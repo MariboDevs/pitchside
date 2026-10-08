@@ -50,7 +50,10 @@ no empty catch blocks, no task markers in committed code, English only, no em da
 - `main` is protected. Work on `feat/*`, `fix/*`, `docs/*`; pull requests into `main`; Copilot code review runs
   on every pull request.
 - Conventional commits: `feat(engine): ...`, `test(stats): ...`, `docs: ...`.
-- AI-assisted development is disclosed in the README. Co-author trailers stay on.
+- Commits are authored by Sipho Maribo (`git config user.name "Sipho Maribo"`, `user.email sipho@maribodevs.com`).
+  AI-assisted development is disclosed in the README; co-author trailers stay on.
+- Work is specified before it is built: `docs/specs/` holds one document per work package and the gap register.
+  A session implements exactly one work package from its document.
 
 ## Where things are decided
 
