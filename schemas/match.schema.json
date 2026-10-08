@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pitchside.maribodevs.com/schemas/match.schema.json",
+  "title": "Pitchside match document",
+  "description": "match.json: everything a consumer needs before the first event arrives.",
+  "type": "object",
+  "required": ["schemaVersion", "matchId", "seed", "competition", "venue", "kickoffUtc", "home", "away"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "0.1" },
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
+    "seed": { "type": "integer" },
+    "competition": { "type": "string" },
+    "venue": { "type": "string" },
+    "kickoffUtc": { "type": "string", "format": "date-time" },
+    "home": { "$ref": "#/$defs/teamSheet" },
+    "away": { "$ref": "#/$defs/teamSheet" }
+  },
+  "$defs": {
+    "club": {
+      "type": "object",
+      "required": ["id", "name", "shortName", "primaryColour", "secondaryColour"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "shortName": { "type": "string", "minLength": 2, "maxLength": 4 },
+        "primaryColour": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "secondaryColour": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+      }
+    },
+    "player": {
+      "type": "object",
+      "required": ["id", "name", "shirtNumber", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "shirtNumber": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "position": { "type": "string", "enum": ["goalkeeper", "defender", "midfielder", "forward"] }
+      }
+    },
+    "teamSheet": {
+      "type": "object",
+      "required": ["club", "formation", "starters", "bench"],
+      "additionalProperties": false,
+      "properties": {
+        "club": { "$ref": "#/$defs/club" },
+        "formation": { "type": "string" },
+        "starters": { "type": "array", "minItems": 11, "maxItems": 11, "items": { "$ref": "#/$defs/player" } },
+        "bench": { "type": "array", "minItems": 0, "maxItems": 9, "items": { "$ref": "#/$defs/player" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,252 @@
+{
+  "schemaVersion": "0.1",
+  "matchId": "MER-7",
+  "seed": 7,
+  "competition": "Meridian League",
+  "venue": "Amanzi United Stadium",
+  "kickoffUtc": "2026-12-06T15:00:00+00:00",
+  "home": {
+    "club": {
+      "id": "AMZ",
+      "name": "Amanzi United",
+      "shortName": "AMZ",
+      "primaryColour": "#0077B6",
+      "secondaryColour": "#FFB703"
+    },
+    "formation": "4-3-3",
+    "starters": [
+      {
+        "id": "AMZ-01",
+        "name": "Elias Vestergaard",
+        "shirtNumber": 1,
+        "position": "goalkeeper"
+      },
+      {
+        "id": "AMZ-02",
+        "name": "Tumelo Greco",
+        "shirtNumber": 2,
+        "position": "defender"
+      },
+      {
+        "id": "AMZ-03",
+        "name": "Femi Kjaer",
+        "shirtNumber": 3,
+        "position": "defender"
+      },
+      {
+        "id": "AMZ-04",
+        "name": "Sefu Brenner",
+        "shirtNumber": 4,
+        "position": "defender"
+      },
+      {
+        "id": "AMZ-05",
+        "name": "Lars Vidal",
+        "shirtNumber": 5,
+        "position": "defender"
+      },
+      {
+        "id": "AMZ-06",
+        "name": "Kagiso Mahlangu",
+        "shirtNumber": 6,
+        "position": "midfielder"
+      },
+      {
+        "id": "AMZ-07",
+        "name": "Obi Ostrowski",
+        "shirtNumber": 7,
+        "position": "midfielder"
+      },
+      {
+        "id": "AMZ-08",
+        "name": "Andres Wojcik",
+        "shirtNumber": 8,
+        "position": "midfielder"
+      },
+      {
+        "id": "AMZ-09",
+        "name": "Samuel Lindqvist",
+        "shirtNumber": 9,
+        "position": "forward"
+      },
+      {
+        "id": "AMZ-10",
+        "name": "Mateo Sandberg",
+        "shirtNumber": 10,
+        "position": "forward"
+      },
+      {
+        "id": "AMZ-11",
+        "name": "Matteo Salinas",
+        "shirtNumber": 11,
+        "position": "forward"
+      }
+    ],
+    "bench": [
+      {
+        "id": "AMZ-12",
+        "name": "Joshua Montero",
+        "shirtNumber": 12,
+        "position": "goalkeeper"
+      },
+      {
+        "id": "AMZ-13",
+        "name": "Oliver Eriksen",
+        "shirtNumber": 13,
+        "position": "defender"
+      },
+      {
+        "id": "AMZ-14",
+        "name": "Lars Greco",
+        "shirtNumber": 14,
+        "position": "defender"
+      },
+      {
+        "id": "AMZ-15",
+        "name": "Nathan Zielinski",
+        "shirtNumber": 15,
+        "position": "midfielder"
+      },
+      {
+        "id": "AMZ-16",
+        "name": "Elias Sandberg",
+        "shirtNumber": 16,
+        "position": "midfielder"
+      },
+      {
+        "id": "AMZ-17",
+        "name": "Oliver Brenner",
+        "shirtNumber": 17,
+        "position": "forward"
+      },
+      {
+        "id": "AMZ-18",
+        "name": "Obi Escobar",
+        "shirtNumber": 18,
+        "position": "forward"
+      }
+    ]
+  },
+  "away": {
+    "club": {
+      "id": "INY",
+      "name": "Inyoni Wanderers",
+      "shortName": "INY",
+      "primaryColour": "#E76F51",
+      "secondaryColour": "#264653"
+    },
+    "formation": "4-3-3",
+    "starters": [
+      {
+        "id": "INY-01",
+        "name": "Obi Dahl",
+        "shirtNumber": 1,
+        "position": "goalkeeper"
+      },
+      {
+        "id": "INY-02",
+        "name": "Sipho Tran",
+        "shirtNumber": 2,
+        "position": "defender"
+      },
+      {
+        "id": "INY-03",
+        "name": "Leon Aguirre",
+        "shirtNumber": 3,
+        "position": "defender"
+      },
+      {
+        "id": "INY-04",
+        "name": "Chidi Lindqvist",
+        "shirtNumber": 4,
+        "position": "defender"
+      },
+      {
+        "id": "INY-05",
+        "name": "Amani Hartley",
+        "shirtNumber": 5,
+        "position": "defender"
+      },
+      {
+        "id": "INY-06",
+        "name": "Emil Holm",
+        "shirtNumber": 6,
+        "position": "midfielder"
+      },
+      {
+        "id": "INY-07",
+        "name": "Oliver Holm",
+        "shirtNumber": 7,
+        "position": "midfielder"
+      },
+      {
+        "id": "INY-08",
+        "name": "Aris Escobar",
+        "shirtNumber": 8,
+        "position": "midfielder"
+      },
+      {
+        "id": "INY-09",
+        "name": "Tomas Hartley",
+        "shirtNumber": 9,
+        "position": "forward"
+      },
+      {
+        "id": "INY-10",
+        "name": "Hugo Sato",
+        "shirtNumber": 10,
+        "position": "forward"
+      },
+      {
+        "id": "INY-11",
+        "name": "Aris Adeyemi",
+        "shirtNumber": 11,
+        "position": "forward"
+      }
+    ],
+    "bench": [
+      {
+        "id": "INY-12",
+        "name": "Femi Otieno",
+        "shirtNumber": 12,
+        "position": "goalkeeper"
+      },
+      {
+        "id": "INY-13",
+        "name": "Aris Novak",
+        "shirtNumber": 13,
+        "position": "defender"
+      },
+      {
+        "id": "INY-14",
+        "name": "Sipho Haddad",
+        "shirtNumber": 14,
+        "position": "defender"
+      },
+      {
+        "id": "INY-15",
+        "name": "Milan Hartmann",
+        "shirtNumber": 15,
+        "position": "midfielder"
+      },
+      {
+        "id": "INY-16",
+        "name": "Musa Rahimi",
+        "shirtNumber": 16,
+        "position": "midfielder"
+      },
+      {
+        "id": "INY-17",
+        "name": "Amani Sato",
+        "shirtNumber": 17,
+        "position": "forward"
+      },
+      {
+        "id": "INY-18",
+        "name": "Joshua Marchant",
+        "shirtNumber": 18,
+        "position": "forward"
+      }
+    ]
+  }
+}

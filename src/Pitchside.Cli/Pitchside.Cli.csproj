@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Pitchside.Cli</RootNamespace>
+    <Description>simulate, calibrate and replay from the command line.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Engine/Pitchside.Engine.csproj" />
+  </ItemGroup>
+</Project>

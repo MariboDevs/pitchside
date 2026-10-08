@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pitchside.maribodevs.com/schemas/event.schema.json",
+  "title": "Pitchside match event",
+  "description": "One line of events.jsonl. Coordinates are metres in the attacking team's frame on a 105 by 68 pitch.",
+  "type": "object",
+  "required": ["id", "matchId", "seq", "period", "clockMs", "wallTimeUtc", "type", "teamId", "location", "possessionId"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "matchId": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 1 },
+    "period": { "type": "integer", "enum": [1, 2] },
+    "clockMs": { "type": "integer", "minimum": 0 },
+    "wallTimeUtc": { "type": "string", "format": "date-time" },
+    "type": {
+      "type": "string",
+      "enum": ["kick_off", "pass", "carry", "shot", "goal", "turnover", "out_of_play", "corner", "foul", "card", "substitution", "pressure", "half_end", "full_time"]
+    },
+    "teamId": { "type": "string" },
+    "playerId": { "type": ["string", "null"] },
+    "location": { "$ref": "#/$defs/location" },
+    "possessionId": { "type": "integer", "minimum": 0 },
+
+    "endLocation": { "$ref": "#/$defs/location" },
+    "lengthM": { "type": "number", "minimum": 0 },
+    "difficulty": { "type": "number", "minimum": 0, "maximum": 1 },
+    "completed": { "type": "boolean" },
+    "receiverId": { "type": "string" },
+    "speedKph": { "type": "number", "minimum": 0 },
+
+    "xg": { "type": "number", "minimum": 0, "maximum": 1 },
+    "onTarget": { "type": "boolean" },
+    "outcome": { "type": "string", "enum": ["goal", "saved", "blocked", "off_target", "post"] },
+    "shotSpeedKph": { "type": "number", "minimum": 0 },
+    "bodyPart": { "type": "string", "enum": ["right_foot", "left_foot", "head", "other"] },
+    "assistId": { "type": "string" },
+    "homeScore": { "type": "integer", "minimum": 0 },
+    "awayScore": { "type": "integer", "minimum": 0 },
+
+    "reason": { "type": "string", "enum": ["interception", "tackle", "bad_touch", "clearance", "goalkeeper_claim"] },
+    "restart": { "type": "string", "enum": ["throw_in", "goal_kick", "corner"] },
+    "fouledPlayerId": { "type": "string" },
+    "cardAwarded": { "type": "boolean" },
+    "colour": { "type": "string", "enum": ["yellow", "red"] },
+    "secondYellow": { "type": "boolean" },
+    "playerOffId": { "type": "string" },
+    "playerOnId": { "type": "string" },
+    "intensity": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "required": ["x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 105 },
+        "y": { "type": "number", "minimum": 0, "maximum": 68 }
+      }
+    }
+  }
+}
