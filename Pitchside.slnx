@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Pitchside.Contracts/Pitchside.Contracts.csproj" />
+    <Project Path="src/Pitchside.Engine/Pitchside.Engine.csproj" />
+    <Project Path="src/Pitchside.Cli/Pitchside.Cli.csproj" />
+    <Project Path="src/Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
+    <Project Path="src/Pitchside.Api/Pitchside.Api.csproj" />
+    <Project Path="src/Pitchside.AppHost/Pitchside.AppHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Pitchside.Engine.Tests/Pitchside.Engine.Tests.csproj" />
+  </Folder>
+</Solution>

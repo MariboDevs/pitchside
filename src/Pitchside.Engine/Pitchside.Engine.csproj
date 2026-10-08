@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Engine</RootNamespace>
+    <Description>The synthetic match engine: fictional league, seeded possession-level simulation, calibration against real-league aggregates.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Contracts/Pitchside.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../data/calibration/targets.json" LogicalName="Pitchside.Engine.Calibration.targets.json" />
+  </ItemGroup>
+</Project>

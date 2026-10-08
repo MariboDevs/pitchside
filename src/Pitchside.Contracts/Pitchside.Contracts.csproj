@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Contracts</RootNamespace>
+    <Description>The event and match contract: C# twins of schemas/match.schema.json and schemas/event.schema.json.</Description>
+  </PropertyGroup>
+</Project>
