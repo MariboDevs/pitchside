@@ -5,6 +5,14 @@ human or model, can take from start to finish without reading the others, except
 The index below is the order of dependency. Nothing in a WP may change a contract owned by another WP; a needed
 change is raised as a note in the pull request and the owning spec is updated first.
 
+## Who implements
+
+Every package is implemented by Claude Code (Opus) in a local session on Sipho's machine, one package per
+session, with commits authored by Sipho Maribo. The specification is the brief; the session reads this folder,
+not the conversation that produced it. Decisions already made and not up for re-litigation: .NET 10 and Aspire,
+Akka.NET actor per match, Angular with the Maribo design language, Cosmos DB, Event Hubs, Microsoft Agent
+Framework on Foundry, Fabric in scope, no shortcuts on any of them.
+
 ## How to implement a work package
 
 1. Read [`CLAUDE.md`](../../CLAUDE.md) at the repository root, then the WP document, then only the sections of
@@ -51,8 +59,10 @@ change is raised as a note in the pull request and the owning spec is updated fi
 | [WP-09](WP-09-infrastructure.md) | Azure infrastructure, deployment, operations | WP-03 | Sipho | `feat/wp09-infra` |
 | [WP-10](WP-10-speech-recap.md) | Spoken full-time recap (Azure AI Speech) | WP-04 | Sipho | `feat/wp10-speech` |
 | [WP-11](WP-11-demo-and-submission.md) | Demo match, video, README, submission | all | Hlumela, Pretty | `docs/wp11-submission` |
+| [WP-12](WP-12-fabric.md) | Microsoft Fabric Real-Time Intelligence | WP-03, WP-09 | Sipho | `feat/wp12-fabric` |
 
-WP-00 to WP-03 are the critical path. WP-04 can start as soon as WP-02's contracts exist, using the scripted
+WP-00 to WP-03 are the critical path. WP-09 is executed by Claude Code running on Sipho's machine, signed in
+to Azure; it is the only package that touches real cloud resources, and it says where a portal click is needed. WP-04 can start as soon as WP-02's contracts exist, using the scripted
 provider. WP-05 can start against WP-03's replay mode with scripted narratives. WP-09 can start on day one with
 the API alone and grow as services land.
 
