@@ -76,6 +76,7 @@ says built when a commit made it true.
 - [docs/CALIBRATION.md](docs/CALIBRATION.md): how realism is measured
 - [docs/PERSONAS.md](docs/PERSONAS.md): the viewer modes and their acceptance criteria
 - [docs/PLAN.md](docs/PLAN.md): the day-by-day plan
+- [docs/specs/](docs/specs/README.md): the build contract, one document per work package, and the gap register
 
 ## Team
 
