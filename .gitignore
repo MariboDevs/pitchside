@@ -1,0 +1,36 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+artifacts/
+*.binlog
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+
+# Local secrets and environment. Nothing under these names is ever committed.
+.env
+.env.*
+appsettings.*.local.json
+secrets.json
+*.pfx
+*.pem
+
+# Azure
+.azure/
+*.azurePubxml
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Generated match output (regenerate with `dotnet run --project src/Pitchside.Cli -- simulate`)
+out/
