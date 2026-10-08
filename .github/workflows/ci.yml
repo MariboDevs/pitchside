@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build, test, calibrate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Pitchside.slnx
+
+      - name: Build (warnings are errors)
+        run: dotnet build Pitchside.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test Pitchside.slnx --no-build --configuration Release --logger "trx;LogFileName=results.trx"
+
+      - name: Calibration report (fails when the engine drifts from the real-league targets)
+        run: dotnet run --project src/Pitchside.Cli --no-build --configuration Release -- calibrate --matches 2000 --report artifacts/calibration-report.md
+
+      - name: Sample match is reproducible
+        run: |
+          dotnet run --project src/Pitchside.Cli --no-build --configuration Release -- simulate --seed 7 --out artifacts/seed-7
+          diff artifacts/seed-7/events.jsonl data/samples/seed-7/events.jsonl
+          diff artifacts/seed-7/match.json data/samples/seed-7/match.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: calibration-and-sample
+          path: artifacts/
