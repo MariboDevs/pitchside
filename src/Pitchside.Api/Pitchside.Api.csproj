@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Api</RootNamespace>
+    <UserSecretsId>pitchside-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Engine/Pitchside.Engine.csproj" />
+    <ProjectReference Include="../Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
+  </ItemGroup>
+</Project>
