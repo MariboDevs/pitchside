@@ -135,7 +135,8 @@ in; `headline` is a code template. Types, priorities and rules are the table in
 - `sustained_pressure` is evaluated on the side's shots and corners, and a goal by that side inside the three
   minutes cancels it.
 - The clean-sheet `milestone` fires once, at the first second-half event of minute 80; when both sides still
-  keep one, a single moment with a null `sideId` covers both, so the derivable id stays unique.
+  keep one, a single moment with a null `sideId` covers both, and when a brace or hat-trick lands on that same
+  event one moment carries both headlines, so the derivable id stays unique and the rate limit drops neither.
 - The 90-second match-wide gap is measured on period clock and resets at half time. A moment inside the gap
   is dropped unless its priority is higher than the one that opened it; goal, red card, penalty, half time and
   full time are never limited and never open a gap.
