@@ -58,7 +58,9 @@ export class Overlay implements OnInit, OnDestroy {
     return match ? { period: Number(match[1]), clockMs: Number(match[2]) } : null;
   });
 
-  protected readonly clock = computed<ClockPosition>(() => this.pinned() ?? this.session.clock());
+  protected readonly clock = computed<ClockPosition>(
+    () => this.pinned() ?? this.session.presentationClock(),
+  );
 
   /** The fact series up to the clock: the xG race and, when pinned, the score and momentum at that moment. */
   protected readonly series = computed(() => {
@@ -87,10 +89,13 @@ export class Overlay implements OnInit, OnDestroy {
           home: point.values['match.momentum.home'] ?? 0.5,
           away: point.values['match.momentum.away'] ?? 0.5,
         }
-      : {
-          home: numberOf(sheet, 'match.momentum.home') || 0.5,
-          away: numberOf(sheet, 'match.momentum.away') || 0.5,
-        };
+      : sheet
+        ? {
+            // Zero is a real share; the ribbon itself splits evenly when both are zero.
+            home: numberOf(sheet, 'match.momentum.home'),
+            away: numberOf(sheet, 'match.momentum.away'),
+          }
+        : { home: 0.5, away: 0.5 };
   });
 
   /** The lower thirds on air at the clock. The scheduler guarantees at most one; the renderer checks it. */

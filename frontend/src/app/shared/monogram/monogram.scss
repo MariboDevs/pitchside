@@ -28,8 +28,9 @@
 }
 
 // Sized from the surrounding text: a box of about 1.7 em of the parent, letters at 0.6 em so three always fit.
+// Broadcast graphics raise the letters to their 28 px minimum and tighten the box to match.
 .monogram--lg {
-  width: 2.8em;
-  height: 2.8em;
-  font-size: 0.6em;
+  width: var(--monogram-box, 2.8em);
+  height: var(--monogram-box, 2.8em);
+  font-size: var(--monogram-letters, 0.6em);
 }

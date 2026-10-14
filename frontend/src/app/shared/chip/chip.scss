@@ -13,7 +13,7 @@
 }
 
 .label {
-  font-size: 0.55em;
+  font-size: var(--chip-label-size, 0.55em);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-text-muted);

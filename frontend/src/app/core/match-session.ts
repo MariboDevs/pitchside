@@ -48,6 +48,12 @@ const MAX_EVENTS = 300;
  * then applies every pushed message; on a reconnect it joins again and applies the new snapshot, so a client that
  * drops out is complete again after one message. Provided per route, never shared between matches.
  */
+/** How far the overlay's presentation clock may run ahead of the last event. */
+const PRESENTATION_CAP_MS = 20_000;
+
+/** Back-off between join attempts while the hub stays connected. */
+const JOIN_RETRY_MS = [1_000, 2_000, 5_000, 10_000];
+
 @Injectable()
 export class MatchSession implements OnDestroy {
   private readonly http = inject(HttpClient);
@@ -55,6 +61,12 @@ export class MatchSession implements OnDestroy {
   private matchId = '';
   private viewer: ViewerPreferences | null = null;
   private disposed = false;
+  private joining = false;
+  private joinAttempt = 0;
+  private presentationTimer: ReturnType<typeof setInterval> | null = null;
+  private anchor = { period: 0, clockMs: 0, at: 0 };
+  /** Overlay and approval pushes that arrive while a join is in flight, applied after its snapshot. */
+  private pending: (() => void)[] = [];
 
   readonly connection = signal<ConnectionState>('connecting');
   readonly match = signal<StoredMatch | null>(null);
@@ -84,6 +96,16 @@ export class MatchSession implements OnDestroy {
     return latest ? { period: latest.period, clockMs: latest.clockMs } : { period: 0, clockMs: 0 };
   });
 
+  /**
+   * The overlay's presentation clock: the match clock, carried forward in real time between events (at most
+   * PRESENTATION_CAP_MS past the last one), so a card due in a gap between events, or the full-time card after the
+   * last event, still has its window. The score bug keeps the hub's clock.
+   */
+  readonly presentationClock = signal<{ period: number; clockMs: number }>({
+    period: 0,
+    clockMs: 0,
+  });
+
   readonly score = computed(() => ({
     home: numberOf(this.factSheet(), 'match.score.home'),
     away: numberOf(this.factSheet(), 'match.score.away'),
@@ -111,9 +133,11 @@ export class MatchSession implements OnDestroy {
       this.narratives.update((all) => new Map(all).set(n.id, n)),
     );
     this.hub.on('OverlayEntry', (e: OverlayEntry) =>
-      this.overlay.update((all) => new Map(all).set(e.id, e)),
+      this.whenJoined(() => this.overlay.update((all) => new Map(all).set(e.id, e))),
     );
-    this.hub.on('ApprovalMode', (u: ApprovalModeUpdate) => this.approval.set(u.mode));
+    this.hub.on('ApprovalMode', (u: ApprovalModeUpdate) =>
+      this.whenJoined(() => this.approval.set(u.mode)),
+    );
     this.hub.on('MatchStatus', (s: MatchStatusUpdate) => this.status.set(s));
     this.hub.onreconnecting(() => this.connection.set('reconnecting'));
     this.hub.onreconnected(() => void this.join());
@@ -123,6 +147,7 @@ export class MatchSession implements OnDestroy {
         setTimeout(() => void this.start(), 3000);
       }
     });
+    this.presentationTimer = setInterval(() => this.tickPresentation(), 250);
     await this.start();
   }
 
@@ -142,6 +167,10 @@ export class MatchSession implements OnDestroy {
 
   ngOnDestroy(): void {
     this.disposed = true;
+    if (this.presentationTimer) {
+      clearInterval(this.presentationTimer);
+    }
+
     void this.hub?.stop();
   }
 
@@ -167,6 +196,7 @@ export class MatchSession implements OnDestroy {
       return;
     }
 
+    this.joining = true;
     try {
       if (this.viewer) {
         await this.hub.invoke('SetViewer', this.matchId, this.viewer);
@@ -174,18 +204,69 @@ export class MatchSession implements OnDestroy {
 
       const snapshot = await this.hub.invoke<MatchSnapshot>('JoinMatch', this.matchId);
       this.applySnapshot(snapshot);
+      this.flushPending();
       this.connection.set('live');
       this.error.set(null);
       await Promise.all([this.loadRecentEvents(snapshot.match.lastSeq), this.loadSeries()]);
+      this.joinAttempt = 0;
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Could not join the match.');
+      this.flushPending();
+      const message = error instanceof Error ? error.message : 'Could not join the match.';
+      this.error.set(message);
       this.connection.set('offline');
+      // A missing match is final; anything else is retried while the hub stays connected.
+      if (!/No match/.test(message)) {
+        this.retryJoin();
+      }
+    }
+  }
+
+  private retryJoin(): void {
+    const delay = JOIN_RETRY_MS[Math.min(this.joinAttempt, JOIN_RETRY_MS.length - 1)];
+    this.joinAttempt++;
+    setTimeout(() => {
+      if (!this.disposed && this.hub?.state === HubConnectionState.Connected) {
+        void this.join();
+      }
+    }, delay);
+  }
+
+  /** Runs an overlay or approval update now, or after the snapshot when a join is in flight. */
+  private whenJoined(apply: () => void): void {
+    if (this.joining) {
+      this.pending.push(apply);
+    } else {
+      apply();
+    }
+  }
+
+  private flushPending(): void {
+    this.joining = false;
+    const queued = this.pending;
+    this.pending = [];
+    queued.forEach((apply) => apply());
+  }
+
+  private tickPresentation(): void {
+    const clock = this.clock();
+    const now = performance.now();
+    if (clock.period !== this.anchor.period || clock.clockMs !== this.anchor.clockMs) {
+      this.anchor = { ...clock, at: now };
+    }
+
+    const ahead = Math.min(now - this.anchor.at, PRESENTATION_CAP_MS);
+    const next = { period: clock.period, clockMs: clock.clockMs + Math.max(0, Math.round(ahead)) };
+    const current = this.presentationClock();
+    if (current.period !== next.period || current.clockMs !== next.clockMs) {
+      this.presentationClock.set(next);
     }
   }
 
   private applySnapshot(snapshot: MatchSnapshot): void {
     this.match.set(snapshot.match);
-    if (snapshot.factSheet) {
+    // A newer sheet can arrive while the join is in flight; the snapshot's older one must not roll it back.
+    const current = this.factSheet();
+    if (snapshot.factSheet && (!current || snapshot.factSheet.asOfSeq >= current.asOfSeq)) {
       this.factSheet.set(snapshot.factSheet);
     }
 

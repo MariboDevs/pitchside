@@ -28,7 +28,7 @@
 }
 
 .mono {
-  font-size: 1.3em;
+  font-size: var(--lower-third-mono-size, 1.3em);
 }
 
 .copy {
@@ -49,7 +49,7 @@
 .text {
   margin: 0.15em 0 0;
   font-weight: 400;
-  font-size: 0.82em;
+  font-size: var(--lower-third-text-size, 0.82em);
   line-height: 1.25;
   color: var(--color-text);
   display: -webkit-box;
@@ -63,7 +63,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.35em;
-  font-size: 0.85em;
+  font-size: var(--lower-third-chips-size, 0.85em);
 }
 
 @include bp.from('md') {

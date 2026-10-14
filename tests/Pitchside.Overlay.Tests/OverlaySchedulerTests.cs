@@ -33,6 +33,50 @@ public sealed class OverlaySchedulerTests
     }
 
     [Fact]
+    public void A_card_starts_two_seconds_after_its_narrative_is_ready_when_that_is_later()
+    {
+        var ready = Goal.Moment.ClockMs + 7_000;
+        var entry = OverlayScheduler.Schedule([], Goal.Moment, Fixture.NarrativeFor(Goal.Moment, 10), Goal.Sheet, Fixture.Document, ApprovalMode.Auto, ready)
+            .ShouldHaveSingleItem();
+        entry.InAtMs.ShouldBe(ready + 2_000);
+        entry.State.ShouldBe(OverlayState.Scheduled);
+    }
+
+    [Fact]
+    public void A_card_due_during_the_previous_exit_waits_for_it()
+    {
+        var first = Place([], Goal.Moment).Single();
+        var next = Goal.Moment with { Id = "MER-7:M:9001:goal", ClockMs = first.OutAtMs - OverlayScheduler.LeadMs + 50, Priority = Goal.Moment.Priority };
+
+        var entry = Place([first], next).ShouldHaveSingleItem();
+
+        entry.InAtMs.ShouldBe(first.OutAtMs + OverlayScheduler.ExitMs);
+    }
+
+    [Fact]
+    public void A_held_card_does_not_touch_the_card_on_screen()
+    {
+        var onScreen = Place([], Swing.Moment with { Period = Goal.Moment.Period, ClockMs = Goal.Moment.ClockMs - 1_000 }).Single();
+
+        var written = Place([onScreen], Goal.Moment, mode: ApprovalMode.Approve);
+
+        written.ShouldHaveSingleItem().State.ShouldBe(OverlayState.Held);
+    }
+
+    [Fact]
+    public void A_queued_card_expires_by_its_own_moment_however_often_it_is_moved()
+    {
+        var queued = Place([], Goal.Moment).Single() with { InAtMs = Goal.Moment.ClockMs + 40_000, OutAtMs = Goal.Moment.ClockMs + 48_000 };
+        var deadlines = new Dictionary<string, int> { [queued.Id] = OverlayScheduler.DeadlineFor(Goal.Moment) };
+        var urgent = Goal.Moment with { Id = "MER-7:M:9002:red_card", ClockMs = Goal.Moment.ClockMs + 37_000, Priority = 1_000 };
+        var blocker = Place([], urgent with { Id = "MER-7:M:9003:goal", Priority = 1 }).Single() with { InAtMs = urgent.ClockMs + 1_000, OutAtMs = urgent.ClockMs + 41_000 };
+
+        var written = OverlayScheduler.Schedule([blocker, queued], urgent, Fixture.NarrativeFor(urgent, 10), Goal.Sheet, Fixture.Document, ApprovalMode.Auto, null, deadlines);
+
+        written.Single(e => e.Id == queued.Id).State.ShouldBe(OverlayState.Expired);
+    }
+
+    [Fact]
     public void A_goal_carries_the_score_chips_with_values_from_code()
     {
         var entry = Place([], Goal.Moment).ShouldHaveSingleItem();
@@ -93,7 +137,7 @@ public sealed class OverlaySchedulerTests
         var existing = new List<OverlayEntry>();
         for (var i = 0; i < 6; i++)
         {
-            existing.AddRange(Place(existing, Fixture.At(Swing.Moment, 100_000 + i, 60), words: 30));
+            existing.AddRange(Place(existing, Fixture.At(Swing.Moment, 100_000 + (i * 1_000), 60), words: 30));
         }
 
         existing.Last().State.ShouldBe(OverlayState.Expired);
