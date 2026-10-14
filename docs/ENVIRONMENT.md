@@ -1,7 +1,7 @@
 # Environment
 
-What exists outside the repository after Phase 0 setup on 8 October 2026: accounts, tooling, GitHub settings
-and the Azure foundation that WP-09 builds on. Ids, names, endpoints and URLs only. No key, secret, token or
+What exists outside the repository after Phase 0 setup, started on 8 October 2026 and last updated on
+14 October 2026: accounts, tooling, GitHub settings and the Azure foundation that WP-09 builds on. Ids, names, endpoints and URLs only. No key, secret, token or
 connection string appears here or anywhere else in this repository; every service is reached with an
 identity.
 
@@ -89,12 +89,15 @@ they are invited as guests.
 | Client id | `89e3ce3e-6e8a-4ac7-95bc-0e3a63a30052` |
 | Principal id | `06983e89-3126-499b-ac88-193588a256e9` |
 | Federated credential `github-env-dev` | subject `repo:MariboDevs/pitchside:environment:dev` |
+| Federated credential `github-env-demo` | subject `repo:MariboDevs/pitchside:environment:demo` |
 | Federated credential `github-branch-main` | subject `repo:MariboDevs/pitchside:ref:refs/heads/main` |
 | Issuer, audience | `https://token.actions.githubusercontent.com`, `api://AzureADTokenExchange` |
 
 GitHub Actions repository variables (not secrets; none of these values is secret): `AZURE_CLIENT_ID`,
-`AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`. A GitHub environment named `dev` exists for the workflow to
-target.
+`AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`. GitHub environments `dev` and `demo` exist for the workflow to
+target; WP-09 adds the required-reviewer rule on `demo`. The identity holds User Access Administrator on
+both resource groups because WP-09 step 4 creates role assignments from the pipeline; it is scoped to the two
+groups and nothing wider, and is accepted for the hackathon's lifetime.
 
 ### Speech
 
@@ -170,7 +173,7 @@ commits only this file.
 
 1. **Foundry quota.** Resolved on 14 October; both GPT-6 deployments exist. Nothing to do.
 2. **Fabric.** Resolved on 14 October; trial capacity and `pitchside-dev` workspace exist. Nothing to do.
-3. **Copilot seat.** Resolved on 14 October; seat assigned and automatic review verified on pull request #4. Confirm once in Settings, Copilot, Policies that "Copilot coding agent" is enabled before WP-11 relies on it.
+3. **Copilot seat and review.** Resolved on 14 October; seat assigned and automatic review verified on pull request #4. The coding agent policy is separate and not verifiable by API: open Settings, Copilot, Policies and confirm "Copilot coding agent" is enabled before WP-11 relies on it.
 4. **Team identities.** Invite Pretty Kunene and Hlumela Tshazibana as guests in the Entra tenant and add
    them as GitHub collaborators when the team decides to; then grant Cognitive Services OpenAI User on
    `ais-pitchside-dev`.
