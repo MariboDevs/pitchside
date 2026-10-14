@@ -189,7 +189,11 @@ export class MatchSession implements OnDestroy {
       this.factSheet.set(snapshot.factSheet);
     }
 
-    this.moments.set(snapshot.moments);
+    // A live moment can arrive before the snapshot reply; keep it rather than overwrite it.
+    this.moments.update((live) => {
+      const known = new Set(snapshot.moments.map((m) => m.id));
+      return [...snapshot.moments, ...live.filter((m) => !known.has(m.id))];
+    });
     this.narratives.update((all) => {
       const next = new Map(all);
       snapshot.narratives.forEach((n) => next.set(n.id, n));

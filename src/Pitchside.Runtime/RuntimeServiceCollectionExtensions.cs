@@ -39,6 +39,7 @@ public static class RuntimeServiceCollectionExtensions
         services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
         services.TryAddSingleton<IMatchBroadcaster, NullMatchBroadcaster>();
         services.TryAddSingleton<IMomentSink, ChannelMomentSink>();
+        services.TryAddSingleton<DurableProgress>();
 
         AddStorage(services, configuration);
         AddBus(services, configuration);
@@ -103,7 +104,10 @@ public static class RuntimeServiceCollectionExtensions
         else if (string.Equals(provider, BusOptions.EventHubsProvider, StringComparison.OrdinalIgnoreCase))
         {
             services.TryAddSingleton<IEventBus>(sp => new EventHubsEventBus(
-                sp.GetRequiredService<IOptions<BusOptions>>().Value.EventHubs, sp.GetRequiredService<TokenCredential>()));
+                sp.GetRequiredService<IOptions<BusOptions>>().Value.EventHubs,
+                sp.GetRequiredService<TokenCredential>(),
+                sp.GetRequiredService<DurableProgress>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EventHubsEventBus>>()));
         }
         else
         {

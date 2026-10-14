@@ -8,8 +8,11 @@ namespace Pitchside.Runtime.Tests;
 internal sealed class RecordingBroadcaster : IMatchBroadcaster
 {
     private readonly ConcurrentQueue<(string Kind, int Seq)> _pushes = new();
+    private readonly ConcurrentQueue<MatchStatusUpdate> _statuses = new();
 
     public IReadOnlyList<(string Kind, int Seq)> Pushes => [.. _pushes];
+
+    public IReadOnlyList<MatchStatusUpdate> Statuses => [.. _statuses];
 
     public Task EventAsync(MatchEvent matchEvent, CancellationToken cancellationToken) => Record("event", matchEvent.Seq);
 
@@ -19,7 +22,11 @@ internal sealed class RecordingBroadcaster : IMatchBroadcaster
 
     public Task NarrativeAsync(Narrative narrative, CancellationToken cancellationToken) => Record("narrative", narrative.FactSheetSeq);
 
-    public Task StatusAsync(MatchStatusUpdate status, CancellationToken cancellationToken) => Record("status", status.LastSeq);
+    public Task StatusAsync(MatchStatusUpdate status, CancellationToken cancellationToken)
+    {
+        _statuses.Enqueue(status);
+        return Record("status", status.LastSeq);
+    }
 
     public Task OverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken) => Record("overlay", entry.InAtMs);
 

@@ -3,7 +3,11 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Akka.Actor;
+using Akka.Hosting;
 using Pitchside.Contracts;
+using Pitchside.Runtime.Actors;
+using Pitchside.Runtime.Messages;
 
 namespace Pitchside.Api.IntegrationTests;
 
@@ -91,6 +95,44 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
         await connection.StartAsync();
 
         await Should.ThrowAsync<Microsoft.AspNetCore.SignalR.HubException>(() => connection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-404"));
+        await Should.ThrowAsync<Microsoft.AspNetCore.SignalR.HubException>(() => connection.InvokeAsync<MatchSnapshot>("JoinMatch", "a/b"));
+        await connection.InvokeAsync("LeaveMatch", "a/b");
+    }
+
+    [Fact]
+    public async Task A_disconnect_unsubscribes_from_every_joined_match()
+    {
+        (await _factory.CreateClient().PostAsJsonAsync("/api/v1/replays", new { seed = 12, speed = 0 })).EnsureSuccessStatusCode();
+        var matches = await _factory.Services.GetRequiredService<IRequiredActor<MatchSupervisorActor>>().GetAsync();
+        var connection = new HubConnectionBuilder()
+            .WithUrl(new Uri(_factory.Server.BaseAddress, "hubs/match"), options =>
+            {
+                options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+                options.Transports = HttpTransportType.LongPolling;
+            })
+            .AddJsonProtocol(options =>
+            {
+                foreach (var converter in ContractJson.Options.Converters)
+                {
+                    options.PayloadSerializerOptions.Converters.Add(converter);
+                }
+            })
+            .Build();
+        await connection.StartAsync();
+        await connection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-12");
+        (await matches.Ask<MatchStateView>(new GetState("MER-12"), TimeSpan.FromSeconds(5))).Subscribers.ShouldBe(1);
+
+        await connection.DisposeAsync();
+
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        var subscribers = -1;
+        while (DateTime.UtcNow < deadline && subscribers != 0)
+        {
+            subscribers = (await matches.Ask<MatchStateView>(new GetState("MER-12"), TimeSpan.FromSeconds(5))).Subscribers;
+            await Task.Delay(100);
+        }
+
+        subscribers.ShouldBe(0);
     }
 
     [Fact]
