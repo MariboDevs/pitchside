@@ -278,4 +278,22 @@ public sealed class MatchActorTests : TestKit
         requeued.ShouldBe(expected.Select(m => m.Id));
         _broadcaster.Pushes.ShouldNotContain(p => p.Kind == "event" || p.Kind == "moment");
     }
+
+    [Fact]
+    public async Task Events_buffered_behind_a_gap_survive_a_restart()
+    {
+        await _store.SaveMatchAsync(Sample.Stored, CancellationToken.None);
+        var outbox = Outbox();
+        var first = Sys.ActorOf(MatchActor.Props(MatchId, _store, _broadcaster, _sink, outbox));
+        Ingest(first, 1, 3);
+        await AwaitAssertAsync(async () => (await StateAsync(first)).LastSeq.ShouldBe(1), Wait);
+        await AwaitAssertAsync(() => outbox.Pending.Keys.ShouldBe([3]), Wait);
+
+        await first.GracefulStop(Wait);
+        var second = Sys.ActorOf(MatchActor.Props(MatchId, _store, _broadcaster, _sink, outbox));
+        Ingest(second, 2);
+
+        await AwaitAssertAsync(async () => (await StateAsync(second)).LastSeq.ShouldBe(3), Wait);
+        await AwaitAssertAsync(async () => (await StoredEventsAsync()).ShouldBe(3), Wait);
+    }
 }
