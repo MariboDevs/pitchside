@@ -17,10 +17,13 @@ namespace Pitchside.Runtime.Bus;
 /// Azure Event Hubs: a producer that partitions by match id, and an <see cref="EventProcessorClient"/> with blob
 /// checkpoints for each consumer group. Authentication is a token credential; a connection string is never read.
 /// A delivered event is checkpointed only once <see cref="DurableProgress"/> shows the match actor has stored it, so a
-/// restart replays anything not yet durable (the actor drops the duplicates) and never skips an event.
+/// restart replays anything not yet durable (the actor drops the duplicates) and never skips an event. Pending events
+/// are rechecked every <see cref="CheckpointInterval"/> while a partition is idle and once more before stopping.
 /// </summary>
 public sealed partial class EventHubsEventBus : IEventBus, IAsyncDisposable
 {
+    public static readonly TimeSpan CheckpointInterval = TimeSpan.FromSeconds(5);
+
     private readonly EventHubsBusOptions _options;
     private readonly TokenCredential _credential;
     private readonly DurableProgress _progress;
@@ -75,8 +78,26 @@ public sealed partial class EventHubsEventBus : IEventBus, IAsyncDisposable
         await processor.StartProcessingAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await foreach (var (envelope, args) in received.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            while (true)
             {
+                // Wake at least every few seconds, so an idle partition's tail is checkpointed once its writes land.
+                if (!received.Reader.TryRead(out var item))
+                {
+                    var arrived = await WaitToReadAsync(received.Reader, CheckpointInterval, cancellationToken).ConfigureAwait(false);
+                    if (arrived is null)
+                    {
+                        break;
+                    }
+
+                    if (arrived == false)
+                    {
+                        await CheckpointAllAsync(pending).ConfigureAwait(false);
+                    }
+
+                    continue;
+                }
+
+                var (envelope, args) = item;
                 yield return envelope;
                 if (!pending.TryGetValue(args.Partition.PartitionId, out var queue))
                 {
@@ -90,11 +111,42 @@ public sealed partial class EventHubsEventBus : IEventBus, IAsyncDisposable
         }
         finally
         {
+            await CheckpointAllAsync(pending).ConfigureAwait(false);
             await processor.StopProcessingAsync(CancellationToken.None).ConfigureAwait(false);
         }
     }
 
     public ValueTask DisposeAsync() => _producer.DisposeAsync();
+
+    /// <summary>
+    /// True when an item is ready, false when the interval passed with none, null when the channel completed. A
+    /// cancelled token ends the stream the same way a completed channel does.
+    /// </summary>
+    private static async Task<bool?> WaitToReadAsync<T>(ChannelReader<T> reader, TimeSpan interval, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(interval);
+        try
+        {
+            return await reader.WaitToReadAsync(timeout.Token).ConfigureAwait(false) ? true : null;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private async Task CheckpointAllAsync(Dictionary<string, Queue<(EventEnvelope Envelope, ProcessEventArgs Args)>> pending)
+    {
+        foreach (var queue in pending.Values)
+        {
+            await CheckpointDurableAsync(queue).ConfigureAwait(false);
+        }
+    }
 
     /// <summary>Checkpoints the newest event of a partition's queue whose store write has landed, and drops it and older ones.</summary>
     private async Task CheckpointDurableAsync(Queue<(EventEnvelope Envelope, ProcessEventArgs Args)> queue)

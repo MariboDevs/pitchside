@@ -9,7 +9,8 @@ namespace Pitchside.Api.Hubs;
 
 /// <summary>
 /// Builds the one message a late joiner needs: the match, the live fact sheet, every moment, its narratives. The fact
-/// sheet and the moments come from the match actor, which has them before their store writes land.
+/// sheet, the moments, the status and the last seq come from the match actor in one reply, so they agree with each
+/// other even while their store writes are still landing.
 /// </summary>
 public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSupervisorActor> supervisor)
 {
@@ -28,9 +29,9 @@ public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSuperv
         }
 
         var matches = await supervisor.GetAsync(cancellationToken).ConfigureAwait(false);
-        var sheet = await matches.Ask<FactSheet>(new GetFactSheet(matchId), AskTimeout, cancellationToken).ConfigureAwait(false);
-        var moments = await matches.Ask<List<Moment>>(new GetMoments(matchId), AskTimeout, cancellationToken).ConfigureAwait(false);
+        var live = await matches.Ask<LiveState>(new GetLiveState(matchId), AskTimeout, cancellationToken).ConfigureAwait(false);
         var narratives = await store.GetNarrativesAsync(matchId, cancellationToken).ConfigureAwait(false);
-        return new MatchSnapshot(match, sheet, moments, [.. narratives.Where(n => n.Persona == viewer.Persona && n.Language == viewer.Language)]);
+        var current = match with { Status = live.View.Status, LastSeq = live.View.LastSeq };
+        return new MatchSnapshot(current, live.FactSheet, [.. live.Moments], [.. narratives.Where(n => n.Persona == viewer.Persona && n.Language == viewer.Language)]);
     }
 }

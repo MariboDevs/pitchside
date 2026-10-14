@@ -42,7 +42,9 @@ Producer (Replay or Live) --> IEventBus --> MatchIngestConsumer --> MatchActor (
 - Writes and pushes go through a per-match `MatchOutbox` owned by the supervisor, so they survive an actor
   restart: writes land one at a time in issue order and are retried until they succeed, so the stored events are
   always a gapless prefix, and a restarted actor waits for earlier writes before it rebuilds. Pushes stay in order
-  across a restart.
+  across a restart. After a rebuild the actor rewrites what the stored events imply (durable watermark, status,
+  fact sheets, moments) as idempotent upserts without broadcasting, and hands moments that have no narrative back
+  to the crew.
 - Lifecycle: `SetLifecycle(matchId, status)` carries the producer's pause, resume and stop to the actor, which
   persists and broadcasts the status. `Completed` and `Stopped` are terminal in the actor and in every store.
 - Match ids are plain tokens (`[A-Za-z0-9_-]{1,64}`); the supervisor refuses anything else, and unsubscribing or a

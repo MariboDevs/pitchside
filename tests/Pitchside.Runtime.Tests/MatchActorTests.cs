@@ -245,4 +245,37 @@ public sealed class MatchActorTests : TestKit
         await Task.Delay(200);
         await Should.ThrowAsync<ActorNotFoundException>(() => Sys.ActorSelection($"/user/quiet/{MatchSupervisorActor.ChildName("MER-404")}").ResolveOne(TimeSpan.FromMilliseconds(500)));
     }
+
+    [Fact]
+    public async Task A_rebuild_rewrites_what_a_crash_left_unwritten_and_requeues_unnarrated_moments()
+    {
+        // Every event is stored, but the crash came before any fact sheet, moment, status or narrative was written.
+        await _store.SaveMatchAsync(Sample.Stored, CancellationToken.None);
+        foreach (var e in Sample.Events)
+        {
+            await _store.AppendEventAsync(e, CancellationToken.None);
+        }
+
+        var expected = MatchMoments.Detect(Sample.Document, Sample.Events);
+        var actor = Sys.ActorOf(MatchActor.Props(MatchId, _store, _broadcaster, _sink, Outbox()));
+
+        await AwaitAssertAsync(async () => (await StateAsync(actor)).LastSeq.ShouldBe(Sample.Events.Count), Wait);
+        await AwaitAssertAsync(async () => (await _store.GetMatchAsync(MatchId, CancellationToken.None))!.Status.ShouldBe(MatchStatus.Completed), Wait);
+        await AwaitAssertAsync(async () => (await _store.GetMomentsAsync(MatchId, CancellationToken.None)).Count.ShouldBe(expected.Count), Wait);
+        _progress.For(MatchId).ShouldBe(Sample.Events.Count);
+
+        var requeued = new List<string>();
+        using var read = new CancellationTokenSource(Wait);
+        await foreach (var item in _sink.ReadAllAsync(read.Token))
+        {
+            requeued.Add(item.Moment.Id);
+            if (requeued.Count == expected.Count)
+            {
+                break;
+            }
+        }
+
+        requeued.ShouldBe(expected.Select(m => m.Id));
+        _broadcaster.Pushes.ShouldNotContain(p => p.Kind == "event" || p.Kind == "moment");
+    }
 }

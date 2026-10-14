@@ -94,6 +94,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         Receive<GetState>(_ => Sender.Tell(View()));
         Receive<GetFactSheet>(_ => Sender.Tell(_latestSheet ?? _stats.Snapshot(_statsState!)));
         Receive<GetMoments>(_ => Sender.Tell(_moments.ToList()));
+        Receive<GetLiveState>(_ => Sender.Tell(new LiveState(View(), _latestSheet ?? _stats.Snapshot(_statsState!), _moments.ToList())));
         Receive<Subscribe>(message => _subscribers.Add(message.ConnectionId));
         Receive<Unsubscribe>(message => _subscribers.Remove(message.ConnectionId));
         Receive<StatusTick>(_ =>
@@ -114,8 +115,14 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         // Writes from an earlier incarnation may still be landing; the store is a gapless prefix once they have.
         await _outbox.WritesDrained.ConfigureAwait(false);
         var match = await _store.GetMatchAsync(_matchId, CancellationToken.None).ConfigureAwait(false);
-        var events = match is null ? [] : await _store.GetEventsAsync(_matchId, 1, int.MaxValue, CancellationToken.None).ConfigureAwait(false);
-        return new MatchLoaded(match, events);
+        if (match is null)
+        {
+            return new MatchLoaded(null, [], new HashSet<string>(StringComparer.Ordinal));
+        }
+
+        var events = await _store.GetEventsAsync(_matchId, 1, int.MaxValue, CancellationToken.None).ConfigureAwait(false);
+        var narratives = events.Count == 0 ? [] : await _store.GetNarrativesAsync(_matchId, CancellationToken.None).ConfigureAwait(false);
+        return new MatchLoaded(match, events, narratives.Select(n => n.MomentId).ToHashSet(StringComparer.Ordinal));
     }
 
     private void OnLoaded(MatchLoaded loaded)
@@ -139,6 +146,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         _statsState = _stats.Start(loaded.Match.Document);
         _detectorState = _detector.Start(loaded.Match.Document);
         var expected = 1;
+        var rebuilt = new List<(Moment Moment, FactSheet Sheet)>();
         foreach (var e in loaded.Events)
         {
             if (e.Seq != expected)
@@ -147,18 +155,44 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
                 break;
             }
 
-            Apply(e, live: false);
+            rebuilt.AddRange(Apply(e, live: false));
             expected++;
         }
 
-        if (loaded.Events.Count > 0)
+        if (_lastSeq > 0)
         {
-            _log.Info("Match {0} rebuilt from {1} stored events, last seq {2}", _matchId, _lastSeq, _lastSeq);
+            Reconcile(rebuilt, loaded.NarratedMomentIds);
+            _log.Info("Match {0} rebuilt from stored events, last seq {1}", _matchId, _lastSeq);
         }
 
         Become(Live);
         Timers.StartPeriodicTimer("status", StatusTick.Instance, StatusInterval);
         Stash.UnstashAll();
+    }
+
+    /// <summary>
+    /// After a rebuild, rewrites what the stored events imply, in case a crash came between an event's append and its
+    /// derived writes: the durable watermark, the status, the latest fact sheet, each moment and its fact sheet. All
+    /// are idempotent upserts and nothing is broadcast again. Moments without a narrative go back to the crew.
+    /// </summary>
+    private void Reconcile(List<(Moment Moment, FactSheet Sheet)> rebuilt, IReadOnlySet<string> narrated)
+    {
+        _outbox.MarkDurable(_lastSeq);
+        var status = _status;
+        var lastSeq = _lastSeq;
+        Persist("match status", ct => _store.UpdateMatchStatusAsync(_matchId, status, lastSeq, ct));
+        var latest = _latestSheet!;
+        Persist("fact sheet", ct => _store.SaveFactSheetAsync(latest, ct));
+        foreach (var (moment, sheet) in rebuilt)
+        {
+            Persist("fact sheet", ct => _store.SaveFactSheetAsync(sheet, ct));
+            Persist("moment", ct => _store.SaveMomentAsync(moment, ct));
+            if (!narrated.Contains(moment.Id))
+            {
+                var item = new MomentWorkItem(moment, sheet, _match!.Document);
+                Push(ct => _sink.EnqueueAsync(item, ct).AsTask());
+            }
+        }
     }
 
     private void Ingest(MatchEvent e)
@@ -246,7 +280,8 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         Push(ct => _broadcaster.StatusAsync(view, ct));
     }
 
-    private void Apply(MatchEvent e, bool live)
+    /// <summary>Applies one event; returns the moments it raised with the fact sheet they were raised at.</summary>
+    private List<(Moment Moment, FactSheet Sheet)> Apply(MatchEvent e, bool live)
     {
         var step = _stats.Apply(_statsState!, e);
         _statsState = step.State;
@@ -266,7 +301,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         _status = status;
         if (!live)
         {
-            return;
+            return [.. found.Select(moment => (moment, sheet))];
         }
 
         _outbox.AppendEvent(e);
@@ -301,6 +336,8 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
             var view = View().ToStatus();
             Push(ct => _broadcaster.StatusAsync(view, ct));
         }
+
+        return [];
     }
 
     private MatchStateView View() => new(_matchId, _status, _lastSeq, _period, _clockMs, _subscribers.Count, _dropped);
