@@ -94,8 +94,9 @@ public sealed class MatchOutbox : IDisposable
                 await write(token).ConfigureAwait(false);
                 return;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException and not OutOfMemoryException)
+            catch (Exception ex) when (ex is not OutOfMemoryException && !token.IsCancellationRequested)
             {
+                // A store timeout surfaces as a cancellation too; only the outbox's own stop ends the retries.
                 _log.Warning(ex, "Match {0}: {1} write failed; retrying in {2} ms", _matchId, what, (int)delay.TotalMilliseconds);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)

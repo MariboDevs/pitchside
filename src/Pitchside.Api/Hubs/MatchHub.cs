@@ -49,8 +49,10 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
             return;
         }
 
+        // Unsubscribe first and regardless of the connection: the join is already forgotten, so a disconnect that
+        // aborted the rest of this call would otherwise leave the actor holding a stale subscriber.
+        (await supervisor.GetAsync(CancellationToken.None).ConfigureAwait(false)).Tell(new Unsubscribe(matchId, Context.ConnectionId), ActorRefs.NoSender);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, Group(matchId), Context.ConnectionAborted).ConfigureAwait(false);
-        (await supervisor.GetAsync(Context.ConnectionAborted).ConfigureAwait(false)).Tell(new Unsubscribe(matchId, Context.ConnectionId), ActorRefs.NoSender);
     }
 
     public Task SetViewer(string matchId, ViewerPreferences preferences)
