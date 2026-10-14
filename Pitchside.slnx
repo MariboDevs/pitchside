@@ -14,8 +14,10 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Pitchside.Agents.Tests/Pitchside.Agents.Tests.csproj" />
+    <Project Path="tests/Pitchside.Api.IntegrationTests/Pitchside.Api.IntegrationTests.csproj" />
     <Project Path="tests/Pitchside.Engine.Tests/Pitchside.Engine.Tests.csproj" />
     <Project Path="tests/Pitchside.Moments.Tests/Pitchside.Moments.Tests.csproj" />
+    <Project Path="tests/Pitchside.Runtime.Tests/Pitchside.Runtime.Tests.csproj" />
     <Project Path="tests/Pitchside.Stats.Tests/Pitchside.Stats.Tests.csproj" />
   </Folder>
 </Solution>
