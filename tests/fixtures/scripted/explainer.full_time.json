@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "It finishes {{homeName}} [[match.score.home]], {{awayName}} [[match.score.away]]." },
+  { "text": "Expected goals ended [[home.xg]] to [[away.xg]], and possession [[home.possessionShare]] to [[away.possessionShare]]." }
+] }

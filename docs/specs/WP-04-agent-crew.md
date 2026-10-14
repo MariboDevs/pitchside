@@ -61,7 +61,7 @@ the heart of the Foundry story.
 
 ```
 Verdict { bool Passed; IReadOnlyList<Objection> Objections }
-Objection { string SentenceIndex; string Kind; string Detail }   // Kind: uncited_number, unknown_fact, wrong_scope, forbidden_content
+Objection { string SentenceIndex; string Kind; string Detail }   // Kind: uncited_number, uncited_sentence, unknown_fact, wrong_scope, forbidden_content
 ```
 
 ## Behaviour
@@ -84,8 +84,13 @@ Objection { string SentenceIndex; string Kind; string Detail }   // Kind: uncite
   3. Every player or club name must appear in the match document (`forbidden_content`).
   4. Every cited key must be in scope for the moment: `player.*` keys only for `playerIds` on the moment,
      side keys only for sides in the match (`wrong_scope`).
-  5. Forbidden vocabulary list (`prompts/forbidden.txt`): odds, bet, bookmaker, wager and any real club name
-     from a committed list (`forbidden_content`).
+  5. Forbidden vocabulary list (`prompts/forbidden.sha256`): the wagering vocabulary and real club and
+     competition names, committed only as SHA-256 hashes of the lower-cased words so the repository never holds
+     the words themselves (CLAUDE.md rules 1 and 2); every word of a sentence is hashed and looked up
+     (`forbidden_content`).
+  6. Every sentence carries at least one `[[key]]` token, so every sentence cites the facts it was written
+     from (`uncited_sentence`). A shirt number such as `#9` is allowed only when a player wearing it is named
+     in the same sentence, and a name is checked as a whole phrase, so words from two names do not make a third.
   Passed only when there are zero objections.
 - **WP04-R4 Agent fact-check.** With `Agents:Provider=Foundry`, a second pass asks a model whether each
   sentence is supported by the cited facts and the moment, answering JSON `{ supported: bool, reason }` per
@@ -119,12 +124,14 @@ Objection { string SentenceIndex; string Kind; string Detail }   // Kind: uncite
   `Checking/Verdict.cs`, `Checking/Objection.cs`, `Rendering/NarrativeRenderer.cs`,
   `Providers/IChatProvider.cs`, `Providers/ScriptedChatProvider.cs`, `Providers/FoundryChatProvider.cs`,
   `Prompts/PromptCatalog.cs` (loads `prompts/*.md` as embedded resources, exposes versions),
-  `prompts/explainer-v1.md`, `prompts/factcheck-v1.md`, `prompts/forbidden.txt`,
+  `prompts/explainer-v1.md`, `prompts/factcheck-v1.md`, `prompts/forbidden.sha256`,
   `prompts/templates/*.md` (one per moment type)
 - `src/Pitchside.Contracts/Narrative.cs`, `NarrativeSentence.cs`, `NarrativeProvenance.cs`,
   `NarrativeEvaluation.cs`; `schemas/narrative.schema.json`
 - Host: `src/Pitchside.Agents.Host/` (worker service with `AddServiceDefaults`, runs `MomentWorkflowRunner`
-  against the bus and store, separate container in WP-09); in local Aspire it is a project resource.
+  against the bus and store, separate container in WP-09). It joins the local Aspire AppHost as a project
+  resource once moments reach it over the WP-03 bus; until then a separate process would read an empty
+  in-memory sink, so the AppHost leaves it out and the crew runs in the API process.
 - `tests/Pitchside.Agents.Tests/`: `CodeFactCheckerTests` (one test per objection kind, plus a corpus of 30
   hand-written sentences with expected verdicts in `fixtures/checker-corpus.json`), `NarrativeRendererTests`,
   `TemplateTests` (every template verifies against the seed-7 moments), `WorkflowTests` with the scripted
@@ -139,6 +146,7 @@ Objection { string SentenceIndex; string Kind; string Detail }   // Kind: uncite
 | `Foundry:Endpoint` | | the Azure OpenAI or Foundry project endpoint |
 | `Foundry:Deployments:Fast` | | deployment name |
 | `Foundry:Deployments:Quality` | | deployment name |
+| `Foundry:TimeoutSeconds` | `4` | deadline for one model call; past it the attempt fails and retry or fallback follows |
 | `Agents:AgentFactCheck` | `true` | second-pass model check |
 
 ## Done when

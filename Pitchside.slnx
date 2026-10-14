@@ -4,12 +4,16 @@
     <Project Path="src/Pitchside.Engine/Pitchside.Engine.csproj" />
     <Project Path="src/Pitchside.Cli/Pitchside.Cli.csproj" />
     <Project Path="src/Pitchside.Moments/Pitchside.Moments.csproj" />
+    <Project Path="src/Pitchside.Runtime/Pitchside.Runtime.csproj" />
     <Project Path="src/Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
+    <Project Path="src/Pitchside.Agents.Host/Pitchside.Agents.Host.csproj" />
+    <Project Path="src/Pitchside.Agents/Pitchside.Agents.csproj" />
     <Project Path="src/Pitchside.Api/Pitchside.Api.csproj" />
     <Project Path="src/Pitchside.AppHost/Pitchside.AppHost.csproj" />
     <Project Path="src/Pitchside.Stats/Pitchside.Stats.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Pitchside.Agents.Tests/Pitchside.Agents.Tests.csproj" />
     <Project Path="tests/Pitchside.Engine.Tests/Pitchside.Engine.Tests.csproj" />
     <Project Path="tests/Pitchside.Moments.Tests/Pitchside.Moments.Tests.csproj" />
     <Project Path="tests/Pitchside.Stats.Tests/Pitchside.Stats.Tests.csproj" />

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Agents.Host</RootNamespace>
+    <UserSecretsId>pitchside-agents</UserSecretsId>
+    <Description>The agent crew's worker host: runs one Microsoft Agent Framework workflow per moment from the moment sink.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Agents/Pitchside.Agents.csproj" />
+    <ProjectReference Include="../Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "{{sideName}} are camped in the final third with [[{{side}}.shots]] shots and [[{{side}}.corners]] corners." },
+  { "text": "They have [[{{side}}.possessionShare]] of the possession." }
+] }
