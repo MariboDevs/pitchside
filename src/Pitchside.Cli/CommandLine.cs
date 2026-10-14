@@ -3,6 +3,7 @@ using System.Text.Json;
 using Pitchside.Contracts;
 using Pitchside.Engine;
 using Pitchside.Engine.Calibration;
+using Pitchside.Moments;
 using Pitchside.Stats;
 
 namespace Pitchside.Cli;
@@ -36,6 +37,8 @@ public static class CommandLine
                 return await CalibrateAsync(options, output, culture).ConfigureAwait(false);
             case "facts":
                 return await FactsAsync(options, output, culture).ConfigureAwait(false);
+            case "moments":
+                return await MomentsAsync(options, output, culture).ConfigureAwait(false);
             default:
                 await output.WriteLineAsync(Usage).ConfigureAwait(false);
                 return 1;
@@ -48,6 +51,7 @@ public static class CommandLine
           simulate  --seed <n> [--out <dir>]          write match.json and events.jsonl for one seeded match
           calibrate [--matches <n>] [--report <file>] simulate a sample and compare it to the real-league targets
           facts     --seed <n> [--at-seq <n>]          print the fact sheet as JSON, at full time or as of an event
+          moments   --seed <n>                         print every detected moment as JSON lines
         """;
 
     private static readonly JsonSerializerOptions Indented = new(ContractJson.Options) { WriteIndented = true };
@@ -97,6 +101,18 @@ public static class CommandLine
         }
 
         await output.WriteLineAsync(JsonSerializer.Serialize(engine.Snapshot(state), Indented)).ConfigureAwait(false);
+        return 0;
+    }
+
+    private static async Task<int> MomentsAsync(Dictionary<string, string> options, TextWriter output, IFormatProvider culture)
+    {
+        var seed = long.Parse(options.GetValueOrDefault("seed", "7"), culture);
+        var match = MatchSimulator.Simulate(seed);
+        foreach (var moment in MatchMoments.Detect(match.Document, match.Events))
+        {
+            await output.WriteLineAsync(JsonSerializer.Serialize(moment, ContractJson.Options)).ConfigureAwait(false);
+        }
+
         return 0;
     }
 

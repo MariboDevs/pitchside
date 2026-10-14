@@ -7,5 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="../Pitchside.Engine/Pitchside.Engine.csproj" />
     <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />
+    <ProjectReference Include="../Pitchside.Moments/Pitchside.Moments.csproj" />
   </ItemGroup>
 </Project>
