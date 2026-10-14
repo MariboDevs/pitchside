@@ -21,9 +21,14 @@ public sealed class FactValueJsonConverter : JsonConverter<FactValue>
         {
             writer.WriteNumberValue(number);
         }
+        else if (value.Text is { } text)
+        {
+            writer.WriteStringValue(text);
+        }
         else
         {
-            writer.WriteStringValue(value.Text);
+            // default(FactValue) holds neither; writing null would break the number-or-string contract.
+            throw new JsonException("A fact value must be a number or a string; default(FactValue) cannot be written.");
         }
     }
 }

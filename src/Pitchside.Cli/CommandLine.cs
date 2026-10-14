@@ -21,6 +21,13 @@ public static class CommandLine
         }
 
         var options = ParseOptions(args.Skip(1));
+        if (options.TryGetValue("seed", out var rawSeed) && (!long.TryParse(rawSeed, NumberStyles.None, culture, out var parsedSeed) || parsedSeed <= 0))
+        {
+            // Match ids are MER-{seed} and the contracts require a positive integer.
+            await output.WriteLineAsync($"--seed must be a positive whole number, not '{rawSeed}'.").ConfigureAwait(false);
+            return 1;
+        }
+
         switch (args[0])
         {
             case "simulate":
