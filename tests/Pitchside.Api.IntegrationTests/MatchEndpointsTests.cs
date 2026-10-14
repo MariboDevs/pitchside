@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Pitchside.Contracts;
 using Pitchside.Runtime.Replay;
 
@@ -22,9 +23,10 @@ public sealed class MatchEndpointsTests : IClassFixture<PitchsideApiFactory>, IA
         var response = await _client.PostAsJsonAsync("/api/v1/replays", new { seed = 7, speed = 0 });
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.Accepted, HttpStatusCode.Conflict);
         var deadline = DateTime.UtcNow.AddSeconds(15);
+        StoredMatch? match = null;
         while (DateTime.UtcNow < deadline)
         {
-            var match = await (await _client.GetAsync("/api/v1/matches/MER-7")).ReadAsync<StoredMatch>();
+            match = await (await _client.GetAsync("/api/v1/matches/MER-7")).ReadAsync<StoredMatch>();
             if (match.Status == MatchStatus.Completed)
             {
                 return;
@@ -33,7 +35,10 @@ public sealed class MatchEndpointsTests : IClassFixture<PitchsideApiFactory>, IA
             await Task.Delay(100);
         }
 
-        throw new TimeoutException("MER-7 did not complete.");
+        // Say where it stopped, so a failure on a loaded runner can be told apart from a stuck actor.
+        var replaying = _factory.Services.GetRequiredService<IReplayService>().Running;
+        throw new TimeoutException(
+            $"MER-7 did not complete: stored status {match?.Status}, last seq {match?.LastSeq}, replaying [{string.Join(", ", replaying)}].");
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
@@ -77,6 +82,22 @@ public sealed class MatchEndpointsTests : IClassFixture<PitchsideApiFactory>, IA
         (await _client.GetAsync("/api/v1/matches/MER-404/moments")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await _client.GetAsync("/api/v1/matches/MER-404/events")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await _client.GetAsync("/api/v1/matches/MER-404/facts")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Theory]
+    [InlineData("forged\r\nINFO: admin signed in")]
+    [InlineData("trailing-newline\n")]
+    [InlineData("has spaces")]
+    [InlineData("a-very-long-id-0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890")]
+    public async Task A_request_id_that_is_not_a_plain_token_is_replaced(string given)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/clubs");
+        request.Headers.TryAddWithoutValidation("X-Request-ID", given);
+        var response = await _client.SendAsync(request);
+
+        var returned = response.Headers.GetValues("X-Request-ID").Single();
+        returned.ShouldNotBe(given);
+        returned.Length.ShouldBe(32);
     }
 
     [Fact]
