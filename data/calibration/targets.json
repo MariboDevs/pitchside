@@ -41,7 +41,10 @@
       "5": 0.091,
       "6": 0.036,
       "7": 0.017
-    }
+    },
+    "pass_completion": 0.82,
+    "penalties_per_match": 0.25,
+    "_note": "pass_completion and penalties_per_match are literature values for top-flight football; football-data.co.uk does not carry passes or penalties"
   },
   "top5_2015_2025": {
     "matches": 20013,
@@ -79,7 +82,10 @@
       "5": 0.086,
       "6": 0.04,
       "7": 0.017
-    }
+    },
+    "pass_completion": 0.82,
+    "penalties_per_match": 0.25,
+    "_note": "pass_completion and penalties_per_match are literature values for top-flight football; football-data.co.uk does not carry passes or penalties"
   },
   "E0_all": {
     "matches": 9930,
@@ -117,7 +123,10 @@
       "5": 0.081,
       "6": 0.033,
       "7": 0.015
-    }
+    },
+    "pass_completion": 0.82,
+    "penalties_per_match": 0.25,
+    "_note": "pass_completion and penalties_per_match are literature values for top-flight football; football-data.co.uk does not carry passes or penalties"
   },
   "all": {
     "matches": 262824,
@@ -155,6 +164,9 @@
       "5": 0.077,
       "6": 0.035,
       "7": 0.013
-    }
+    },
+    "pass_completion": 0.82,
+    "penalties_per_match": 0.25,
+    "_note": "pass_completion and penalties_per_match are literature values for top-flight football; football-data.co.uk does not carry passes or penalties"
   }
 }

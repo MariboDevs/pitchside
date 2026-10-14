@@ -15,7 +15,7 @@
     "wallTimeUtc": { "type": "string", "format": "date-time" },
     "type": {
       "type": "string",
-      "enum": ["kick_off", "pass", "carry", "shot", "goal", "turnover", "out_of_play", "corner", "foul", "card", "substitution", "pressure", "half_end", "full_time"]
+      "enum": ["kick_off", "pass", "carry", "shot", "goal", "turnover", "out_of_play", "corner", "foul", "card", "substitution", "pressure", "half_end", "full_time", "tracking"]
     },
     "teamId": { "type": "string" },
     "playerId": { "type": ["string", "null"] },
@@ -35,6 +35,7 @@
     "shotSpeedKph": { "type": "number", "minimum": 0 },
     "bodyPart": { "type": "string", "enum": ["right_foot", "left_foot", "head", "other"] },
     "assistId": { "type": "string" },
+    "penalty": { "type": "boolean" },
     "homeScore": { "type": "integer", "minimum": 0 },
     "awayScore": { "type": "integer", "minimum": 0 },
 
@@ -46,9 +47,21 @@
     "secondYellow": { "type": "boolean" },
     "playerOffId": { "type": "string" },
     "playerOnId": { "type": "string" },
-    "intensity": { "type": "number", "minimum": 0, "maximum": 1 }
+    "intensity": { "type": "number", "minimum": 0, "maximum": 1 },
+
+    "tracking": { "type": "array", "items": { "$ref": "#/$defs/trackingEntry" } }
   },
   "$defs": {
+    "trackingEntry": {
+      "type": "object",
+      "required": ["playerId", "distanceM", "topSpeedKph"],
+      "additionalProperties": false,
+      "properties": {
+        "playerId": { "type": "string" },
+        "distanceM": { "type": "number", "minimum": 0 },
+        "topSpeedKph": { "type": "number", "minimum": 0, "maximum": 45 }
+      }
+    },
     "location": {
       "type": "object",
       "required": ["x", "y"],

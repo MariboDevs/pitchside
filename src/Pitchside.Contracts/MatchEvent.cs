@@ -45,6 +45,8 @@ public sealed record MatchEvent
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AssistId { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Penalty { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? HomeScore { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? AwayScore { get; init; }
@@ -68,4 +70,8 @@ public sealed record MatchEvent
     public string? PlayerOnId { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? Intensity { get; init; }
+
+    // Tracking
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<TrackingEntry>? Tracking { get; init; }
 }

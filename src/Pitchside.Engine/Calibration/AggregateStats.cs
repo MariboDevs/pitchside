@@ -31,6 +31,7 @@ public sealed class AggregateStats
         double homeGoals = 0, awayGoals = 0, homeWins = 0, draws = 0, awayWins = 0, over25 = 0, btts = 0, goalless = 0;
         double firstHalfGoals = 0, totalGoals = 0;
         double homeShots = 0, awayShots = 0, homeSot = 0, awaySot = 0, homeCorners = 0, awayCorners = 0;
+        double passes = 0, passesCompleted = 0, penalties = 0;
         double homeFouls = 0, awayFouls = 0, homeYellows = 0, awayYellows = 0, homeReds = 0, awayReds = 0;
 
         foreach (var match in matches)
@@ -81,8 +82,21 @@ public sealed class AggregateStats
                         }
 
                         break;
+                    case EventType.Pass:
+                        passes++;
+                        if (e.Completed == true)
+                        {
+                            passesCompleted++;
+                        }
+
+                        break;
                     case EventType.Shot:
                         Add(ref homeShots, ref awayShots, home);
+                        if (e.Penalty == true)
+                        {
+                            penalties++;
+                        }
+
                         if (e.OnTarget == true)
                         {
                             Add(ref homeSot, ref awaySot, home);
@@ -142,6 +156,8 @@ public sealed class AggregateStats
             ["away_yellows"] = awayYellows / n,
             ["home_reds"] = homeReds / n,
             ["away_reds"] = awayReds / n,
+            ["pass_completion"] = passes == 0 ? 0 : passesCompleted / passes,
+            ["penalties_per_match"] = penalties / n,
         };
         return new AggregateStats(matches.Count, values);
     }

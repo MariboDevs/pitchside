@@ -18,12 +18,14 @@ public sealed class MatchSimulator
     private readonly SideState _home;
     private readonly SideState _away;
     private readonly MatchDocument _document;
+    private readonly TrackingModel _tracking;
 
     private int _seq;
     private int _period;
     private int _clockMs;
     private int _possessionId;
     private int _wallOffsetMs;
+    private int _nextTrackingMs;
     private readonly double _tempo;
     private readonly double _homeForm;
     private readonly double _awayForm;
@@ -46,6 +48,7 @@ public sealed class MatchSimulator
             awaySheet);
         _home = new SideState(home, homeSheet, true, _rng);
         _away = new SideState(away, awaySheet, false, _rng);
+        _tracking = new TrackingModel(seed);
         // Matches differ in tempo: a log-normal multiplier with mean 1 on both sides' shot rates gives the
         // real spread of goalless and high-scoring games that fixed rates cannot produce.
         _tempo = Math.Exp(_rng.Gaussian(-0.5 * options.TempoSpread * options.TempoSpread, options.TempoSpread));
@@ -90,11 +93,22 @@ public sealed class MatchSimulator
         var endMs = HalfLengthMs + stoppageMs;
         var inPossession = kicksOff;
         var start = new PossessionStart(Centre(), PossessionKind.KickOff);
+        _nextTrackingMs = 60_000;
+        _tracking.StartInterval(_home.OnPitch.Concat(_away.OnPitch), 0);
         Emit(EventType.KickOff, inPossession, OutfieldPlayer(inPossession, Position.Midfielder), Centre());
         _clockMs += 1000;
 
         while (_clockMs < endMs)
         {
+            // Tracking ticks fall at the first possession boundary after each minute rolls over, home side first,
+            // at the same point of the loop on every run so the engine stays deterministic.
+            if (_clockMs >= _nextTrackingMs)
+            {
+                EmitTracking(_home);
+                EmitTracking(_away);
+                _nextTrackingMs = ((_clockMs / 60_000) + 1) * 60_000;
+            }
+
             ApplySubstitutions(_home);
             ApplySubstitutions(_away);
             var result = PlayPossession(inPossession, Opponent(inPossession), start);
@@ -108,6 +122,11 @@ public sealed class MatchSimulator
     private PossessionResult PlayPossession(SideState team, SideState opponent, PossessionStart start)
     {
         _possessionId++;
+        if (start.Kind == PossessionKind.Penalty)
+        {
+            return ResolvePenalty(team, opponent);
+        }
+
         var location = start.Location;
         var passes = _rng.GeometricAtLeastOne(_options.MeanPasses);
         var shotRate = start.Kind == PossessionKind.Corner ? _options.CornerShotRate : ShotRate(team, opponent);
@@ -142,8 +161,10 @@ public sealed class MatchSimulator
                 var carryEnd = PassModel.SampleEnd(_rng, location, forward: true);
                 var carryLength = location.DistanceTo(carryEnd);
                 var durationS = Math.Max(1.0, carryLength / _rng.Range(3.5, 8.5));
+                var carrySpeed = Math.Round(carryLength / durationS * 3.6, 1);
                 Emit(EventType.Carry, team, carrier, location,
-                    endLocation: carryEnd, lengthM: Math.Round(carryLength, 1), speedKph: Math.Round(carryLength / durationS * 3.6, 1));
+                    endLocation: carryEnd, lengthM: Math.Round(carryLength, 1), speedKph: carrySpeed);
+                _tracking.Carry(carrier, carryLength, carrySpeed);
                 _clockMs += (int)(durationS * 1000);
                 location = carryEnd;
                 continue;
@@ -152,6 +173,17 @@ public sealed class MatchSimulator
             var end = PassModel.SampleEnd(_rng, location, forward: _rng.Chance(0.72));
             var receiver = OutfieldPlayer(team, PreferredPosition(end), exclude: carrier);
             var difficulty = PassModel.Difficulty(location, end);
+            if (_rng.Chance(difficulty * _options.PassFailureScale))
+            {
+                // An incomplete pass is cut out where it was aimed and the opponent restarts from there.
+                Emit(EventType.Pass, team, carrier, location,
+                    endLocation: end, lengthM: Math.Round(location.DistanceTo(end), 1), difficulty: difficulty, completed: false);
+                _clockMs += (int)_rng.Range(1500, 4000);
+                Emit(EventType.Turnover, team, carrier, end, reason: TurnoverReason.Interception);
+                _clockMs += 2000;
+                return new PossessionResult(opponent, new PossessionStart(Mirror(end), PossessionKind.OpenPlay));
+            }
+
             Emit(EventType.Pass, team, carrier, location,
                 endLocation: end, lengthM: Math.Round(location.DistanceTo(end), 1), difficulty: difficulty, completed: true, receiverId: receiver);
             _clockMs += (int)_rng.Range(2500, 6500);
@@ -165,7 +197,8 @@ public sealed class MatchSimulator
             return ResolveShot(team, opponent, carrier, lastPasser);
         }
 
-        if (_rng.Chance(_options.FoulRate))
+        var foulRate = location.X > 88 ? _options.FoulRate * _options.BoxFoulFactor : _options.FoulRate;
+        if (_rng.Chance(foulRate))
         {
             return ResolveFoul(team, opponent, carrier, location);
         }
@@ -201,13 +234,31 @@ public sealed class MatchSimulator
         }
 
         var xg = Math.Round(ShotModel.SampleXg(_rng, out var location), 3);
-        var outcome = ShotModel.ResolveOutcome(_rng, xg);
         var bodyPart = ShotModel.SampleBodyPart(_rng);
+        return FinishShot(team, opponent, shooterId, lastPasser, location, xg, bodyPart, penalty: false);
+    }
+
+    /// <summary>A penalty is a possession of one event: a shot from the spot by the side's designated taker.</summary>
+    private PossessionResult ResolvePenalty(SideState team, SideState opponent)
+    {
+        var outfield = team.OnPitch.Where(p => p.Position != Position.Goalkeeper).ToList();
+        var forwards = outfield.Where(p => p.Position == Position.Forward).ToList();
+        var pool = forwards.Count > 0 ? forwards : outfield.Count > 0 ? outfield : [.. team.OnPitch];
+        var taker = pool.MaxBy(p => p.ShirtNumber)!.Id;
+        var bodyPart = _rng.Chance(0.75) ? BodyPart.RightFoot : BodyPart.LeftFoot;
+        _clockMs += 30_000;
+        return FinishShot(team, opponent, taker, null, ShotModel.PenaltySpot, ShotModel.PenaltyXg, bodyPart, penalty: true);
+    }
+
+    private PossessionResult FinishShot(
+        SideState team, SideState opponent, string shooterId, string? lastPasser, Location location, double xg, BodyPart bodyPart, bool penalty)
+    {
+        var outcome = ShotModel.ResolveOutcome(_rng, xg);
         var onTarget = outcome is ShotOutcome.Goal or ShotOutcome.Saved;
         _clockMs += 1500;
         Emit(EventType.Shot, team, shooterId, location,
             xg: xg, onTarget: onTarget, outcome: outcome, shotSpeedKph: ShotModel.SampleShotSpeedKph(_rng, bodyPart),
-            bodyPart: bodyPart, assistId: outcome == ShotOutcome.Goal ? lastPasser : null);
+            bodyPart: bodyPart, assistId: outcome == ShotOutcome.Goal ? lastPasser : null, penalty: penalty ? true : null);
         team.Shots++;
         if (onTarget)
         {
@@ -288,14 +339,25 @@ public sealed class MatchSimulator
             Emit(EventType.Card, opponent, fouler, Mirror(location), colour: CardColour.Red, secondYellow: false);
         }
 
+        if (location.X > 88 && _rng.Chance(_options.PenaltyPerBoxFoul))
+        {
+            return new PossessionResult(team, new PossessionStart(ShotModel.PenaltySpot, PossessionKind.Penalty));
+        }
+
         return new PossessionResult(team, new PossessionStart(location, PossessionKind.OpenPlay));
+    }
+
+    private void EmitTracking(SideState side)
+    {
+        var entries = _tracking.Tick(side.OnPitch, _clockMs);
+        Emit(EventType.Tracking, side, null, Centre(), tracking: entries);
     }
 
     private PossessionResult ResolveOutOfPlay(SideState team, SideState opponent, string carrier, Location location)
     {
         _clockMs += 12_000;
         // Sides that attack more win more corners: scale the corner chance by attacking pressure.
-        var cornerChance = 0.26 * ShotRate(team, opponent) / 0.085;
+        var cornerChance = 0.29 * ShotRate(team, opponent) / 0.085;
         if (location.X > 70 && _rng.Chance(cornerChance))
         {
             Emit(EventType.OutOfPlay, opponent, null, new Location(104.5, location.Y), restart: Restart.Corner);
@@ -338,6 +400,7 @@ public sealed class MatchSimulator
             }
 
             side.CompleteSubstitution(off, on);
+            _tracking.PlayerOn(on, _clockMs);
             Emit(EventType.Substitution, side, on, new Location(52.5, 0.5), playerOffId: off, playerOnId: on);
         }
     }
@@ -406,6 +469,7 @@ public sealed class MatchSimulator
         double? shotSpeedKph = null,
         BodyPart? bodyPart = null,
         string? assistId = null,
+        bool? penalty = null,
         int? homeScore = null,
         int? awayScore = null,
         TurnoverReason? reason = null,
@@ -416,7 +480,8 @@ public sealed class MatchSimulator
         bool? secondYellow = null,
         string? playerOffId = null,
         string? playerOnId = null,
-        double? intensity = null)
+        double? intensity = null,
+        IReadOnlyList<TrackingEntry>? tracking = null)
     {
         _seq++;
         var elapsed = TimeSpan.FromMilliseconds(_wallOffsetMs + _clockMs);
@@ -445,6 +510,7 @@ public sealed class MatchSimulator
             ShotSpeedKph = shotSpeedKph,
             BodyPart = bodyPart,
             AssistId = assistId,
+            Penalty = penalty,
             HomeScore = homeScore,
             AwayScore = awayScore,
             Reason = reason,
@@ -456,6 +522,7 @@ public sealed class MatchSimulator
             PlayerOffId = playerOffId,
             PlayerOnId = playerOnId,
             Intensity = intensity,
+            Tracking = tracking,
         });
     }
 }
