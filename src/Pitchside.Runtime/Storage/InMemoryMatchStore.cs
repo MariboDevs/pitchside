@@ -30,7 +30,7 @@ public sealed class InMemoryMatchStore : IMatchStore
         _matches.AddOrUpdate(
             matchId,
             _ => throw new KeyNotFoundException($"No match '{matchId}'."),
-            (_, current) => current with { Status = status, LastSeq = Math.Max(current.LastSeq, lastSeq) });
+            (_, current) => current with { Status = MatchStatusTransition.Resolve(current.Status, status), LastSeq = Math.Max(current.LastSeq, lastSeq) });
         return Task.CompletedTask;
     }
 
