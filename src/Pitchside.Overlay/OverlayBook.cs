@@ -35,21 +35,29 @@ public sealed class OverlayBook
     public bool IsLoaded(string matchId) => Match(matchId).Loaded;
 
     /// <summary>
-    /// Restores a match's timeline from storage after a restart. Entries already in the book win, since they are newer;
-    /// a loaded card's deadline is taken from its first start.
+    /// Restores a match's timeline from storage after a restart. Entries already in the book win, since they are newer.
+    /// A restored card's deadline comes from its moment, never from its stored start, which may have moved; a card
+    /// stored as scheduled past that deadline can only have been aired by the producer, so it keeps that override.
     /// </summary>
-    public void Load(string matchId, IReadOnlyList<OverlayEntry> stored)
+    public void Load(string matchId, IReadOnlyList<OverlayEntry> stored, IReadOnlyList<Moment> moments)
     {
         ArgumentNullException.ThrowIfNull(stored);
+        ArgumentNullException.ThrowIfNull(moments);
+        var byId = moments.ToDictionary(m => m.Id, StringComparer.Ordinal);
         var match = Match(matchId);
         lock (match)
         {
             foreach (var entry in stored)
             {
-                if (match.Entries.TryAdd(entry.Id, entry))
+                if (!match.Entries.TryAdd(entry.Id, entry))
                 {
-                    match.Deadlines.TryAdd(entry.Id, entry.InAtMs - OverlayScheduler.LeadMs + OverlayScheduler.MaxDelayMs);
+                    continue;
                 }
+
+                var deadline = byId.TryGetValue(entry.MomentId, out var moment)
+                    ? OverlayScheduler.DeadlineFor(moment)
+                    : entry.InAtMs - OverlayScheduler.LeadMs + OverlayScheduler.MaxDelayMs;
+                match.Deadlines.TryAdd(entry.Id, entry.State == OverlayState.Scheduled && entry.InAtMs > deadline ? int.MaxValue : deadline);
             }
 
             match.Loaded = true;
@@ -98,7 +106,7 @@ public sealed class OverlayBook
     /// <summary>
     /// Releases a held card through the same placement as a new one: from its own slot if that is still ahead,
     /// otherwise from the given clock, queuing behind or pre-empting what is on the line. The producer chose to air
-    /// it, so it does not expire. Returns every entry written, the released card last, or nothing if it was not held.
+    /// it, so it never expires, however often a later card moves it. Returns every entry written, the released card last, or nothing if it was not held.
     /// </summary>
     public IReadOnlyList<OverlayEntry> Air(string matchId, string entryId, int period, int clockMs)
     {
@@ -113,6 +121,7 @@ public sealed class OverlayBook
             var length = entry.OutAtMs - entry.InAtMs;
             var start = entry.Period == period && entry.InAtMs > clockMs ? entry.InAtMs : clockMs + OverlayScheduler.LeadMs;
             var candidate = entry with { State = OverlayState.Scheduled, Period = period, InAtMs = start, OutAtMs = start + length };
+            match.Deadlines[entryId] = int.MaxValue;
             var changed = OverlayScheduler.Place([.. match.Entries.Values], candidate, int.MaxValue, match.Deadlines);
             foreach (var written in changed)
             {

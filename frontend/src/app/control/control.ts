@@ -69,6 +69,8 @@ export class Control implements OnInit {
   /** Cited events that are no longer in the live feed, fetched when a moment is inspected. */
   protected readonly evidence = signal<ReadonlyMap<string, MatchEvent>>(new Map());
   private readonly loadingSheets = new Set<number>();
+  /** Moments whose cited events have been gathered into the evidence cache, or are being. */
+  private readonly evidenceFor = new Set<string>();
   protected readonly error = signal<string | null>(null);
 
   private readonly names = computed(() => {
@@ -188,11 +190,22 @@ export class Control implements OnInit {
   });
 
   constructor() {
-    // The selected moment is expanded, the first one included, so its sheet and evidence load as soon as it exists.
+    // The selected moment is expanded, the first one included, so its sheet loads as soon as it exists.
     effect(() => {
       const moment = this.current();
       if (moment && !this.sheets().has(moment.factSheetSeq)) {
         untracked(() => void this.loadSheet(moment));
+      }
+    });
+
+    // Its cited events need both the sheet and the narrative, which can arrive in either order on a live match.
+    effect(() => {
+      const moment = this.current();
+      const sheet = moment ? this.sheets().get(moment.factSheetSeq) : undefined;
+      const narrative = moment ? this.narrativeOf(moment) : undefined;
+      if (moment && sheet && narrative && !this.evidenceFor.has(moment.id)) {
+        this.evidenceFor.add(moment.id);
+        untracked(() => void this.loadEvidence(moment, sheet));
       }
     });
   }
@@ -214,7 +227,6 @@ export class Control implements OnInit {
     try {
       const sheet = await this.api.factsAt(this.matchId(), moment.factSheetSeq);
       this.sheets.update((all) => new Map(all).set(moment.factSheetSeq, sheet));
-      await this.loadEvidence(moment, sheet);
     } catch (error) {
       this.error.set(toApiError(error));
     } finally {
@@ -222,15 +234,22 @@ export class Control implements OnInit {
     }
   }
 
-  /** Fetches the events the moment's narrative cites that the session no longer holds. */
+  /**
+   * Gathers the events the moment's narrative cites into the evidence cache: those the session still holds are kept
+   * from it, so they survive its buffer and a filtered or trimmed feed, and the rest are fetched in one range.
+   */
   private async loadEvidence(moment: Moment, sheet: FactSheet): Promise<void> {
     const narrative = this.narrativeOf(moment);
     const keys = new Set(narrative?.sentences.flatMap((s) => s.citations) ?? []);
-    const held = new Set([...this.session.events().map((e) => e.id), ...this.evidence().keys()]);
-    const missing = sheet.facts
-      .filter((f) => keys.has(f.key))
-      .flatMap((f) => f.derivedFrom)
-      .filter((id) => !held.has(id));
+    const cited = new Set(sheet.facts.filter((f) => keys.has(f.key)).flatMap((f) => f.derivedFrom));
+    const held = this.session.events().filter((e) => cited.has(e.id));
+    this.evidence.update((all) => {
+      const next = new Map(all);
+      held.forEach((e) => next.set(e.id, e));
+      return next;
+    });
+
+    const missing = [...cited].filter((id) => !this.evidence().has(id));
     const seqs = missing
       .map((id) => Number(id.slice(id.lastIndexOf('-') + 1)))
       .filter((n) => n > 0);
@@ -239,12 +258,17 @@ export class Control implements OnInit {
     }
 
     const wanted = new Set(missing);
-    const events = await this.api.events(this.matchId(), Math.min(...seqs), Math.max(...seqs));
-    this.evidence.update((all) => {
-      const next = new Map(all);
-      events.filter((e) => wanted.has(e.id)).forEach((e) => next.set(e.id, e));
-      return next;
-    });
+    try {
+      const events = await this.api.events(this.matchId(), Math.min(...seqs), Math.max(...seqs));
+      this.evidence.update((all) => {
+        const next = new Map(all);
+        events.filter((e) => wanted.has(e.id)).forEach((e) => next.set(e.id, e));
+        return next;
+      });
+    } catch (error) {
+      this.evidenceFor.delete(moment.id);
+      this.error.set(toApiError(error));
+    }
   }
 
   protected async hold(moment: Moment | undefined): Promise<void> {
