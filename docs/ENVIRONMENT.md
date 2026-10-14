@@ -141,7 +141,7 @@ is the dev capacity until then.
 | Code scanning default setup (CodeQL) | enabled, default query suite, languages auto-detected: C# and GitHub Actions today; JavaScript/TypeScript is added automatically when the Angular app lands |
 | Environment `dev` | created |
 | Collaborators | not added in Phase 0, by decision on 8 October |
-| Copilot | organisation plan is Copilot Business, seat management "assign selected", 0 seats assigned, coding agent and code review therefore unusable until a seat is assigned |
+| Copilot | organisation plan is Copilot Business, seat management "assign selected"; one seat assigned to siphomaribo on 14 October. Verified on throwaway pull request #4: Copilot was auto-requested and reviewed within 75 seconds under the ruleset |
 
 ## Local toolchain (Sipho's machine, WSL2)
 
@@ -170,12 +170,7 @@ commits only this file.
 
 1. **Foundry quota.** Resolved on 14 October; both GPT-6 deployments exist. Nothing to do.
 2. **Fabric.** Resolved on 14 October; trial capacity and `pitchside-dev` workspace exist. Nothing to do.
-3. **Copilot seat.** Assign a Copilot Business seat to siphomaribo in the organisation (Settings, Copilot,
-   Access) so that automatic code review and the coding agent work; the ruleset rule is already in place.
-   Then in Settings, Copilot, Policies confirm "Copilot code review" and "Copilot coding agent" are enabled.
-   Verification pull request #2 (8 October, closed unmerged) ran CI and CodeQL successfully under the
-   ruleset, but no Copilot review was requested, which is the expected result with no seat assigned.
-   Open another throwaway pull request after the seat is assigned to confirm.
+3. **Copilot seat.** Resolved on 14 October; seat assigned and automatic review verified on pull request #4. Confirm once in Settings, Copilot, Policies that "Copilot coding agent" is enabled before WP-11 relies on it.
 4. **Team identities.** Invite Pretty Kunene and Hlumela Tshazibana as guests in the Entra tenant and add
    them as GitHub collaborators when the team decides to; then grant Cognitive Services OpenAI User on
    `ais-pitchside-dev`.
