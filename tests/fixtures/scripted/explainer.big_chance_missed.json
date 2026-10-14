@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "{{player0Name}} should have scored: {{sideName}} have now made [[{{side}}.bigChances]] big chances." },
+  { "text": "Their expected goals reach [[{{side}}.xg]] with the score still [[match.score.home]]-[[match.score.away]]." }
+] }

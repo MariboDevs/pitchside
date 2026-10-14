@@ -1,0 +1,1 @@
+{ "sentences": [ { "text": "{{homeName}} [[match.score.home]], {{awayName}} [[match.score.away]] at minute [[match.clock.minute]]." } ] }

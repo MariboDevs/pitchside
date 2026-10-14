@@ -51,6 +51,7 @@ public static class Extensions
                 .AddRuntimeInstrumentation())
             .WithTracing(tracing => tracing
                 .AddSource(builder.Environment.ApplicationName)
+                .AddSource("Pitchside.*")
                 .AddAspNetCoreInstrumentation(options =>
                     options.Filter = context => !context.Request.Path.StartsWithSegments(HealthEndpointPath, StringComparison.Ordinal)
                                              && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath, StringComparison.Ordinal))

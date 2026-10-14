@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "At the break it is {{homeName}} [[match.score.home]], {{awayName}} [[match.score.away]]." },
+  { "text": "The chances say [[home.xg]] to [[away.xg]] in expected goals, from [[home.shots]] and [[away.shots]] shots." }
+] }

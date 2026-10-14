@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Agents</RootNamespace>
+    <Description>The agent crew: explainer, fact-checker, persona writer and translator as a Microsoft Agent Framework workflow per moment, with a scripted provider for offline runs.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Contracts/Pitchside.Contracts.csproj" />
+    <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />
+    <ProjectReference Include="../Pitchside.Moments/Pitchside.Moments.csproj" />
+    <ProjectReference Include="../Pitchside.Runtime/Pitchside.Runtime.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="prompts/*.md;prompts/*.txt" LogicalName="Pitchside.Agents.prompts.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="prompts/templates/*.md" LogicalName="Pitchside.Agents.prompts.templates.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../tests/fixtures/scripted/*.json" LogicalName="Pitchside.Agents.scripted.%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

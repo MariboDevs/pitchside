@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "{{sideName}} have taken over: [[match.momentum.{{side}}]] of the momentum over the last five minutes." },
+  { "text": "They have [[{{side}}.shots]] shots and [[{{side}}.finalThirdEntries]] entries into the final third so far." }
+] }

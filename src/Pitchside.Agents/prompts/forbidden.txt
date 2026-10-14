@@ -1,0 +1,26 @@
+# Words that may never appear in a narrative, matched as whole words in any case.
+# The list is the checker's backstop for rule 2 and rule 1 of CLAUDE.md.
+odds
+bet
+bets
+betting
+bettor
+bookmaker
+bookmakers
+bookie
+bookies
+wager
+wagers
+wagering
+gamble
+gambling
+Premier
+Arsenal
+Chelsea
+Liverpool
+Manchester
+Tottenham
+Everton
+Newcastle
+Villa
+Leeds
