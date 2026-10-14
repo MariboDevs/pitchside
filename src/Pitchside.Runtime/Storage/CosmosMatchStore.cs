@@ -52,7 +52,7 @@ public sealed class CosmosMatchStore(CosmosClient client, string databaseName) :
     {
         var current = await GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"No match '{matchId}'.");
-        await SaveMatchAsync(current with { Status = status, LastSeq = Math.Max(current.LastSeq, lastSeq) }, cancellationToken).ConfigureAwait(false);
+        await SaveMatchAsync(current with { Status = MatchStatusTransition.Resolve(current.Status, status), LastSeq = Math.Max(current.LastSeq, lastSeq) }, cancellationToken).ConfigureAwait(false);
     }
 
     public Task AppendEventAsync(MatchEvent matchEvent, CancellationToken cancellationToken)

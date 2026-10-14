@@ -23,6 +23,20 @@ public sealed class InMemoryMatchStoreTests
         (await _store.GetMatchAsync("MER-8", None)).ShouldBeNull();
     }
 
+    [Theory]
+    [InlineData(MatchStatus.Stopped)]
+    [InlineData(MatchStatus.Completed)]
+    public async Task A_late_live_write_does_not_undo_a_finished_status(MatchStatus finished)
+    {
+        await _store.SaveMatchAsync(Sample.Stored, None);
+        await _store.UpdateMatchStatusAsync("MER-7", finished, 40, None);
+        await _store.UpdateMatchStatusAsync("MER-7", MatchStatus.Live, 60, None);
+
+        var match = (await _store.GetMatchAsync("MER-7", None))!;
+        match.Status.ShouldBe(finished);
+        match.LastSeq.ShouldBe(60);
+    }
+
     [Fact]
     public async Task Events_are_read_back_by_range_in_order()
     {
