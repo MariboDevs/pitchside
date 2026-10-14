@@ -13,4 +13,10 @@ public interface IReplayService
     bool Resume(string matchId);
 
     IReadOnlyCollection<string> Running { get; }
+
+    /// <summary>
+    /// Whether this process replayed the match as fast as possible (speed 0), so its clock runs far ahead of real time;
+    /// still true after its events are all published, while its actor works through them.
+    /// </summary>
+    bool IsInstant(string matchId);
 }

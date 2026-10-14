@@ -6,9 +6,9 @@ namespace Pitchside.Overlay;
 /// <summary>
 /// Places a lower third on the timeline. It shows for 6 s plus 0.25 s per word, capped at 12 s, from 2 s after its
 /// narrative is ready. One lower third at a time: a higher priority pre-empts the card on screen (its out time is cut
-/// and the new card starts after the exit animation, pushing queued cards back), a lower or equal priority queues
-/// behind the last card with the exit gap, and a card that would start more than 45 s after its moment expires,
-/// however often it is moved. Pure and deterministic.
+/// and the new card starts after the exit animation, pushing queued cards back), a lower or equal priority takes the
+/// first gap at or after its start that fits it with the exit gap, and a card that would start more than 45 s after
+/// its moment expires, however often it is moved. Pure and deterministic.
 /// </summary>
 public static class OverlayScheduler
 {
@@ -76,8 +76,9 @@ public static class OverlayScheduler
     /// <summary>
     /// Puts a card on the line from its <c>InAtMs</c>. A higher priority than the card on screen pre-empts it: that
     /// card's out time is cut, this one starts after the exit, and queued cards move back, expiring past their own
-    /// deadline. Otherwise the card queues after the last one, always leaving the exit animation's gap. A card that
-    /// would start after <paramref name="deadline"/> expires.
+    /// deadline. Otherwise the card takes the first gap from its start that fits it, always leaving the exit
+    /// animation's gap. A card that would start after <paramref name="deadline"/> expires, and an overdue card never
+    /// pre-empts: it moves nothing.
     /// </summary>
     public static IReadOnlyList<OverlayEntry> Place(
         IReadOnlyList<OverlayEntry> existing, OverlayEntry candidate, int deadline, IReadOnlyDictionary<string, int> deadlines)
@@ -96,7 +97,7 @@ public static class OverlayScheduler
         var onScreen = line.FirstOrDefault(e => e.InAtMs <= desired && desired < e.OutAtMs);
 
         int inAt;
-        if (onScreen is not null && candidate.Priority > onScreen.Priority)
+        if (onScreen is not null && candidate.Priority > onScreen.Priority && desired + ExitMs <= deadline)
         {
             changed.Add(onScreen with { OutAtMs = desired });
             inAt = desired + ExitMs;
@@ -122,7 +123,7 @@ public static class OverlayScheduler
         }
         else
         {
-            inAt = line.Count == 0 ? desired : Math.Max(desired, line.Max(e => e.OutAtMs) + ExitMs);
+            inAt = FirstFit(line, desired, duration);
         }
 
         changed.Add(candidate with
@@ -132,6 +133,32 @@ public static class OverlayScheduler
             State = inAt > deadline ? OverlayState.Expired : OverlayState.Scheduled,
         });
         return changed;
+    }
+
+    /// <summary>
+    /// The earliest start at or after <paramref name="desired"/> where the card fits between the cards on the line,
+    /// with the exit gap on both sides. Narratives finish out of order, so a card can arrive after a later moment's
+    /// card is already placed; it takes the free gap at its own moment rather than queuing behind the whole period.
+    /// </summary>
+    private static int FirstFit(List<OverlayEntry> line, int desired, int duration)
+    {
+        var start = desired;
+        foreach (var placed in line)
+        {
+            if (placed.OutAtMs + ExitMs <= start)
+            {
+                continue;
+            }
+
+            if (start + duration + ExitMs <= placed.InAtMs)
+            {
+                break;
+            }
+
+            start = Math.Max(start, placed.OutAtMs + ExitMs);
+        }
+
+        return start;
     }
 
     /// <summary>6 s plus 0.25 s per word of the rendered text, capped at 12 s.</summary>

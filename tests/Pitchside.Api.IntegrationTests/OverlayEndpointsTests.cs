@@ -46,8 +46,10 @@ public sealed class OverlayEndpointsTests : IClassFixture<PitchsideApiFactory>, 
             }
         }
 
-        // The match is over, so every scheduled card reads as aired.
+        // The match is over, so every scheduled card reads as aired. An instant replay is laid out from its moments,
+        // not from the clock its narratives were ready at, which is long past them, so none expires.
         entries.ShouldNotContain(e => e.State == OverlayState.Scheduled);
+        entries.ShouldNotContain(e => e.State == OverlayState.Expired);
         (await (await _client.GetAsync("/api/v1/matches/MER-7/overlay?fromMs=2700000")).ReadAsync<List<OverlayEntry>>()).Count.ShouldBeLessThan(entries.Count);
     }
 
