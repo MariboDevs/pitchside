@@ -7,7 +7,7 @@
   "required": ["schemaVersion", "matchId", "seed", "competition", "venue", "kickoffUtc", "home", "away"],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "type": "string", "const": "0.1" },
+    "schemaVersion": { "type": "string", "const": "0.2" },
     "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
     "seed": { "type": "integer" },
     "competition": { "type": "string" },
@@ -31,13 +31,14 @@
     },
     "player": {
       "type": "object",
-      "required": ["id", "name", "shirtNumber", "position"],
+      "required": ["id", "name", "shirtNumber", "position", "workRate"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
         "shirtNumber": { "type": "integer", "minimum": 1, "maximum": 99 },
-        "position": { "type": "string", "enum": ["goalkeeper", "defender", "midfielder", "forward"] }
+        "position": { "type": "string", "enum": ["goalkeeper", "defender", "midfielder", "forward"] },
+        "workRate": { "type": "number", "minimum": 95, "maximum": 125 }
       }
     },
     "teamSheet": {
