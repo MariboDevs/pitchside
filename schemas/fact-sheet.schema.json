@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pitchside.maribodevs.com/schemas/fact-sheet.schema.json",
+  "title": "Pitchside fact sheet",
+  "description": "Every fact true as of one event sequence number. Numbers come from code; narratives cite fact keys.",
+  "type": "object",
+  "required": ["matchId", "asOfSeq", "period", "clockMs", "facts"],
+  "additionalProperties": false,
+  "properties": {
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
+    "asOfSeq": { "type": "integer", "minimum": 0 },
+    "period": { "type": "integer", "minimum": 0, "maximum": 2 },
+    "clockMs": { "type": "integer", "minimum": 0 },
+    "facts": { "type": "array", "items": { "$ref": "#/$defs/fact" } }
+  },
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "required": ["key", "value", "precision", "derivedFrom"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^(match|home|away|player\\.[A-Za-z0-9-]+)\\.[A-Za-z0-9.]+$" },
+        "value": { "type": ["number", "string"] },
+        "unit": { "type": "string" },
+        "precision": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "derivedFrom": { "type": "array", "maxItems": 50, "items": { "type": "string" } },
+        "window": {
+          "type": "object",
+          "required": ["fromSeq", "toSeq"],
+          "additionalProperties": false,
+          "properties": {
+            "fromSeq": { "type": "integer", "minimum": 0 },
+            "toSeq": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}
