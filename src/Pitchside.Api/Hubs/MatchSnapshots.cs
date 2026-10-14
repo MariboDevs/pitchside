@@ -9,7 +9,7 @@ namespace Pitchside.Api.Hubs;
 
 /// <summary>
 /// Builds the one message a late joiner needs: the match, the live fact sheet, every moment, the narratives for its
-/// viewer preferences, the overlay timeline and the approval mode.
+/// viewer preferences (and the base English ones every view falls back to), the overlay timeline and the approval mode.
 /// </summary>
 public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSupervisorActor> supervisor, Broadcast.OverlayCoordinator overlay)
 {
@@ -33,7 +33,8 @@ public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSuperv
             match,
             sheet,
             moments,
-            [.. narratives.Where(n => n.Persona == viewer.Persona && n.Language == viewer.Language)],
+            [.. narratives.Where(n => (n.Persona == viewer.Persona && n.Language == viewer.Language)
+                || (n.Persona == Personas.Base && n.Language == Languages.English))],
             entries,
             overlay.Mode(matchId));
     }

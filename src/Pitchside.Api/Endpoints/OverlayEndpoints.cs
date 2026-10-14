@@ -60,6 +60,49 @@ public static class OverlayEndpoints
                 (persona is null || n.Persona == persona) && (language is null || n.Language == language))]);
         }).WithName("GetNarratives");
 
+        group.MapGet("/facts/series", GetSeriesAsync).WithName("GetFactSeries");
+
         return app;
+    }
+
+    /// <summary>
+    /// Chosen facts sampled every <paramref name="every"/> events, recomputed from the stored events in one pass, so
+    /// a client that joins late can draw the xG race and score history without computing anything itself.
+    /// </summary>
+    private static async Task<Results<Ok<IReadOnlyList<FactSeriesPoint>>, NotFound, ValidationProblem>> GetSeriesAsync(
+        string matchId, string? keys, int? every, IMatchStore store, CancellationToken ct)
+    {
+        var wanted = (keys ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var step = every ?? 10;
+        if (wanted.Length is 0 or > 12 || step is < 1 or > 500)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["keys"] = ["Give 1 to 12 comma-separated fact keys and a step from 1 to 500 events."],
+            });
+        }
+
+        var match = await store.GetMatchAsync(matchId, ct).ConfigureAwait(false);
+        if (match is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var events = await store.GetEventsAsync(matchId, 1, int.MaxValue, ct).ConfigureAwait(false);
+        var engine = new Pitchside.Stats.MatchStatsEngine();
+        var state = engine.Start(match.Document);
+        var points = new List<FactSeriesPoint>();
+        for (var i = 0; i < events.Count; i++)
+        {
+            state = engine.Apply(state, events[i]).State;
+            if ((i + 1) % step == 0 || i == events.Count - 1 || events[i].Type is EventType.Goal)
+            {
+                var sheet = engine.Snapshot(state);
+                points.Add(new FactSeriesPoint(sheet.AsOfSeq, sheet.Period, sheet.ClockMs,
+                    wanted.ToDictionary(k => k, k => sheet.Find(k)?.Value.Number ?? 0, StringComparer.Ordinal)));
+            }
+        }
+
+        return TypedResults.Ok<IReadOnlyList<FactSeriesPoint>>(points);
     }
 }
