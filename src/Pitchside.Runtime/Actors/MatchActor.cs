@@ -35,7 +35,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
     private readonly IMatchStatsEngine _stats = new MatchStatsEngine();
     private readonly IMomentDetector _detector = new MomentDetector();
     private readonly List<Moment> _moments = [];
-    private readonly SortedDictionary<int, MatchEvent> _pending = [];
+    private readonly SortedDictionary<int, MatchEvent> _pending;
     private readonly HashSet<string> _subscribers = new(StringComparer.Ordinal);
 
     private StoredMatch? _match;
@@ -59,6 +59,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         _broadcaster = broadcaster;
         _sink = sink;
         _outbox = outbox;
+        _pending = outbox.Pending;
         Become(Loading);
     }
 
@@ -167,6 +168,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
 
         Become(Live);
         Timers.StartPeriodicTimer("status", StatusTick.Instance, StatusInterval);
+        ResumePending();
         Stash.UnstashAll();
     }
 
@@ -193,6 +195,25 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
                 Push(ct => _sink.EnqueueAsync(item, ct).AsTask());
             }
         }
+    }
+
+    /// <summary>
+    /// Events buffered behind a gap by an earlier incarnation are still in the outbox: drop what the rebuild already
+    /// covers, apply what now follows on, and ask for any gap that is still open.
+    /// </summary>
+    private void ResumePending()
+    {
+        foreach (var seq in _pending.Keys.Where(seq => seq <= _lastSeq).ToList())
+        {
+            _pending.Remove(seq);
+        }
+
+        while (_pending.Remove(_lastSeq + 1, out var next))
+        {
+            Apply(next, live: true);
+        }
+
+        RequestGap();
     }
 
     private void Ingest(MatchEvent e)
