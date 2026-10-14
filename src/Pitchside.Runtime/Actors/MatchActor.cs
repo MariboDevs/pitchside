@@ -14,7 +14,9 @@ namespace Pitchside.Runtime.Actors;
 /// One match, live. The only writer of the match's events, fact sheets and moments. It applies events strictly
 /// in sequence (older ones are dropped and counted, a gap is buffered and filled from the store), runs the stats
 /// and moment stages, persists without blocking, pushes to watchers in order, and hands moments to the crew.
-/// On (re)start it rebuilds its state by replaying the stored events.
+/// Writes and pushes go through the match's <see cref="MatchOutbox"/>, which keeps them ordered and retries writes,
+/// and which outlives a restart. On (re)start the actor waits for earlier writes to land, then rebuilds its state by
+/// replaying the stored events.
 /// </summary>
 public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
 {
@@ -22,11 +24,13 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
     public const int MaxLoadAttempts = 40;
     public static readonly TimeSpan LoadRetryDelay = TimeSpan.FromMilliseconds(250);
     public static readonly TimeSpan StatusInterval = TimeSpan.FromSeconds(10);
+    public static readonly TimeSpan GapRetryDelay = TimeSpan.FromSeconds(1);
 
     private readonly string _matchId;
     private readonly IMatchStore _store;
     private readonly IMatchBroadcaster _broadcaster;
     private readonly IMomentSink _sink;
+    private readonly MatchOutbox _outbox;
     private readonly ILoggingAdapter _log = Context.GetLogger();
     private readonly IMatchStatsEngine _stats = new MatchStatsEngine();
     private readonly IMomentDetector _detector = new MomentDetector();
@@ -47,14 +51,14 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
     private int _lastSavedMinute = -1;
     private int _loadAttempt;
     private bool _gapRequested;
-    private Task _outbox = Task.CompletedTask;
 
-    public MatchActor(string matchId, IMatchStore store, IMatchBroadcaster broadcaster, IMomentSink sink)
+    public MatchActor(string matchId, IMatchStore store, IMatchBroadcaster broadcaster, IMomentSink sink, MatchOutbox outbox)
     {
         _matchId = matchId;
         _store = store;
         _broadcaster = broadcaster;
         _sink = sink;
+        _outbox = outbox;
         Become(Loading);
     }
 
@@ -62,8 +66,8 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
 
     public ITimerScheduler Timers { get; set; } = null!;
 
-    public static Props Props(string matchId, IMatchStore store, IMatchBroadcaster broadcaster, IMomentSink sink) =>
-        Akka.Actor.Props.Create(() => new MatchActor(matchId, store, broadcaster, sink));
+    public static Props Props(string matchId, IMatchStore store, IMatchBroadcaster broadcaster, IMomentSink sink, MatchOutbox outbox) =>
+        Akka.Actor.Props.Create(() => new MatchActor(matchId, store, broadcaster, sink, outbox));
 
     protected override void PreStart() => Load();
 
@@ -79,13 +83,24 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
     {
         Receive<IngestEvent>(message => Ingest(message.Event));
         Receive<ResendLoaded>(OnResend);
+        Receive<ResendFailed>(failed =>
+        {
+            _gapRequested = false;
+            _log.Warning(failed.Cause, "Match {0}: reading the gap from the store failed; retrying", _matchId);
+            Timers.StartSingleTimer("gap", RetryGap.Instance, GapRetryDelay);
+        });
+        Receive<RetryGap>(_ => RequestGap());
+        Receive<SetLifecycle>(OnLifecycle);
         Receive<GetState>(_ => Sender.Tell(View()));
         Receive<GetFactSheet>(_ => Sender.Tell(_latestSheet ?? _stats.Snapshot(_statsState!)));
         Receive<GetMoments>(_ => Sender.Tell(_moments.ToList()));
         Receive<Subscribe>(message => _subscribers.Add(message.ConnectionId));
         Receive<Unsubscribe>(message => _subscribers.Remove(message.ConnectionId));
-        Receive<StatusTick>(_ => Push(ct => _broadcaster.StatusAsync(View().ToStatus(), ct)));
-        Receive<PersistFailed>(failed => _log.Warning(failed.Cause, "Match {0}: {1} failed", _matchId, failed.What));
+        Receive<StatusTick>(_ =>
+        {
+            var status = View().ToStatus();
+            Push(ct => _broadcaster.StatusAsync(status, ct));
+        });
     }
 
     private void Load()
@@ -96,6 +111,8 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
 
     private async Task<MatchLoaded> LoadAsync()
     {
+        // Writes from an earlier incarnation may still be landing; the store is a gapless prefix once they have.
+        await _outbox.WritesDrained.ConfigureAwait(false);
         var match = await _store.GetMatchAsync(_matchId, CancellationToken.None).ConfigureAwait(false);
         var events = match is null ? [] : await _store.GetEventsAsync(_matchId, 1, int.MaxValue, CancellationToken.None).ConfigureAwait(false);
         return new MatchLoaded(match, events);
@@ -126,6 +143,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         {
             if (e.Seq != expected)
             {
+                _log.Warning("Match {0}: stored events stop being contiguous at seq {1}; the rest is filled from the bus", _matchId, expected);
                 break;
             }
 
@@ -156,10 +174,8 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
             _pending[e.Seq] = e;
             if (!_gapRequested)
             {
-                _gapRequested = true;
                 _log.Warning("GapDetected: match {0} expected seq {1}, got {2}; requesting a resend from the store", _matchId, _lastSeq + 1, e.Seq);
-                _store.GetEventsAsync(_matchId, _lastSeq + 1, e.Seq - 1, CancellationToken.None)
-                    .PipeTo(Self, success: events => new ResendLoaded(events), failure: ex => new PersistFailed("resend", ex));
+                RequestGap();
             }
 
             return;
@@ -177,6 +193,18 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         }
     }
 
+    private void RequestGap()
+    {
+        if (_gapRequested || _pending.Count == 0)
+        {
+            return;
+        }
+
+        _gapRequested = true;
+        _store.GetEventsAsync(_matchId, _lastSeq + 1, _pending.Keys.First() - 1, CancellationToken.None)
+            .PipeTo(Self, success: events => new ResendLoaded(events), failure: ex => new ResendFailed(ex));
+    }
+
     private void OnResend(ResendLoaded resend)
     {
         _gapRequested = false;
@@ -184,6 +212,27 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         {
             Ingest(e);
         }
+
+        // The store may not have the missing events yet; ask again rather than wait for the next arrival.
+        if (_pending.Count > 0 && !_gapRequested)
+        {
+            Timers.StartSingleTimer("gap", RetryGap.Instance, GapRetryDelay);
+        }
+    }
+
+    private void OnLifecycle(SetLifecycle lifecycle)
+    {
+        var status = MatchStatusTransition.Resolve(_status, lifecycle.Status);
+        if (status == _status)
+        {
+            return;
+        }
+
+        _status = status;
+        var lastSeq = _lastSeq;
+        Persist("match status", ct => _store.UpdateMatchStatusAsync(_matchId, status, lastSeq, ct));
+        var view = View().ToStatus();
+        Push(ct => _broadcaster.StatusAsync(view, ct));
     }
 
     private void Apply(MatchEvent e, bool live)
@@ -199,7 +248,9 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         _period = e.Period;
         _clockMs = e.ClockMs;
 
-        var status = e.Type == EventType.FullTime ? MatchStatus.Completed : _status is MatchStatus.Scheduled ? MatchStatus.Live : _status;
+        var status = e.Type == EventType.FullTime
+            ? MatchStatusTransition.Resolve(_status, MatchStatus.Completed)
+            : _status is MatchStatus.Scheduled ? MatchStatus.Live : _status;
         var statusChanged = status != _status;
         _status = status;
         if (!live)
@@ -207,7 +258,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
             return;
         }
 
-        Persist("event", ct => _store.AppendEventAsync(e, ct));
+        _outbox.AppendEvent(e);
         Push(ct => _broadcaster.EventAsync(e, ct));
 
         _eventsSinceSheet++;
@@ -243,30 +294,9 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
 
     private MatchStateView View() => new(_matchId, _status, _lastSeq, _period, _clockMs, _subscribers.Count, _dropped);
 
-    /// <summary>Writes to the store off the actor thread; a failure comes back as a message.</summary>
-    private void Persist(string what, Func<CancellationToken, Task> write) =>
-        write(CancellationToken.None).PipeTo(Self, success: null, failure: ex => new PersistFailed(what, ex));
+    /// <summary>Writes to the store off the actor thread, in order, retried until they land.</summary>
+    private void Persist(string what, Func<CancellationToken, Task> write) => _outbox.Write(what, write);
 
-    /// <summary>
-    /// Pushes to watchers and the crew in the order the actor produced the messages, off the actor thread: each
-    /// send waits for the previous one, so clients see Event, FactSheet and Moment in sequence.
-    /// </summary>
-    private void Push(Func<CancellationToken, Task> send)
-    {
-        var self = Self;
-        _outbox = SendAfter(_outbox, send, self);
-    }
-
-    private static async Task SendAfter(Task previous, Func<CancellationToken, Task> send, IActorRef self)
-    {
-        await previous.ConfigureAwait(false);
-        try
-        {
-            await send(CancellationToken.None).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            self.Tell(new PersistFailed("push", ex));
-        }
-    }
+    /// <summary>Pushes to watchers and the crew in the order the actor produced them, off the actor thread.</summary>
+    private void Push(Func<CancellationToken, Task> send) => _outbox.Push(send);
 }

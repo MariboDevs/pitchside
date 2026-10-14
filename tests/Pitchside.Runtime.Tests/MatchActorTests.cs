@@ -16,11 +16,14 @@ public sealed class MatchActorTests : TestKit
     private readonly InMemoryMatchStore _store = new();
     private readonly RecordingBroadcaster _broadcaster = new();
     private readonly ChannelMomentSink _sink = new();
+    private readonly DurableProgress _progress = new();
+
+    private MatchOutbox Outbox(IMatchStore? store = null) => new(MatchId, store ?? _store, _progress, Sys.Log);
 
     private async Task<IActorRef> NewActorAsync()
     {
         await _store.SaveMatchAsync(Sample.Stored, CancellationToken.None);
-        return Sys.ActorOf(MatchActor.Props(MatchId, _store, _broadcaster, _sink));
+        return Sys.ActorOf(MatchActor.Props(MatchId, _store, _broadcaster, _sink, Outbox()));
     }
 
     private static Task<MatchStateView> StateAsync(IActorRef actor) => actor.Ask<MatchStateView>(new GetState(MatchId), Wait);
@@ -87,7 +90,7 @@ public sealed class MatchActorTests : TestKit
     [Fact]
     public async Task A_restart_rebuilds_the_state_from_the_store()
     {
-        var supervisor = Sys.ActorOf(Props.Create(() => new MatchSupervisorActor(_store, _broadcaster, _sink, new UnusedReplays())), "matches");
+        var supervisor = Sys.ActorOf(Props.Create(() => new MatchSupervisorActor(_store, _broadcaster, _sink, new UnusedReplays(), _progress)), "matches");
         await _store.SaveMatchAsync(Sample.Stored, CancellationToken.None);
         foreach (var e in Sample.Events.Take(400))
         {
@@ -165,10 +168,65 @@ public sealed class MatchActorTests : TestKit
     [Fact]
     public async Task An_actor_waits_for_its_document_before_ingesting()
     {
-        var actor = Sys.ActorOf(MatchActor.Props(MatchId, _store, _broadcaster, _sink));
+        var actor = Sys.ActorOf(MatchActor.Props(MatchId, _store, _broadcaster, _sink, Outbox()));
         Ingest(actor, 1, 2, 3);
         await _store.SaveMatchAsync(Sample.Stored, CancellationToken.None);
 
         await AwaitAssertAsync(async () => (await StateAsync(actor)).LastSeq.ShouldBe(3), Wait);
+    }
+
+    [Fact]
+    public async Task A_failed_append_is_retried_in_order_and_the_store_stays_gapless()
+    {
+        var flaky = new FlakyAppendStore(_store, new Dictionary<int, int> { [3] = 2 });
+        await _store.SaveMatchAsync(Sample.Stored, CancellationToken.None);
+        var actor = Sys.ActorOf(MatchActor.Props(MatchId, flaky, _broadcaster, _sink, Outbox(flaky)));
+
+        Ingest(actor, 1, 2, 3, 4, 5);
+
+        await AwaitAssertAsync(async () => (await StoredEventsAsync()).ShouldBe(5), Wait);
+        flaky.Failures.ShouldBe(2);
+        (await _store.GetEventsAsync(MatchId, 1, 5, CancellationToken.None)).Select(e => e.Seq).ShouldBe([1, 2, 3, 4, 5]);
+        _progress.For(MatchId).ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task Pause_resume_and_stop_reach_the_actor_and_a_stop_outlasts_full_time()
+    {
+        var actor = await NewActorAsync();
+        Ingest(actor, 1, 2);
+        await AwaitAssertAsync(async () => (await StateAsync(actor)).Status.ShouldBe(MatchStatus.Live), Wait);
+
+        actor.Tell(new SetLifecycle(MatchId, MatchStatus.Paused));
+        await AwaitAssertAsync(async () => (await StateAsync(actor)).Status.ShouldBe(MatchStatus.Paused), Wait);
+        actor.Tell(new SetLifecycle(MatchId, MatchStatus.Live));
+        actor.Tell(new SetLifecycle(MatchId, MatchStatus.Stopped));
+        Ingest(actor, [.. Enumerable.Range(3, Sample.Events.Count - 2)]);
+
+        await AwaitAssertAsync(async () => (await StateAsync(actor)).LastSeq.ShouldBe(Sample.Events.Count), Wait);
+        (await StateAsync(actor)).Status.ShouldBe(MatchStatus.Stopped);
+        await AwaitAssertAsync(async () => (await _store.GetMatchAsync(MatchId, CancellationToken.None))!.Status.ShouldBe(MatchStatus.Stopped), Wait);
+        _broadcaster.Statuses.ShouldContain(s => s.Status == MatchStatus.Paused);
+    }
+
+    [Theory]
+    [InlineData("a/b")]
+    [InlineData("MER 7")]
+    [InlineData("")]
+    public async Task The_supervisor_refuses_an_invalid_match_id(string matchId)
+    {
+        var supervisor = Sys.ActorOf(Props.Create(() => new MatchSupervisorActor(_store, _broadcaster, _sink, new UnusedReplays(), _progress)));
+        await Should.ThrowAsync<ArgumentException>(() => supervisor.Ask<MatchStateView>(new GetState(matchId), Wait));
+    }
+
+    [Fact]
+    public async Task Unsubscribing_from_an_unknown_match_creates_no_actor()
+    {
+        var supervisor = Sys.ActorOf(Props.Create(() => new MatchSupervisorActor(_store, _broadcaster, _sink, new UnusedReplays(), _progress)), "quiet");
+        supervisor.Tell(new Unsubscribe("MER-404", "connection-1"));
+        supervisor.Tell(new SetLifecycle("MER-404", MatchStatus.Stopped));
+
+        await Task.Delay(200);
+        await Should.ThrowAsync<ActorNotFoundException>(() => Sys.ActorSelection($"/user/quiet/{MatchSupervisorActor.ChildName("MER-404")}").ResolveOne(TimeSpan.FromMilliseconds(500)));
     }
 }
