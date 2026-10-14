@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "{{player0Name}} finishes the move and {{sideName}} make it [[match.score.home]]-[[match.score.away]]." },
+  { "text": "That goal comes from [[{{side}}.xg]] expected goals built up across the match." }
+] }
