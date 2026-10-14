@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "matchId": "MER-7",
   "seed": 7,
   "competition": "Meridian League",
@@ -19,111 +19,129 @@
         "id": "AMZ-01",
         "name": "Elias Vestergaard",
         "shirtNumber": 1,
-        "position": "goalkeeper"
+        "position": "goalkeeper",
+        "workRate": 98
       },
       {
         "id": "AMZ-02",
-        "name": "Tumelo Greco",
+        "name": "Yaw Greco",
         "shirtNumber": 2,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 109.7
       },
       {
         "id": "AMZ-03",
-        "name": "Femi Kjaer",
+        "name": "Sefu Brenner",
         "shirtNumber": 3,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 111.5
       },
       {
         "id": "AMZ-04",
-        "name": "Sefu Brenner",
+        "name": "Leon Khumalo",
         "shirtNumber": 4,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 96.3
       },
       {
         "id": "AMZ-05",
-        "name": "Lars Vidal",
+        "name": "Obi Ostrowski",
         "shirtNumber": 5,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 107.9
       },
       {
         "id": "AMZ-06",
-        "name": "Kagiso Mahlangu",
+        "name": "Nico Calloway",
         "shirtNumber": 6,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 106.5
       },
       {
         "id": "AMZ-07",
-        "name": "Obi Ostrowski",
+        "name": "Mateo Sandberg",
         "shirtNumber": 7,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 121.4
       },
       {
         "id": "AMZ-08",
-        "name": "Andres Wojcik",
+        "name": "Isaac Lowell",
         "shirtNumber": 8,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 103.3
       },
       {
         "id": "AMZ-09",
-        "name": "Samuel Lindqvist",
+        "name": "Oliver Eriksen",
         "shirtNumber": 9,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 111.4
       },
       {
         "id": "AMZ-10",
-        "name": "Mateo Sandberg",
+        "name": "Femi Ortega",
         "shirtNumber": 10,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 122.5
       },
       {
         "id": "AMZ-11",
-        "name": "Matteo Salinas",
+        "name": "Elias Sandberg",
         "shirtNumber": 11,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 101.6
       }
     ],
     "bench": [
       {
         "id": "AMZ-12",
-        "name": "Joshua Montero",
+        "name": "Emeka Hartmann",
         "shirtNumber": 12,
-        "position": "goalkeeper"
+        "position": "goalkeeper",
+        "workRate": 105.9
       },
       {
         "id": "AMZ-13",
-        "name": "Oliver Eriksen",
+        "name": "Obi Dahl",
         "shirtNumber": 13,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 95.3
       },
       {
         "id": "AMZ-14",
-        "name": "Lars Greco",
+        "name": "Tariq Vidal",
         "shirtNumber": 14,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 105
       },
       {
         "id": "AMZ-15",
-        "name": "Nathan Zielinski",
+        "name": "Chidi Lindqvist",
         "shirtNumber": 15,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 119.9
       },
       {
         "id": "AMZ-16",
-        "name": "Elias Sandberg",
+        "name": "Lethabo Otieno",
         "shirtNumber": 16,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 106.9
       },
       {
         "id": "AMZ-17",
-        "name": "Oliver Brenner",
+        "name": "Oliver Holm",
         "shirtNumber": 17,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 123.1
       },
       {
         "id": "AMZ-18",
-        "name": "Obi Escobar",
+        "name": "Lucas Brandt",
         "shirtNumber": 18,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 99
       }
     ]
   },
@@ -139,113 +157,131 @@
     "starters": [
       {
         "id": "INY-01",
-        "name": "Obi Dahl",
+        "name": "Hugo Sato",
         "shirtNumber": 1,
-        "position": "goalkeeper"
+        "position": "goalkeeper",
+        "workRate": 123.5
       },
       {
         "id": "INY-02",
-        "name": "Sipho Tran",
+        "name": "Mikkel Greco",
         "shirtNumber": 2,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 113.7
       },
       {
         "id": "INY-03",
-        "name": "Leon Aguirre",
+        "name": "Aris Novak",
         "shirtNumber": 3,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 95.5
       },
       {
         "id": "INY-04",
-        "name": "Chidi Lindqvist",
+        "name": "Femi Zielinski",
         "shirtNumber": 4,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 118.8
       },
       {
         "id": "INY-05",
-        "name": "Amani Hartley",
+        "name": "Musa Rahimi",
         "shirtNumber": 5,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 119.8
       },
       {
         "id": "INY-06",
-        "name": "Emil Holm",
+        "name": "Aris Lowell",
         "shirtNumber": 6,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 101.3
       },
       {
         "id": "INY-07",
-        "name": "Oliver Holm",
+        "name": "Nathan Kim",
         "shirtNumber": 7,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 105.9
       },
       {
         "id": "INY-08",
-        "name": "Aris Escobar",
+        "name": "Rafael Hartmann",
         "shirtNumber": 8,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 97.1
       },
       {
         "id": "INY-09",
-        "name": "Tomas Hartley",
+        "name": "Lwazi Nowak",
         "shirtNumber": 9,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 103.6
       },
       {
         "id": "INY-10",
-        "name": "Hugo Sato",
+        "name": "Kagiso Valdez",
         "shirtNumber": 10,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 123.9
       },
       {
         "id": "INY-11",
-        "name": "Aris Adeyemi",
+        "name": "Sibusiso Boateng",
         "shirtNumber": 11,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 97.3
       }
     ],
     "bench": [
       {
         "id": "INY-12",
-        "name": "Femi Otieno",
+        "name": "Tumelo Valdez",
         "shirtNumber": 12,
-        "position": "goalkeeper"
+        "position": "goalkeeper",
+        "workRate": 124.9
       },
       {
         "id": "INY-13",
-        "name": "Aris Novak",
+        "name": "Sefu Lindqvist",
         "shirtNumber": 13,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 123
       },
       {
         "id": "INY-14",
-        "name": "Sipho Haddad",
+        "name": "Luca Cabrera",
         "shirtNumber": 14,
-        "position": "defender"
+        "position": "defender",
+        "workRate": 112.8
       },
       {
         "id": "INY-15",
-        "name": "Milan Hartmann",
+        "name": "Lwazi Adjei",
         "shirtNumber": 15,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 108
       },
       {
         "id": "INY-16",
-        "name": "Musa Rahimi",
+        "name": "Emeka Ashworth",
         "shirtNumber": 16,
-        "position": "midfielder"
+        "position": "midfielder",
+        "workRate": 112.2
       },
       {
         "id": "INY-17",
-        "name": "Amani Sato",
+        "name": "Bruno Valdez",
         "shirtNumber": 17,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 102
       },
       {
         "id": "INY-18",
-        "name": "Joshua Marchant",
+        "name": "Mateo Rahimi",
         "shirtNumber": 18,
-        "position": "forward"
+        "position": "forward",
+        "workRate": 102.6
       }
     ]
   }

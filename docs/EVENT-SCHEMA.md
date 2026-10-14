@@ -22,7 +22,7 @@ team's frame, so a renderer flips them for the away team.
 | `kick_off` | Start of a period | |
 | `pass` | A pass attempt | `endLocation`, `lengthM`, `difficulty` (0 to 1), `completed` |
 | `carry` | Ball carried by a player | `endLocation`, `lengthM` |
-| `shot` | A shot attempt | `xg` (0 to 1), `onTarget`, `outcome` (goal, saved, blocked, off_target, post), `shotSpeedKph`, `bodyPart` |
+| `shot` | A shot attempt | `xg` (0 to 1), `onTarget`, `outcome` (goal, saved, blocked, off_target, post), `shotSpeedKph`, `bodyPart`, `penalty` |
 | `goal` | A goal, always immediately after the `shot` that scored it | `scorer`, `assist`, `homeScore`, `awayScore` |
 | `turnover` | Possession lost in play | `reason` (interception, tackle, bad_touch, clearance) |
 | `out_of_play` | Ball left the pitch | `restart` (throw_in, goal_kick, corner) |
@@ -33,9 +33,23 @@ team's frame, so a renderer flips them for the away team.
 | `pressure` | A pressing action on the ball carrier | `intensity` (0 to 1) |
 | `half_end` | End of a period | |
 | `full_time` | End of the match | `homeScore`, `awayScore` |
+| `tracking` | Per-player movement over the last tracking interval, one event per side | `tracking` |
 
 Every event carries `id`, `matchId`, `seq`, `period`, `clockMs`, `wallTimeUtc`, `type`, `teamId`, `playerId`,
 `location`, `possessionId`. Qualifiers are nullable and only present where the type defines them.
+
+## Passes, penalties and tracking (schema 0.2)
+
+- `completed` on a `pass` may be `false`. An incomplete pass has no `receiverId` and is always followed by a
+  `turnover` with reason `interception` by the same side, in the same possession, at the pass's end location.
+- `penalty: true` marks a `shot` taken from the spot, `(94, 34)`, at a fixed xG of 0.76. A penalty is a
+  possession of one shot, awarded after a foul by the defending side with the ball beyond x = 88.
+- A `tracking` event is emitted by each side at the first possession boundary after each minute of period
+  clock rolls over, home side first. `playerId` is null and `location` is the centre spot. Its `tracking`
+  array holds one `{ playerId, distanceM, topSpeedKph }` entry per player on the pitch for that side. Each
+  entry is the delta since that player's previous tick (or since kick-off of the period, or since coming on),
+  never the cumulative: a consumer sums the deltas.
+- Every player in `match.json` carries `workRate`, metres per minute on the ball-less run, 95 to 125.
 
 ## Why these fields
 

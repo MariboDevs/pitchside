@@ -28,17 +28,20 @@ public static class SquadFactory
         var shirt = 1;
         foreach (var position in StartingPositions)
         {
-            starters.Add(new Player($"{club.Club.Id}-{shirt:00}", Names.Generate(rng), shirt, position));
+            starters.Add(new Player($"{club.Club.Id}-{shirt:00}", Names.Generate(rng), shirt, position, WorkRate(rng)));
             shirt++;
         }
 
         var bench = new List<Player>(BenchPositions.Length);
         foreach (var position in BenchPositions)
         {
-            bench.Add(new Player($"{club.Club.Id}-{shirt:00}", Names.Generate(rng), shirt, position));
+            bench.Add(new Player($"{club.Club.Id}-{shirt:00}", Names.Generate(rng), shirt, position, WorkRate(rng)));
             shirt++;
         }
 
         return new TeamSheet(club.Club, "4-3-3", starters, bench);
     }
+
+    /// <summary>Metres per minute on the ball-less run, uniform in [95, 125), one decimal.</summary>
+    private static double WorkRate(Pcg32 rng) => Math.Round(rng.Range(95, 125), 1);
 }

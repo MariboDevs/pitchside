@@ -6,7 +6,7 @@ passed on `main` and the evidence is linked. Update this file in the pull reques
 | WP | Status | Pull request | Evidence |
 | --- | --- | --- | --- |
 | Scaffold | done | initial commits on `main` | 32 tests, calibration report at 5,000 matches all within tolerance, sample `data/samples/seed-7` validates |
-| WP-00 | not started | | |
+| WP-00 | in review | `feat/wp00-engine` | Schema 0.2: incomplete passes, penalties, tracking ticks, `workRate`. 54 tests pass (`ConsistencyTests.An_incomplete_pass_is_always_followed_by_a_turnover_by_the_same_side`, `A_penalty_shot_has_the_penalty_flag_spot_and_xg`, `A_penalty_is_a_possession_of_one_shot_after_a_foul_in_the_final_third`, `Tracking_ticks_are_a_minute_apart_per_side_and_list_exactly_the_players_on_the_pitch`, `SchemaValidationTests`). `calibrate --matches 5000`: all 26 statistics within tolerance (pass completion 0.820, penalties 0.271 per match). Sample `seed-7` regenerated (1,623 events) and reproduces byte for byte. Needs a local session: none |
 | WP-01 | not started | | |
 | WP-02 | not started | | |
 | WP-03 | not started | | |

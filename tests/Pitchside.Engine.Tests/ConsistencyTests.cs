@@ -97,6 +97,132 @@ public sealed class ConsistencyTests
         }
     }
 
+    [Theory]
+    [MemberData(nameof(Seeds))]
+    public void An_incomplete_pass_is_always_followed_by_a_turnover_by_the_same_side(long seed)
+    {
+        var events = MatchSimulator.Simulate(seed).Events;
+        var incomplete = 0;
+        for (var i = 0; i < events.Count; i++)
+        {
+            if (events[i].Type != EventType.Pass || events[i].Completed != false)
+            {
+                continue;
+            }
+
+            incomplete++;
+            var next = events[i + 1];
+            next.Type.ShouldBe(EventType.Turnover);
+            next.TeamId.ShouldBe(events[i].TeamId);
+            next.Reason.ShouldBe(TurnoverReason.Interception);
+            next.PossessionId.ShouldBe(events[i].PossessionId);
+            events[i].ReceiverId.ShouldBeNull();
+        }
+
+        incomplete.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void A_penalty_shot_has_the_penalty_flag_spot_and_xg()
+    {
+        var penalties = Enumerable.Range(1, 60)
+            .SelectMany(seed => MatchSimulator.Simulate(seed).Events)
+            .Where(e => e.Penalty == true)
+            .ToList();
+
+        penalties.ShouldNotBeEmpty();
+        foreach (var shot in penalties)
+        {
+            shot.Type.ShouldBe(EventType.Shot);
+            shot.Xg.ShouldBe(0.76);
+            shot.Location.ShouldBe(new Location(94, 34));
+            shot.BodyPart.ShouldBeOneOf(BodyPart.RightFoot, BodyPart.LeftFoot);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Seeds))]
+    public void A_penalty_is_a_possession_of_one_shot_after_a_foul_in_the_final_third(long seed)
+    {
+        var events = MatchSimulator.Simulate(seed + 100).Events;
+        for (var i = 0; i < events.Count; i++)
+        {
+            if (events[i].Penalty != true)
+            {
+                continue;
+            }
+
+            events.Count(e => e.PossessionId == events[i].PossessionId && e.Type is EventType.Shot or EventType.Pass or EventType.Carry or EventType.Turnover).ShouldBe(1);
+            var foul = events.Take(i).Last(e => e.Type == EventType.Foul);
+            foul.TeamId.ShouldNotBe(events[i].TeamId);
+            foul.Location.X.ShouldBeLessThan(105 - 88);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Seeds))]
+    public void Tracking_ticks_are_a_minute_apart_per_side_and_list_exactly_the_players_on_the_pitch(long seed)
+    {
+        var match = MatchSimulator.Simulate(seed);
+        var onPitch = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal)
+        {
+            [match.Document.Home.Club.Id] = match.Document.Home.Starters.Select(p => p.Id).ToHashSet(StringComparer.Ordinal),
+            [match.Document.Away.Club.Id] = match.Document.Away.Starters.Select(p => p.Id).ToHashSet(StringComparer.Ordinal),
+        };
+        var lastTick = new Dictionary<(string Team, int Period), int>();
+        var ticks = 0;
+
+        foreach (var e in match.Events)
+        {
+            switch (e.Type)
+            {
+                case EventType.Substitution:
+                    onPitch[e.TeamId].Remove(e.PlayerOffId!);
+                    onPitch[e.TeamId].Add(e.PlayerOnId!);
+                    break;
+                case EventType.Card when e.Colour == CardColour.Red:
+                    onPitch[e.TeamId].Remove(e.PlayerId!);
+                    break;
+                case EventType.Tracking:
+                    ticks++;
+                    e.PlayerId.ShouldBeNull();
+                    e.Location.ShouldBe(new Location(Pitch.LengthM / 2, Pitch.WidthM / 2));
+                    e.Tracking.ShouldNotBeNull();
+                    e.Tracking.Select(t => t.PlayerId).ToHashSet(StringComparer.Ordinal).SetEquals(onPitch[e.TeamId]).ShouldBeTrue();
+                    e.Tracking.Count.ShouldBe(onPitch[e.TeamId].Count);
+                    foreach (var entry in e.Tracking)
+                    {
+                        entry.DistanceM.ShouldBeGreaterThan(0);
+                        entry.TopSpeedKph.ShouldBeInRange(12, 40);
+                    }
+
+                    var minute = e.ClockMs / 60_000;
+                    minute.ShouldBeGreaterThanOrEqualTo(1);
+                    if (lastTick.TryGetValue((e.TeamId, e.Period), out var previous))
+                    {
+                        minute.ShouldBeGreaterThan(previous);
+                    }
+
+                    lastTick[(e.TeamId, e.Period)] = minute;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        ticks.ShouldBeGreaterThan(150);
+    }
+
+    [Fact]
+    public void Work_rates_are_within_the_contract_range()
+    {
+        var match = MatchSimulator.Simulate(7);
+        foreach (var player in match.Document.Home.Starters.Concat(match.Document.Home.Bench).Concat(match.Document.Away.Starters).Concat(match.Document.Away.Bench))
+        {
+            player.WorkRate.ShouldBeInRange(95, 125);
+        }
+    }
+
     [Fact]
     public void Nothing_in_the_league_names_a_real_club_or_competition()
     {

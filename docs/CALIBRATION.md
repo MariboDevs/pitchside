@@ -50,10 +50,16 @@ more), fatigue and substitutions, and by period (the second half carries more go
 - Fouls and cards: a per-possession foul rate; a yellow per foul rate with a measured away-side tilt; a
   straight-red rate; referees are far less likely to book a player already on a yellow.
 - Substitutions: three per side between minutes 58 and 86, outfield for outfield.
+- Pass completion: a pass is incomplete with probability equal to its difficulty times a tuned scale; an
+  incomplete pass is intercepted and hands the ball to the opponent. Measured against a literature value of
+  82%, because football-data.co.uk does not carry passes.
+- Penalties: a foul beyond x = 88 by the defending side is a penalty with probability 0.22, taken from the spot
+  at a fixed xG of 0.76. Defenders foul far less inside their own box, which keeps penalties near the
+  literature value of 0.25 per match.
+- Player movement: tracking ticks every minute carry each player's distance (work rate plus carries) and top
+  speed. These feed the stats layer and are not calibrated against a target.
 
-Not yet modelled, and therefore not measured: pass completion against a target (all passes except the last
-of a turnover possession complete), player speed distributions, fatigue within a half, injuries, penalties as
-a distinct shot type, own goals.
+Not yet modelled, and therefore not measured: fatigue within a half, injuries, own goals.
 
 ## The report
 

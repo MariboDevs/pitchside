@@ -32,6 +32,8 @@ public sealed class CalibrationReport
         ("away_yellows", 0.3),
         ("home_reds", 0.03),
         ("away_reds", 0.03),
+        ("pass_completion", 0.02),
+        ("penalties_per_match", 0.08),
     ];
 
     private CalibrationReport(AggregateStats synthetic, CalibrationTargets targets, IReadOnlyList<CalibrationRow> rows)
@@ -85,7 +87,9 @@ public sealed class CalibrationReport
         }
 
         sb.AppendLine();
-        sb.AppendLine("Targets are league-level averages from football-data.co.uk (English top flight, 2015/16 to 2025/26). See docs/CALIBRATION.md.");
+        sb.AppendLine("Targets are league-level averages from football-data.co.uk (English top flight, 2015/16 to 2025/26), except");
+        sb.AppendLine("`pass_completion` and `penalties_per_match`, which are literature values because football-data.co.uk does not");
+        sb.AppendLine("carry passes or penalties. See docs/CALIBRATION.md.");
         return sb.ToString();
     }
 }
