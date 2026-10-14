@@ -11,7 +11,8 @@ namespace Pitchside.Agents.Providers;
 /// <summary>
 /// The Foundry provider: Microsoft Agent Framework's OpenAI integration against the Azure OpenAI v1 endpoint of a
 /// Foundry project, keyless through a token credential (managed identity in Azure, the developer's sign-in
-/// locally). Temperature 0, JSON output, 400 output tokens per call.
+/// locally). Temperature 0, JSON output, 400 output tokens per call, and a deadline of
+/// <c>Foundry:TimeoutSeconds</c> per call.
 /// </summary>
 public sealed class FoundryChatProvider : IChatProvider
 {
@@ -42,7 +43,18 @@ public sealed class FoundryChatProvider : IChatProvider
             MaxOutputTokens = request.MaxOutputTokens,
             ResponseFormat = Microsoft.Extensions.AI.ChatResponseFormat.Json,
         });
-        var response = await agent.RunAsync(request.UserMessage, options: options, cancellationToken: cancellationToken).ConfigureAwait(false);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(_options.TimeoutSeconds));
+        AgentResponse response;
+        try
+        {
+            response = await agent.RunAsync(request.UserMessage, options: options, cancellationToken: deadline.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Foundry deployment '{deployment}' did not answer within {_options.TimeoutSeconds} s.", ex);
+        }
+
         return new ChatResult(response.Text, ProviderName, deployment, response.Usage?.InputTokenCount ?? 0, response.Usage?.OutputTokenCount ?? 0);
     }
 
