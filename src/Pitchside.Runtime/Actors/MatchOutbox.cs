@@ -8,7 +8,8 @@ namespace Pitchside.Runtime.Actors;
 /// One match's ordered side effects, owned by the supervisor so it outlives any one incarnation of the match actor.
 /// Writes run one at a time in the order the actor issued them and each is retried until it succeeds, so the store
 /// always holds a gapless prefix of the events; a restarted actor waits for <see cref="WritesDrained"/> before it
-/// rebuilds. Pushes run one at a time in order too, so a restart cannot overtake sends still in flight.
+/// rebuilds. Pushes run one at a time in order too, so a restart cannot overtake sends still in flight. Events
+/// buffered behind a gap also live here, so a restart keeps them.
 /// </summary>
 public sealed class MatchOutbox : IDisposable
 {
@@ -31,6 +32,12 @@ public sealed class MatchOutbox : IDisposable
         _progress = progress;
         _log = log;
     }
+
+    /// <summary>
+    /// Events received ahead of a gap, waiting for the missing ones. Kept here rather than in the actor so a restart
+    /// does not lose them; only the current incarnation of the match actor touches it.
+    /// </summary>
+    public SortedDictionary<int, MatchEvent> Pending { get; } = [];
 
     /// <summary>Completes when every write issued so far is in the store.</summary>
     public Task WritesDrained
