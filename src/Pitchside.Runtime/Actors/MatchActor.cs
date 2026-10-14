@@ -192,7 +192,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
             if (!narrated.Contains(moment.Id))
             {
                 var item = new MomentWorkItem(moment, sheet, _match!.Document);
-                Push(ct => _sink.EnqueueAsync(item, ct).AsTask());
+                Persist("hand to the crew", ct => _sink.EnqueueAsync(item, ct).AsTask());
             }
         }
     }
@@ -348,8 +348,10 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         {
             Persist("moment", ct => _store.SaveMomentAsync(moment, ct));
             Push(ct => _broadcaster.MomentAsync(moment, ct));
+            // The crew gets the moment through the write chain, after the moment and its fact sheet are stored, so
+            // everything downstream of a narrative (the overlay's chips) can read them.
             var item = new MomentWorkItem(moment, sheet, _match!.Document);
-            Push(ct => _sink.EnqueueAsync(item, ct).AsTask());
+            Persist("hand to the crew", ct => _sink.EnqueueAsync(item, ct).AsTask());
         }
 
         if (statusChanged)
