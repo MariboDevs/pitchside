@@ -84,7 +84,7 @@ Scopes are `match`, `home`, `away` and `player.<playerId>`. Side metrics exist f
 | `match.period` | | 0 before kick-off, then 1 or 2 |
 | `match.state` | | `pre_match`, `first_half`, `half_time`, `second_half`, `full_time` |
 | `match.score.home`, `match.score.away` | goals | `goal` events per side |
-| `match.possessions` | count | distinct possession ids so far |
+| `match.possessions` | count | distinct possession ids so far; `derivedFrom` is the first event of each |
 | `match.rhythm` | per min | distinct possessions in the last 10 minutes of the period, over the minutes elapsed in that window (at least 1) |
 | `match.control` | share | completed passes and carries over open-play events (passes, carries, shots, turnovers, pressures, fouls, out of play) in the last 10 minutes; 0.5 when there are none |
 | `match.momentum.home`, `match.momentum.away` | share | each side's share of a weighted sum over the last 5 minutes: 3 per shot, 4 more per shot on target, 1 per final-third entry, 2 per corner, 10 per unit of xG; 0.5 each when nothing happened |
@@ -93,7 +93,7 @@ Scopes are `match`, `home`, `away` and `player.<playerId>`. Side metrics exist f
 | `{side}.passDifficultyAvg` | difficulty | mean difficulty of attempted passes |
 | `{side}.progressivePasses` | count | completed passes gaining at least 10 m towards goal |
 | `{side}.finalThirdEntries` | count | completed passes or carries ending beyond x = 70 from x at most 70 |
-| `{side}.possessionShare` | share | share of possession time: the clock between two events goes to the side the earlier events showed in possession (a pressure, foul or card shows the other side in possession) |
+| `{side}.possessionShare` | share | share of possession time: the clock between two events goes to the side the earlier events showed in possession. On-ball events show their own side; a turnover or a goal hands the ball to the other side; a pressure, foul or card shows the other side in possession; a goal kick or corner goes to the side that did not put the ball out; a throw-in shows nobody |
 | `{side}.corners`, `.fouls`, `.yellows`, `.reds` | count | a second yellow counts as a yellow and a red |
 | `{side}.pressures`, `.pressingIntensity` | count, per pass | intensity is the side's pressures over the opponent's passes in the last 10 minutes |
 | `{side}.distanceKm` | km | sum of the side's tracking deltas, which already include carry lengths (WP-00 R4) |

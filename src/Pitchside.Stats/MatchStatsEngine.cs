@@ -67,7 +67,12 @@ public sealed class MatchStatsEngine : IMatchStatsEngine
 
         if (e.PossessionId > state.LastPossessionId)
         {
-            next = next with { LastPossessionId = e.PossessionId, Possessions = state.Possessions + 1 };
+            next = next with
+            {
+                LastPossessionId = e.PossessionId,
+                Possessions = state.Possessions + 1,
+                PossessionStarts = state.PossessionStarts.Add(1, e.Id),
+            };
         }
 
         next = e.Type switch

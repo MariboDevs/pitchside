@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Pitchside.Contracts;
 
 namespace Pitchside.Stats;
@@ -16,13 +17,35 @@ public static class FactSheetBuilder
     private const string UnitPerPass = "per pass";
     private const string UnitDifficulty = "difficulty";
 
+    private static readonly string[] SideMetrics =
+    [
+        FactKeys.Goals, FactKeys.Xg, FactKeys.Shots, FactKeys.ShotsOnTarget, FactKeys.BigChances, FactKeys.Passes,
+        FactKeys.PassesCompleted, FactKeys.PassCompletion, FactKeys.PassDifficultyAvg, FactKeys.ProgressivePasses,
+        FactKeys.FinalThirdEntries, FactKeys.PossessionShare, FactKeys.Corners, FactKeys.Fouls, FactKeys.Yellows, FactKeys.Reds,
+        FactKeys.Pressures, FactKeys.PressingIntensity, FactKeys.DistanceKm, FactKeys.TopSpeedKph,
+    ];
+
+    private static readonly string[] PlayerMetrics =
+    [
+        FactKeys.Passes, FactKeys.PassesCompleted, FactKeys.PassCompletion, FactKeys.ProgressivePasses, FactKeys.Carries,
+        FactKeys.DistanceKm, FactKeys.TopSpeedKph, FactKeys.Shots, FactKeys.Xg, FactKeys.Goals, FactKeys.Assists,
+        FactKeys.Pressures, FactKeys.Fouls, FactKeys.Cards, FactKeys.Minutes, FactKeys.Sprints, FactKeys.Tags,
+    ];
+
+    private static readonly IReadOnlyDictionary<string, string> HomeKeys = SideMetrics.ToDictionary(m => m, m => FactKeys.ForSide(FactKeys.HomeScope, m), StringComparer.Ordinal);
+    private static readonly IReadOnlyDictionary<string, string> AwayKeys = SideMetrics.ToDictionary(m => m, m => FactKeys.ForSide(FactKeys.AwayScope, m), StringComparer.Ordinal);
+
+    // Keys are built once per player, by FactKeys, and reused by every sheet after.
+    private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, string>> PlayerKeys = new(StringComparer.Ordinal);
+
     public static FactSheet Build(MatchStatsState state)
     {
         ArgumentNullException.ThrowIfNull(state);
         var facts = new List<Fact>(64 + (state.Players.Count * 18));
-        AddMatchFacts(state, facts);
-        AddSideFacts(state, FactKeys.HomeScope, state.HomeId, state.Home, state.AwayId, facts);
-        AddSideFacts(state, FactKeys.AwayScope, state.AwayId, state.Away, state.HomeId, facts);
+        var window = state.Window.Items.ToList();
+        AddMatchFacts(state, window, facts);
+        AddSideFacts(state, HomeKeys, state.HomeId, state.Home, state.AwayId, window, facts);
+        AddSideFacts(state, AwayKeys, state.AwayId, state.Away, state.HomeId, window, facts);
         foreach (var player in state.Players.Values)
         {
             AddPlayerFacts(state, player, facts);
@@ -31,18 +54,18 @@ public static class FactSheetBuilder
         return new FactSheet(state.MatchId, state.AsOfSeq, state.Period, state.ClockMs, facts);
     }
 
-    private static void AddMatchFacts(MatchStatsState state, List<Fact> facts)
+    private static void AddMatchFacts(MatchStatsState state, List<MatchEvent> tenMinutes, List<Fact> facts)
     {
         facts.Add(Number(FactKeys.MatchClockMinute, EventRules.MatchMinute(state.Period, state.ClockMs), UnitMinutes, 0, []));
         facts.Add(Number(FactKeys.MatchPeriod, state.Period, null, 0, []));
         facts.Add(new Fact { Key = FactKeys.MatchState, Value = FactValue.Of(state.State), Precision = 0, DerivedFrom = [] });
         facts.Add(Number(FactKeys.MatchScoreHome, state.Home.Goals.Value, UnitGoals, 0, state.Home.Goals.Ids));
         facts.Add(Number(FactKeys.MatchScoreAway, state.Away.Goals.Value, UnitGoals, 0, state.Away.Goals.Ids));
-        facts.Add(Number(FactKeys.MatchPossessions, state.Possessions, UnitCount, 0, []));
+        facts.Add(Number(FactKeys.MatchPossessions, state.Possessions, UnitCount, 0, state.PossessionStarts.Ids));
 
         var now = state.ClockMs;
-        var tenMinutes = state.Window.Items.ToList();
-        var fiveMinutes = state.Window.Since(now - EventRules.FiveMinutesMs).ToList();
+        var fiveFrom = now - EventRules.FiveMinutesMs;
+        var fiveMinutes = tenMinutes.FindAll(e => e.ClockMs >= fiveFrom);
         var tenWindow = WindowOf(tenMinutes, state.AsOfSeq);
         var fiveWindow = WindowOf(fiveMinutes, state.AsOfSeq);
 
@@ -61,9 +84,10 @@ public static class FactSheetBuilder
         facts.Add(Number(FactKeys.MatchMomentumAway, total == 0 ? 0.5 : awayWeight / total, UnitShare, 2, [], fiveWindow));
     }
 
-    private static void AddSideFacts(MatchStatsState state, string scope, string teamId, SideAccumulator side, string opponentId, List<Fact> facts)
+    private static void AddSideFacts(
+        MatchStatsState state, IReadOnlyDictionary<string, string> keys, string teamId, SideAccumulator side, string opponentId, List<MatchEvent> window, List<Fact> facts)
     {
-        string Key(string metric) => FactKeys.ForSide(scope, metric);
+        string Key(string metric) => keys[metric];
 
         facts.Add(Number(Key(FactKeys.Goals), side.Goals.Value, UnitGoals, 0, side.Goals.Ids));
         facts.Add(Number(Key(FactKeys.Xg), side.Xg.Value, UnitXg, 2, side.Xg.Ids));
@@ -85,7 +109,6 @@ public static class FactSheetBuilder
         facts.Add(Number(Key(FactKeys.Reds), side.Reds.Value, UnitCount, 0, side.Reds.Ids));
         facts.Add(Number(Key(FactKeys.Pressures), side.Pressures.Value, UnitCount, 0, side.Pressures.Ids));
 
-        var window = state.Window.Items.ToList();
         var pressures = window.Count(e => e.Type == EventType.Pressure && e.TeamId == teamId);
         var opponentPasses = window.Count(e => e.Type == EventType.Pass && e.TeamId == opponentId);
         facts.Add(Number(Key(FactKeys.PressingIntensity), Ratio(pressures, opponentPasses), UnitPerPass, 2, [], WindowOf(window, state.AsOfSeq)));
@@ -105,7 +128,8 @@ public static class FactSheetBuilder
 
     private static void AddPlayerFacts(MatchStatsState state, PlayerAccumulator p, List<Fact> facts)
     {
-        string Key(string metric) => FactKeys.ForPlayer(p.PlayerId, metric);
+        var keys = PlayerKeys.GetOrAdd(p.PlayerId, id => PlayerMetrics.ToDictionary(m => m, m => FactKeys.ForPlayer(id, m), StringComparer.Ordinal));
+        string Key(string metric) => keys[metric];
 
         facts.Add(Number(Key(FactKeys.Passes), p.Passes.Value, UnitCount, 0, p.Passes.Ids));
         facts.Add(Number(Key(FactKeys.PassesCompleted), p.PassesCompleted.Value, UnitCount, 0, p.PassesCompleted.Ids));
