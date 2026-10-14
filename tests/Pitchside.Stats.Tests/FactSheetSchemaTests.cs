@@ -46,4 +46,11 @@ public sealed class FactSheetSchemaTests
         back.ShouldEqualSheet(sheet);
         JsonSerializer.Serialize(back, ContractJson.Options).ShouldBe(json);
     }
+
+    [Fact]
+    public void A_default_fact_value_cannot_be_written()
+    {
+        var fact = new Fact { Key = "match.period", Value = default, Precision = 0, DerivedFrom = [] };
+        Should.Throw<JsonException>(() => JsonSerializer.Serialize(fact, ContractJson.Options));
+    }
 }
