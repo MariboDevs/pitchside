@@ -69,7 +69,7 @@ public sealed class WorkflowTests
         narrative.Provenance.Fallback.ShouldBeTrue();
         narrative.Provenance.Provider.ShouldBe(FallbackComposer.ProviderName);
         narrative.Provenance.Attempts.ShouldBe(2);
-        narrative.RenderedText.ShouldStartWith("Nathan Kim scores for Inyoni Wanderers.");
+        narrative.RenderedText.ShouldStartWith("Nathan Kim scores for Inyoni Wanderers in minute ");
         context.Attempts.ShouldBe(MomentWorkflow.MaxExplainerAttempts);
         provider.Requests.Count(r => r.PromptName == ExplainerExecutor.PromptName).ShouldBe(2);
     }
@@ -171,6 +171,36 @@ public sealed class WorkflowTests
     }
 
     [Fact]
+    public async Task A_publisher_fault_is_logged_and_the_runner_carries_on()
+    {
+        var goals = Enumerable.Range(0, 4).Select(i => Goal.WorkItem with { Moment = Goal.Moment with { Id = $"MER-7:M:{2000 + i}:goal" } }).ToList();
+        var publisher = new FailingPublisher(goals[0].Moment.Id);
+        var sink = new ChannelMomentSink();
+        var runner = new MomentWorkflowRunner(sink, Crew.Workflow(), publisher, Options.Create(new AgentsOptions()), NullLogger<MomentWorkflowRunner>.Instance);
+
+        await runner.StartAsync(CancellationToken.None);
+        foreach (var item in goals)
+        {
+            await sink.EnqueueAsync(item, CancellationToken.None);
+        }
+
+        sink.Complete();
+        await runner.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(30));
+
+        runner.ExecuteTask.IsCompletedSuccessfully.ShouldBeTrue();
+        publisher.Narratives.Select(n => n.MomentId).Distinct().Order(StringComparer.Ordinal).ShouldBe(goals.Skip(1).Select(g => g.Moment.Id));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    public void An_answer_outside_one_to_three_sentences_is_invalid(int count)
+    {
+        var sentences = string.Join(", ", Enumerable.Repeat("""{ "text": "Goal at minute [[match.clock.minute]]." }""", count));
+        Should.Throw<FormatException>(() => ExplainerExecutor.Parse($$"""{ "sentences": [ {{sentences}} ] }"""));
+    }
+
+    [Fact]
     public async Task The_scripted_code_path_meets_the_latency_budget()
     {
         var workflow = Crew.Workflow();
@@ -205,12 +235,15 @@ public sealed class WorkflowTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        await Crew.Workflow().RunAsync(Goal.WorkItem, CancellationToken.None);
+        // The listener is process-wide and other classes run the same goal in parallel, so this run gets an id of
+        // its own.
+        var traced = Goal.WorkItem with { Moment = Goal.Moment with { Id = Goal.Moment.Id + ":traced" } };
+        await Crew.Workflow().RunAsync(traced, CancellationToken.None);
 
         List<Activity> mine;
         lock (activities)
         {
-            mine = [.. activities.Where(a => (string?)a.GetTagItem("pitchside.moment.id") == Goal.Moment.Id)];
+            mine = [.. activities.Where(a => (string?)a.GetTagItem("pitchside.moment.id") == traced.Moment.Id)];
         }
 
         var root = mine.Single(a => a.OperationName == AgentTelemetry.MomentActivity);
