@@ -3,8 +3,11 @@ using Pitchside.Runtime.Storage;
 
 namespace Pitchside.Runtime.Tests;
 
-/// <summary>An in-memory store whose event appends fail for the chosen seqs until each has failed the given number of times.</summary>
-public sealed class FlakyAppendStore(IMatchStore inner, IReadOnlyDictionary<int, int> failuresBySeq) : IMatchStore
+/// <summary>
+/// An in-memory store whose event appends fail for the chosen seqs until each has failed the given number of times,
+/// with an <see cref="InvalidOperationException"/> or, to stand for a store timeout, a <see cref="TaskCanceledException"/>.
+/// </summary>
+public sealed class FlakyAppendStore(IMatchStore inner, IReadOnlyDictionary<int, int> failuresBySeq, bool timeOut = false) : IMatchStore
 {
     private readonly Dictionary<int, int> _remaining = new(failuresBySeq);
     private readonly Lock _lock = new();
@@ -20,7 +23,9 @@ public sealed class FlakyAppendStore(IMatchStore inner, IReadOnlyDictionary<int,
             {
                 _remaining[matchEvent.Seq] = left - 1;
                 Failures++;
-                throw new InvalidOperationException($"Append of seq {matchEvent.Seq} failed.");
+                throw timeOut
+                    ? new TaskCanceledException($"Append of seq {matchEvent.Seq} timed out.")
+                    : new InvalidOperationException($"Append of seq {matchEvent.Seq} failed.");
             }
         }
 
