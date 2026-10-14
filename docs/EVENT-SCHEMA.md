@@ -61,3 +61,61 @@ field here, not something inferred later.
 
 `match.json` carries `schemaVersion`. A breaking change bumps it; the engine always writes the current version
 and the sample under `data/samples/` is regenerated and committed in the same pull request.
+
+## Fact sheet
+
+The stats layer (`src/Pitchside.Stats`) turns events into facts by code alone. A fact sheet is every fact true as
+of one event sequence number; its contract is [`schemas/fact-sheet.schema.json`](../schemas/fact-sheet.schema.json)
+and `src/Pitchside.Contracts/FactSheet.cs`. Print one with
+`dotnet run --project src/Pitchside.Cli -- facts --seed 7 [--at-seq N]`.
+
+Each fact has a `key` (the citation handle, built only by `FactKeys`), a `value` (a number, or a string for
+categorical facts), a `unit`, a `precision` (decimals shown; the value is already rounded to it, half away from
+zero), `derivedFrom` (the ids of the events that produced it, the 50 most recent, oldest first) and, for rolling
+metrics only, a `window` of sequence numbers.
+
+### Catalogue
+
+Scopes are `match`, `home`, `away` and `player.<playerId>`. Side metrics exist for both `home` and `away`.
+
+| Key pattern | Unit | Definition |
+| --- | --- | --- |
+| `match.clock.minute` | min | floor of match minute: 1 to 45+ in the first half, 46 to 90+ in the second, 0 before kick-off |
+| `match.period` | | 0 before kick-off, then 1 or 2 |
+| `match.state` | | `pre_match`, `first_half`, `half_time`, `second_half`, `full_time` |
+| `match.score.home`, `match.score.away` | goals | `goal` events per side |
+| `match.possessions` | count | distinct possession ids so far; `derivedFrom` is the first event of each |
+| `match.rhythm` | per min | distinct possessions in the last 10 minutes of the period, over the minutes elapsed in that window (at least 1) |
+| `match.control` | share | completed passes and carries over open-play events (passes, carries, shots, turnovers, pressures, fouls, out of play) in the last 10 minutes; 0.5 when there are none |
+| `match.momentum.home`, `match.momentum.away` | share | each side's share of a weighted sum over the last 5 minutes: 3 per shot, 4 more per shot on target, 1 per final-third entry, 2 per corner, 10 per unit of xG; 0.5 each when nothing happened |
+| `{side}.goals`, `.xg`, `.shots`, `.shotsOnTarget`, `.bigChances` | goals, xg, count | a big chance is a shot with xG at least 0.30; xG includes penalties |
+| `{side}.passes`, `.passesCompleted`, `.passCompletion` | count, share | completion is 0 before the first pass |
+| `{side}.passDifficultyAvg` | difficulty | mean difficulty of attempted passes |
+| `{side}.progressivePasses` | count | completed passes gaining at least 10 m towards goal |
+| `{side}.finalThirdEntries` | count | completed passes or carries ending beyond x = 70 from x at most 70 |
+| `{side}.possessionShare` | share | share of possession time: the clock between two events goes to the side the earlier events showed in possession. On-ball events show their own side; a turnover or a goal hands the ball to the other side; a pressure, foul or card shows the other side in possession; a goal kick or corner goes to the side that did not put the ball out; a throw-in shows nobody |
+| `{side}.corners`, `.fouls`, `.yellows`, `.reds` | count | a second yellow counts as a yellow and a red |
+| `{side}.pressures`, `.pressingIntensity` | count, per pass | intensity is the side's pressures over the opponent's passes in the last 10 minutes |
+| `{side}.distanceKm` | km | sum of the side's tracking deltas, which already include carry lengths (WP-00 R4) |
+| `{side}.topSpeedKph` | kph | fastest player on the side |
+| `player.<id>.passes`, `.passesCompleted`, `.passCompletion`, `.progressivePasses`, `.carries` | count, share | |
+| `player.<id>.distanceKm`, `.topSpeedKph` | km, kph | tracking deltas; top speed is the fastest tracking reading or carry |
+| `player.<id>.shots`, `.xg`, `.goals`, `.assists` | count, xg, goals | |
+| `player.<id>.pressures`, `.fouls`, `.cards` | count | |
+| `player.<id>.minutes` | min | whole minutes of period clock on the pitch, from kick-off or coming on to half end, going off or now |
+| `player.<id>.sprints` | count | carries at 25 kph or faster plus tracking intervals topping 30 kph |
+| `player.<id>.tags` | | comma-separated names of the tags the player has raised, first raise first |
+
+Player facts exist only for players who have appeared: the starters from kick-off, substitutes from coming on.
+Rolling windows use period clock and never cross half time.
+
+### Tags
+
+| Tag | Trigger |
+| --- | --- |
+| `speed.30`, `speed.33` | a player's top speed first reaches 30 (33) kph |
+| `distance.5`, `distance.10` | a player's distance first reaches 5 (10) km |
+| `shot.fast` | a shot at 100 kph or faster |
+| `pass.hard` | a completed pass with difficulty at least 0.6 |
+
+A tag is `{ "tag", "playerId", "eventId", "value" }` and is returned by the step that raised it.

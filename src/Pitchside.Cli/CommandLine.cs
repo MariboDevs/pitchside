@@ -1,6 +1,9 @@
 using System.Globalization;
+using System.Text.Json;
+using Pitchside.Contracts;
 using Pitchside.Engine;
 using Pitchside.Engine.Calibration;
+using Pitchside.Stats;
 
 namespace Pitchside.Cli;
 
@@ -18,12 +21,21 @@ public static class CommandLine
         }
 
         var options = ParseOptions(args.Skip(1));
+        if (options.TryGetValue("seed", out var rawSeed) && (!long.TryParse(rawSeed, NumberStyles.None, culture, out var parsedSeed) || parsedSeed <= 0))
+        {
+            // Match ids are MER-{seed} and the contracts require a positive integer.
+            await output.WriteLineAsync($"--seed must be a positive whole number, not '{rawSeed}'.").ConfigureAwait(false);
+            return 1;
+        }
+
         switch (args[0])
         {
             case "simulate":
                 return await SimulateAsync(options, output, culture).ConfigureAwait(false);
             case "calibrate":
                 return await CalibrateAsync(options, output, culture).ConfigureAwait(false);
+            case "facts":
+                return await FactsAsync(options, output, culture).ConfigureAwait(false);
             default:
                 await output.WriteLineAsync(Usage).ConfigureAwait(false);
                 return 1;
@@ -35,7 +47,10 @@ public static class CommandLine
 
           simulate  --seed <n> [--out <dir>]          write match.json and events.jsonl for one seeded match
           calibrate [--matches <n>] [--report <file>] simulate a sample and compare it to the real-league targets
+          facts     --seed <n> [--at-seq <n>]          print the fact sheet as JSON, at full time or as of an event
         """;
+
+    private static readonly JsonSerializerOptions Indented = new(ContractJson.Options) { WriteIndented = true };
 
     private static async Task<int> SimulateAsync(Dictionary<string, string> options, TextWriter output, IFormatProvider culture)
     {
@@ -67,6 +82,22 @@ public static class CommandLine
         await File.WriteAllTextAsync(reportPath, markdown).ConfigureAwait(false);
         await output.WriteAsync(markdown).ConfigureAwait(false);
         return report.AllPass ? 0 : 2;
+    }
+
+    private static async Task<int> FactsAsync(Dictionary<string, string> options, TextWriter output, IFormatProvider culture)
+    {
+        var seed = long.Parse(options.GetValueOrDefault("seed", "7"), culture);
+        var match = MatchSimulator.Simulate(seed);
+        var atSeq = options.TryGetValue("at-seq", out var raw) ? int.Parse(raw, culture) : int.MaxValue;
+        var engine = new MatchStatsEngine();
+        var state = engine.Start(match.Document);
+        foreach (var matchEvent in match.Events.TakeWhile(e => e.Seq <= atSeq))
+        {
+            state = engine.Apply(state, matchEvent).State;
+        }
+
+        await output.WriteLineAsync(JsonSerializer.Serialize(engine.Snapshot(state), Indented)).ConfigureAwait(false);
+        return 0;
     }
 
     private static Dictionary<string, string> ParseOptions(IEnumerable<string> args)

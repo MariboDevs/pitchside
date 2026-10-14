@@ -6,8 +6,10 @@
     <Project Path="src/Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
     <Project Path="src/Pitchside.Api/Pitchside.Api.csproj" />
     <Project Path="src/Pitchside.AppHost/Pitchside.AppHost.csproj" />
+    <Project Path="src/Pitchside.Stats/Pitchside.Stats.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Pitchside.Engine.Tests/Pitchside.Engine.Tests.csproj" />
+    <Project Path="tests/Pitchside.Stats.Tests/Pitchside.Stats.Tests.csproj" />
   </Folder>
 </Solution>
