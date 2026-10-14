@@ -119,3 +119,24 @@ Rolling windows use period clock and never cross half time.
 | `pass.hard` | a completed pass with difficulty at least 0.6 |
 
 A tag is `{ "tag", "playerId", "eventId", "value" }` and is returned by the step that raised it.
+
+## Moments
+
+The moment detector (`src/Pitchside.Moments`) decides by rule, with no model, that a span of events matters and
+attaches the evidence a narrative may cite. Its contract is [`schemas/moment.schema.json`](../schemas/moment.schema.json)
+and `src/Pitchside.Contracts/Moment.cs`. Print a match's moments with
+`dotnet run --project src/Pitchside.Cli -- moments --seed 7`.
+
+A moment's `id` is `{matchId}:M:{triggerSeq:0000}:{type}`; `factSheetSeq` is the sheet its fact keys resolve
+in; `headline` is a code template. Types, priorities and rules are the table in
+[WP-02](specs/WP-02-moments.md). Where the table leaves room, the detector decides:
+
+- A missed penalty is a `penalty` moment only, not also a `big_chance_missed`.
+- `sustained_pressure` is evaluated on the side's shots and corners, and a goal by that side inside the three
+  minutes cancels it.
+- The clean-sheet `milestone` fires once, at the first second-half event of minute 80; when both sides still
+  keep one, a single moment with a null `sideId` covers both, and when a brace or hat-trick lands on that same
+  event one moment carries both headlines, so the derivable id stays unique and the rate limit drops neither.
+- The 90-second match-wide gap is measured on period clock and resets at half time. A moment inside the gap
+  is dropped unless its priority is higher than the one that opened it; goal, red card, penalty, half time and
+  full time are never limited and never open a gap.
