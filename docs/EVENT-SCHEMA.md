@@ -152,3 +152,35 @@ of those tokens. `renderedText` is produced by code, substituting each token wit
 precision. `status` is `verified` (passed the fact-checker), `fallback` (the moment type's code template after
 two failed explainer attempts), `rejected` or `draft`. Run the whole crew offline with
 `dotnet run --project src/Pitchside.Cli -- narrate --seed 7 --provider scripted`.
+
+## Live runtime
+
+A match goes live through the runtime (`src/Pitchside.Runtime`): a producer publishes `EventEnvelope`s
+(`matchId`, `seq`, `type`, `payloadJson`, `publishedUtc`) to the bus, partitioned by match id; one Akka.NET
+actor per match applies them strictly in sequence, runs the stats and moment stages, stores events, fact
+sheets (at every moment and every minute of clock) and moments, and pushes to clients.
+
+### SignalR hub (`/hubs/match`)
+
+| Direction | Method | Payload |
+| --- | --- | --- |
+| client to server | `JoinMatch(matchId)` | replies with a `MatchSnapshot`: the stored match, the live fact sheet, every moment and the narratives for the connection's viewer preferences |
+| client to server | `LeaveMatch(matchId)` | |
+| client to server | `SetViewer(matchId, ViewerPreferences)` | `{ persona, language, clubId?, playerId? }`, kept per connection |
+| server to client | `Event` | `MatchEvent`, every ingested event |
+| server to client | `FactSheet` | `FactSheet`, every 5 events or on a moment |
+| server to client | `Moment` | `Moment` |
+| server to client | `Narrative` | `Narrative` |
+| server to client | `MatchStatus` | `{ matchId, status, lastSeq, period, clockMs }`, on change and every 10 s |
+
+Messages use the contract serializer (camelCase, snake_case enums) and arrive in the order the actor produced
+them.
+
+### API (`/api/v1`)
+
+`GET /matches`, `GET /matches/{matchId}`, `GET /matches/{matchId}/events?fromSeq=&toSeq=`,
+`GET /matches/{matchId}/facts?atSeq=` (recomputed exactly from the stored events when `atSeq` is given),
+`GET /matches/{matchId}/moments`, `POST /replays { seed, speed }` (202; 409 when the match is already stored;
+429 at the cap), `DELETE /replays/{matchId}`, `POST /replays/{matchId}/pause` and `/resume`. A seeded match
+without replaying it: `GET /simulations/{seed}` and `/simulations/{seed}/events`. Errors are RFC 7807 problem
+details and every response carries `X-Request-ID`.

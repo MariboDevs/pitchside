@@ -6,6 +6,8 @@
   <ItemGroup>
     <ProjectReference Include="../Pitchside.Engine/Pitchside.Engine.csproj" />
     <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />
+    <ProjectReference Include="../Pitchside.Runtime/Pitchside.Runtime.csproj" />
+    <ProjectReference Include="../Pitchside.Agents/Pitchside.Agents.csproj" />
     <ProjectReference Include="../Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>

@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Azure.CosmosDB" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Pitchside.Api/Pitchside.Api.csproj" />
