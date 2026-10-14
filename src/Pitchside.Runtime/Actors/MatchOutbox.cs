@@ -50,6 +50,9 @@ public sealed class MatchOutbox : IDisposable
         _progress.Advance(_matchId, matchEvent.Seq);
     });
 
+    /// <summary>Records events already in the store, found on rebuild, as durable.</summary>
+    public void MarkDurable(int seq) => _progress.Advance(_matchId, seq);
+
     public void Write(string what, Func<CancellationToken, Task> write)
     {
         lock (_lock)
