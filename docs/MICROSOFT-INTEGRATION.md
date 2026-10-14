@@ -7,7 +7,7 @@ kept current as the build lands. Status: **planned** until a commit makes it tru
 | Technology | Role in Pitchside | Status |
 | --- | --- | --- |
 | Microsoft Foundry | Hosts the model deployments the agent crew calls, the evaluation runs that score every narrative for groundedness, and the tracing that shows each agent's handoffs | planned |
-| Microsoft Agent Framework (.NET) | The agent crew: moment detector, explainer, fact-checker, overlay scheduler, persona writer, translator. Shared match state, typed handoffs, retry and scripted fallback | planned |
+| Microsoft Agent Framework (.NET) | The agent crew: moment detector, explainer, fact-checker, overlay scheduler, persona writer, translator. Shared match state, typed handoffs, retry and scripted fallback | built (WP-04: one `Microsoft.Agents.AI.Workflows` workflow per moment, `src/Pitchside.Agents`) |
 | Azure MCP and an MCP server of our own | Match state, statistics and the overlay timeline exposed as MCP tools so agents, Copilot and the judges' own clients can query a live match | planned |
 | GitHub Copilot Agent Mode | Used in development alongside Claude Code; Copilot coding agent and Copilot code review run on pull requests | planned |
 | Azure Container Apps | Hosts the API, the agent host and the overlay UI, scale-to-zero outside demo hours | planned |

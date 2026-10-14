@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pitchside.maribodevs.com/schemas/narrative.schema.json",
+  "title": "Pitchside narrative",
+  "description": "Text about one moment for one persona in one language. Numbers appear only as [[fact.key]] tokens in sentences; renderedText is produced by code.",
+  "type": "object",
+  "required": ["id", "matchId", "momentId", "persona", "language", "factSheetSeq", "sentences", "renderedText", "status", "provenance", "evaluation"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+:[a-z_]+:[a-z]{2}$" },
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
+    "momentId": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+$" },
+    "persona": { "type": "string", "enum": ["base", "analyst", "casual", "club_fan", "player_focus"] },
+    "language": { "type": "string", "enum": ["en", "af", "zu", "es"] },
+    "factSheetSeq": { "type": "integer", "minimum": 1 },
+    "sentences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "citations"],
+        "additionalProperties": false,
+        "properties": {
+          "text": { "type": "string", "minLength": 1 },
+          "citations": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "renderedText": { "type": "string" },
+    "status": { "type": "string", "enum": ["draft", "verified", "rejected", "fallback"] },
+    "provenance": {
+      "type": "object",
+      "required": ["provider", "model", "promptVersion", "attempts", "generatedUtc", "fallback"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "promptVersion": { "type": "string" },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "generatedUtc": { "type": "string", "format": "date-time" },
+        "fallback": { "type": "boolean" }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "required": ["citationCoverage", "groundedness"],
+      "additionalProperties": false,
+      "properties": {
+        "citationCoverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "groundedness": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}
