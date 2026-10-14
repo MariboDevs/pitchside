@@ -32,13 +32,16 @@ test('the 16:9 overlay draws the score bug and the lower third on air', async ({
   expect(background).toBe('rgba(0, 0, 0, 0)');
 
   // Title-safe: nothing within 5% of an edge.
-  // Measure the card at rest: its enter animation translates it by 24px for 320ms.
-  await card.evaluate((el) =>
-    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)),
-  );
+  // Measure the card at rest: its enter animation slides it up 24px, and the animation is not always
+  // visible to getAnimations() when the card first appears, so poll its edge until it settles.
   const box = (await card.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(1920 * 0.05 - 1);
-  expect(box.y + box.height).toBeLessThanOrEqual(1080 * 0.95 + 1);
+  await expect
+    .poll(async () => {
+      const b = (await card.boundingBox())!;
+      return b.y + b.height;
+    })
+    .toBeLessThanOrEqual(1080 * 0.95 + 1);
 
   // Broadcast minimum: no text under 28 px at 1080p, anywhere on the stage.
   const sizes = await page.evaluate(() =>

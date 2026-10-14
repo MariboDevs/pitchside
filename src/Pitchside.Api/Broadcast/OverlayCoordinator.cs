@@ -6,6 +6,7 @@ using Pitchside.Overlay;
 using Pitchside.Runtime.Actors;
 using Pitchside.Runtime.Broadcast;
 using Pitchside.Runtime.Messages;
+using Pitchside.Runtime.Replay;
 using Pitchside.Runtime.Storage;
 
 namespace Pitchside.Api.Broadcast;
@@ -20,7 +21,7 @@ namespace Pitchside.Api.Broadcast;
 /// (WP-09), and after a restart a match starts in auto-air.
 /// </para>
 /// </summary>
-public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMatchBroadcaster broadcaster, IRequiredActor<MatchSupervisorActor> supervisor)
+public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMatchBroadcaster broadcaster, IRequiredActor<MatchSupervisorActor> supervisor, IReplayService replays)
 {
     /// <summary>How long to wait for a moment and its fact sheet to be readable before giving up on a card.</summary>
     public static readonly TimeSpan InputWait = TimeSpan.FromSeconds(5);
@@ -45,11 +46,20 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         await SerialAsync(narrative.MatchId, async () =>
         {
             var state = await StateAsync(narrative.MatchId, cancellationToken).ConfigureAwait(false);
-            int? ready = state.Period == moment.Period ? state.ClockMs : null;
-            await WriteAsync(book.Schedule(moment, narrative, sheet, match.Document, ready), cancellationToken).ConfigureAwait(false);
+            await WriteAsync(book.Schedule(moment, narrative, sheet, match.Document, ReadyClock(state, moment)), cancellationToken).ConfigureAwait(false);
             return 0;
         }, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// The match clock the narrative was ready at, when that is a real-time clock: the match is still in play, in the
+    /// moment's period, and not replaying as fast as possible. A finished match or an instant replay has a clock far
+    /// past its moments, so its cards are laid out from their moments instead, as a record of the match.
+    /// </summary>
+    private int? ReadyClock(MatchStateView state, Moment moment) =>
+        state.Status is MatchStatus.Live or MatchStatus.Paused && state.Period == moment.Period && !replays.IsInstant(state.MatchId)
+            ? state.ClockMs
+            : null;
 
     public async Task<OverlayEntry?> HoldAsync(string matchId, string entryId, CancellationToken cancellationToken)
     {
@@ -150,7 +160,9 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
     {
         if (!book.IsLoaded(matchId))
         {
-            book.Load(matchId, await store.GetOverlayEntriesAsync(matchId, cancellationToken).ConfigureAwait(false));
+            var stored = await store.GetOverlayEntriesAsync(matchId, cancellationToken).ConfigureAwait(false);
+            var moments = await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false);
+            book.Load(matchId, stored, moments);
         }
     }
 
@@ -160,12 +172,16 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         return await matches.Ask<MatchStateView>(new GetState(matchId), Hubs.MatchSnapshots.AskTimeout, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Stores and pushes each entry in order, still under the match's gate. The book already holds the change, so a
+    /// write or push that fails briefly is retried rather than left behind the book.
+    /// </summary>
     private async Task WriteAsync(IReadOnlyList<OverlayEntry> entries, CancellationToken cancellationToken)
     {
         foreach (var entry in entries)
         {
-            await store.SaveOverlayEntryAsync(entry, cancellationToken).ConfigureAwait(false);
-            await broadcaster.OverlayEntryAsync(entry, cancellationToken).ConfigureAwait(false);
+            await WriteRetry.RunAsync(token => store.SaveOverlayEntryAsync(entry, token), WriteRetry.Delays, cancellationToken).ConfigureAwait(false);
+            await WriteRetry.RunAsync(token => broadcaster.OverlayEntryAsync(entry, token), WriteRetry.Delays, cancellationToken).ConfigureAwait(false);
         }
     }
 }
