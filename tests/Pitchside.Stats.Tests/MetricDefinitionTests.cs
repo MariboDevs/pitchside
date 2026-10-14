@@ -47,6 +47,7 @@ public sealed class MetricDefinitionTests
         sheet.NumberOf(FactKeys.MatchScoreAway).ShouldBe(0);
         sheet.Find(FactKeys.MatchScoreHome)!.DerivedFrom.ShouldBe([TinyMatch.Id(7)]);
         sheet.NumberOf(FactKeys.MatchPossessions).ShouldBe(4);
+        sheet.Find(FactKeys.MatchPossessions)!.DerivedFrom.ShouldBe([TinyMatch.Id(2), TinyMatch.Id(8), TinyMatch.Id(11), TinyMatch.Id(15)]);
 
         // The second half's window holds only the kick-off, a substitution and full time.
         sheet.NumberOf(FactKeys.MatchRhythm).ShouldBe(0);
@@ -113,10 +114,12 @@ public sealed class MetricDefinitionTests
     [Fact]
     public void Possession_share_goes_to_whoever_had_the_ball()
     {
-        // Home holds the ball for 2,752 s (including first-half stoppage), away for 128 s.
+        // The goal at 10 s hands the ball to away until its turnover at 77 s hands it back: away holds it for 62 + 3
+        // + 2 s there and the 120 s of the second half, 187 s in all; home for the other 2,693 s. Crediting the
+        // interval after a turnover or a goal to the side that lost the ball would give 0.96 and 0.04.
         var sheet = At(20);
-        sheet.NumberOf(H(FactKeys.PossessionShare)).ShouldBe(0.96);
-        sheet.NumberOf(A(FactKeys.PossessionShare)).ShouldBe(0.04);
+        sheet.NumberOf(H(FactKeys.PossessionShare)).ShouldBe(0.94);
+        sheet.NumberOf(A(FactKeys.PossessionShare)).ShouldBe(0.06);
     }
 
     [Fact]

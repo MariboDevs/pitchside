@@ -39,7 +39,8 @@ internal static class BatchStats
         var goals = events.Where(e => e.Type == EventType.Goal).ToList();
         facts.Add(N("match.score.home", goals.Count(g => g.TeamId == homeId), "goals", 0, Ids(goals.Where(g => g.TeamId == homeId))));
         facts.Add(N("match.score.away", goals.Count(g => g.TeamId == awayId), "goals", 0, Ids(goals.Where(g => g.TeamId == awayId))));
-        facts.Add(N("match.possessions", events.Select(e => e.PossessionId).Where(id => id > 0).Distinct().Count(), "count", 0, []));
+        var possessionStarts = events.Where(e => e.PossessionId > 0).GroupBy(e => e.PossessionId).Select(g => g.First()).ToList();
+        facts.Add(N("match.possessions", possessionStarts.Count, "count", 0, Ids(possessionStarts)));
 
         // Rolling windows: the current period, the last ten (or five) minutes of period clock.
         var lastKickOff = events.Select((e, i) => (e, i)).LastOrDefault(x => x.e.Type == EventType.KickOff);
@@ -79,11 +80,13 @@ internal static class BatchStats
             }
 
             var other = e.TeamId == homeId ? awayId : homeId;
+            // After a turnover or a goal the other side has the ball; after a goal kick or a corner the side that
+            // put the ball out does not; a throw-in tells us nothing.
             owner = e.Type switch
             {
-                EventType.KickOff or EventType.Pass or EventType.Carry or EventType.Shot or EventType.Goal or EventType.Turnover or EventType.Corner => e.TeamId,
-                EventType.Pressure or EventType.Foul or EventType.Card => other,
-                EventType.OutOfPlay => e.Restart == Restart.Corner ? other : e.TeamId,
+                EventType.KickOff or EventType.Pass or EventType.Carry or EventType.Shot or EventType.Corner => e.TeamId,
+                EventType.Turnover or EventType.Goal or EventType.Pressure or EventType.Foul or EventType.Card => other,
+                EventType.OutOfPlay when e.Restart is Restart.GoalKick or Restart.Corner => other,
                 _ => owner,
             };
             previous = e;

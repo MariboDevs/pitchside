@@ -12,8 +12,11 @@ public static class EventRules
     public const double FinalThirdX = 70;
 
     /// <summary>
-    /// The side in possession that an event reveals, or null when it reveals none. Defensive actions (pressure,
-    /// foul, card) and a corner awarded by the ball going out reveal the other side.
+    /// The side in possession after an event, or null when the event does not say. On-ball actions (kick-off,
+    /// pass, carry, shot, corner) show their own side. A turnover or a goal hands the ball to the other side.
+    /// Defensive actions (pressure, foul, card) show the other side in possession. The ball going out shows the
+    /// side that restarts: the event is emitted by the side that put the ball out, so a goal kick or a corner goes
+    /// to the other side, and a throw-in, which can go either way, says nothing.
     /// </summary>
     public static string? PossessionOwner(MatchEvent e, string homeId, string awayId)
     {
@@ -21,10 +24,10 @@ public static class EventRules
         var other = e.TeamId == homeId ? awayId : homeId;
         return e.Type switch
         {
-            EventType.KickOff or EventType.Pass or EventType.Carry or EventType.Shot or EventType.Goal
-                or EventType.Turnover or EventType.Corner => e.TeamId,
+            EventType.KickOff or EventType.Pass or EventType.Carry or EventType.Shot or EventType.Corner => e.TeamId,
+            EventType.Turnover or EventType.Goal => other,
             EventType.Pressure or EventType.Foul or EventType.Card => other,
-            EventType.OutOfPlay => e.Restart == Restart.Corner ? other : e.TeamId,
+            EventType.OutOfPlay => e.Restart is Restart.GoalKick or Restart.Corner ? other : null,
             _ => null,
         };
     }

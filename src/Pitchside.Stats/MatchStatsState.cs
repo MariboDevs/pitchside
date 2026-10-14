@@ -23,6 +23,9 @@ public sealed record MatchStatsState
     public int LastPossessionId { get; init; }
     public int Possessions { get; init; }
 
+    /// <summary>The first event of each possession, the source of <c>match.possessions</c>.</summary>
+    public Metric PossessionStarts { get; init; } = Metric.Empty;
+
     /// <summary>The team the latest possession-revealing event put in possession; null before kick-off.</summary>
     public string? InPossession { get; init; }
 
