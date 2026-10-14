@@ -78,7 +78,7 @@ public sealed partial class EventHubsEventBus : IEventBus, IAsyncDisposable
         await processor.StartProcessingAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 // Wake at least every few seconds, so an idle partition's tail is checkpointed once its writes land.
                 if (!received.Reader.TryRead(out var item))
@@ -111,8 +111,14 @@ public sealed partial class EventHubsEventBus : IEventBus, IAsyncDisposable
         }
         finally
         {
-            await CheckpointAllAsync(pending).ConfigureAwait(false);
-            await processor.StopProcessingAsync(CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                await CheckpointAllAsync(pending).ConfigureAwait(false);
+            }
+            finally
+            {
+                await processor.StopProcessingAsync(CancellationToken.None).ConfigureAwait(false);
+            }
         }
     }
 
@@ -149,19 +155,37 @@ public sealed partial class EventHubsEventBus : IEventBus, IAsyncDisposable
     }
 
     /// <summary>Checkpoints the newest event of a partition's queue whose store write has landed, and drops it and older ones.</summary>
+    /// <remarks>
+    /// Entries leave the queue only after the checkpoint succeeds. A failed checkpoint is logged and retried on the next
+    /// event or interval, never allowed to end ingestion: at worst a restart redelivers events the actor drops.
+    /// </remarks>
     private async Task CheckpointDurableAsync(Queue<(EventEnvelope Envelope, ProcessEventArgs Args)> queue)
     {
-        ProcessEventArgs? durable = null;
-        while (queue.TryPeek(out var head) && head.Envelope.Seq <= _progress.For(head.Envelope.MatchId))
+        var eligible = queue.TakeWhile(entry => entry.Envelope.Seq <= _progress.For(entry.Envelope.MatchId)).Count();
+        if (eligible == 0)
         {
-            durable = queue.Dequeue().Args;
+            return;
         }
 
-        if (durable is { } args)
+        var newest = queue.ElementAt(eligible - 1);
+        try
         {
-            await args.UpdateCheckpointAsync(CancellationToken.None).ConfigureAwait(false);
+            await newest.Args.UpdateCheckpointAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            LogCheckpointFailed(ex, newest.Args.Partition.PartitionId, newest.Envelope.MatchId, newest.Envelope.Seq);
+            return;
+        }
+
+        for (var i = 0; i < eligible; i++)
+        {
+            queue.Dequeue();
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Checkpoint on partition {PartitionId} at {MatchId}/{Seq} failed; it is retried")]
+    private partial void LogCheckpointFailed(Exception exception, string partitionId, string matchId, int seq);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Event Hubs processor error on partition {PartitionId} during {Operation}")]
     private partial void LogProcessorError(Exception exception, string partitionId, string operation);

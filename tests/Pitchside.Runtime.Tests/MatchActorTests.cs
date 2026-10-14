@@ -191,10 +191,12 @@ public sealed class MatchActorTests : TestKit
         await AwaitAssertAsync(async () => (await StateAsync(actor)).LastSeq.ShouldBe(3), Wait);
     }
 
-    [Fact]
-    public async Task A_failed_append_is_retried_in_order_and_the_store_stays_gapless()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_failed_append_is_retried_in_order_and_the_store_stays_gapless(bool timeOut)
     {
-        var flaky = new FlakyAppendStore(_store, new Dictionary<int, int> { [3] = 2 });
+        var flaky = new FlakyAppendStore(_store, new Dictionary<int, int> { [3] = 2 }, timeOut);
         await _store.SaveMatchAsync(Sample.Stored, CancellationToken.None);
         var actor = Sys.ActorOf(MatchActor.Props(MatchId, flaky, _broadcaster, _sink, Outbox(flaky)));
 
