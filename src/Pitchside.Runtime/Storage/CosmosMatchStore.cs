@@ -8,7 +8,8 @@ namespace Pitchside.Runtime.Storage;
 /// <summary>
 /// Azure Cosmos DB storage: one container per document type, partition key <c>/matchId</c>, serverless-compatible
 /// (no throughput set). Point reads by id and partition key; every query filters on the partition key. Retries
-/// are the SDK's defaults.
+/// are the SDK's defaults. In Azure the database and containers are provisioned by Bicep: Entra ID data-plane roles
+/// cannot create them, so startup only checks that they exist. The key-authenticated local emulator creates them.
 /// </summary>
 public sealed class CosmosMatchStore(CosmosClient client, string databaseName) : IMatchStore
 {
@@ -22,13 +23,39 @@ public sealed class CosmosMatchStore(CosmosClient client, string databaseName) :
 
     private static readonly string[] AllContainers = [Matches, Events, FactSheets, Moments, Narratives, Overlay, Audit];
 
-    /// <summary>Creates the database and every container if missing. Idempotent.</summary>
+    public const int MaxStatusAttempts = 10;
+
+    /// <summary>
+    /// Creates the database and every container if missing (idempotent), which the emulator allows. Under Entra ID the
+    /// create is forbidden, so it falls back to checking that Bicep provisioned each one and fails clearly if not.
+    /// </summary>
     public async Task EnsureCreatedAsync(CancellationToken cancellationToken)
     {
-        var database = (await client.CreateDatabaseIfNotExistsAsync(databaseName, cancellationToken: cancellationToken).ConfigureAwait(false)).Database;
-        foreach (var name in AllContainers)
+        try
         {
-            await database.CreateContainerIfNotExistsAsync(new ContainerProperties(name, "/matchId"), cancellationToken: cancellationToken).ConfigureAwait(false);
+            var database = (await client.CreateDatabaseIfNotExistsAsync(databaseName, cancellationToken: cancellationToken).ConfigureAwait(false)).Database;
+            foreach (var name in AllContainers)
+            {
+                await database.CreateContainerIfNotExistsAsync(new ContainerProperties(name, "/matchId"), cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            await VerifyProvisionedAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public async Task<bool> TryCreateMatchAsync(StoredMatch match, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        try
+        {
+            await Container(Matches).CreateItemAsync(new CosmosItem<StoredMatch>(match.MatchId, match.MatchId, match.LastSeq, match), new PartitionKey(match.MatchId), cancellationToken: cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+        {
+            return false;
         }
     }
 
@@ -48,11 +75,43 @@ public sealed class CosmosMatchStore(CosmosClient client, string databaseName) :
         return [.. items.Select(i => i.Payload).OrderBy(m => m.CreatedUtc).ThenBy(m => m.MatchId, StringComparer.Ordinal)];
     }
 
+    /// <summary>
+    /// A read and a replace conditional on the read's ETag, repeated on a conflicting write, so the terminal-status
+    /// and highest-seq rules apply to the current document rather than to a stale copy.
+    /// </summary>
     public async Task UpdateMatchStatusAsync(string matchId, MatchStatus status, int lastSeq, CancellationToken cancellationToken)
     {
-        var current = await GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false)
-            ?? throw new KeyNotFoundException($"No match '{matchId}'.");
-        await SaveMatchAsync(current with { Status = MatchStatusTransition.Resolve(current.Status, status), LastSeq = Math.Max(current.LastSeq, lastSeq) }, cancellationToken).ConfigureAwait(false);
+        var container = Container(Matches);
+        for (var attempt = 1; ; attempt++)
+        {
+            ItemResponse<CosmosItem<StoredMatch>> read;
+            try
+            {
+                read = await container.ReadItemAsync<CosmosItem<StoredMatch>>(matchId, new PartitionKey(matchId), cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                throw new KeyNotFoundException($"No match '{matchId}'.", ex);
+            }
+
+            var current = read.Resource.Payload;
+            var next = current with { Status = MatchStatusTransition.Resolve(current.Status, status), LastSeq = Math.Max(current.LastSeq, lastSeq) };
+            try
+            {
+                await container.ReplaceItemAsync(
+                    new CosmosItem<StoredMatch>(matchId, matchId, next.LastSeq, next),
+                    matchId,
+                    new PartitionKey(matchId),
+                    new ItemRequestOptions { IfMatchEtag = read.ETag },
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed && attempt < MaxStatusAttempts)
+            {
+                // Another write landed between the read and the replace; read again and reapply the rules.
+                continue;
+            }
+        }
     }
 
     public Task AppendEventAsync(MatchEvent matchEvent, CancellationToken cancellationToken)
@@ -109,6 +168,22 @@ public sealed class CosmosMatchStore(CosmosClient client, string databaseName) :
     }
 
     private Container Container(string name) => client.GetContainer(databaseName, name);
+
+    private async Task VerifyProvisionedAsync(CancellationToken cancellationToken)
+    {
+        foreach (var name in AllContainers)
+        {
+            try
+            {
+                await Container(name).ReadContainerAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                throw new InvalidOperationException(
+                    $"Cosmos DB container '{databaseName}/{name}' does not exist. In Azure the containers are provisioned by the Bicep templates; Entra ID cannot create them.", ex);
+            }
+        }
+    }
 
     private Task Upsert<T>(string container, CosmosItem<T> item, CancellationToken cancellationToken) =>
         Container(container).UpsertItemAsync(item, new PartitionKey(item.MatchId), cancellationToken: cancellationToken);

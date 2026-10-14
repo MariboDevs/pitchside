@@ -1,8 +1,12 @@
 using System.Diagnostics;
+using Akka.Actor;
+using Akka.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Pitchside.Contracts;
+using Pitchside.Runtime.Actors;
+using Pitchside.Runtime.Messages;
 using Pitchside.Runtime.Replay;
 using Pitchside.Runtime.Storage;
 
@@ -16,6 +20,10 @@ public sealed class ReplayServiceTests : IAsyncLifetime
     private IReplayService Replays => _host.Services.GetRequiredService<IReplayService>();
 
     private IMatchStore Store => _host.Services.GetRequiredService<IMatchStore>();
+
+    private async Task<MatchStatus> ActorStatusAsync(string matchId) =>
+        (await (await _host.Services.GetRequiredService<IRequiredActor<MatchSupervisorActor>>().GetAsync())
+            .Ask<MatchStateView>(new GetState(matchId), TimeSpan.FromSeconds(5))).Status;
 
     public async Task InitializeAsync()
     {
@@ -77,6 +85,7 @@ public sealed class ReplayServiceTests : IAsyncLifetime
 
         await WaitFor(() => Task.FromResult(!Replays.Running.Contains(started.MatchId)));
         await WaitFor(async () => (await Store.GetMatchAsync(started.MatchId, CancellationToken.None))!.Status == MatchStatus.Stopped);
+        await WaitFor(async () => await ActorStatusAsync(started.MatchId) == MatchStatus.Stopped);
         Replays.Stop("MER-404").ShouldBeFalse();
     }
 
@@ -86,6 +95,8 @@ public sealed class ReplayServiceTests : IAsyncLifetime
         var started = await Replays.StartAsync(106, 50, CancellationToken.None);
         await WaitFor(async () => (await Store.GetEventsAsync(started.MatchId, 1, 5, CancellationToken.None)).Count == 5);
         Replays.Pause(started.MatchId).ShouldBeTrue();
+        await WaitFor(async () => await ActorStatusAsync(started.MatchId) == MatchStatus.Paused);
+        await WaitFor(async () => (await Store.GetMatchAsync(started.MatchId, CancellationToken.None))!.Status == MatchStatus.Paused);
         await Task.Delay(300);
         var paused = (await Store.GetEventsAsync(started.MatchId, 1, int.MaxValue, CancellationToken.None)).Count;
         await Task.Delay(500);
@@ -93,7 +104,25 @@ public sealed class ReplayServiceTests : IAsyncLifetime
 
         Replays.Resume(started.MatchId).ShouldBeTrue();
         await WaitFor(async () => (await Store.GetEventsAsync(started.MatchId, 1, int.MaxValue, CancellationToken.None)).Count > paused);
+        (await ActorStatusAsync(started.MatchId)).ShouldBe(MatchStatus.Live);
         Replays.Stop(started.MatchId);
+    }
+
+    [Fact]
+    public async Task A_start_that_cannot_store_its_match_frees_its_slot()
+    {
+        var existing = Sample.Stored with { Document = Sample.Stored.Document with { MatchId = "MER-107" } };
+        await Store.SaveMatchAsync(existing, CancellationToken.None);
+
+        await Should.ThrowAsync<ReplayConflictException>(() => Replays.StartAsync(107, 0, CancellationToken.None));
+        Replays.Running.ShouldNotContain("MER-107");
+        (await Store.GetMatchAsync("MER-107", CancellationToken.None))!.Document.ShouldBe(existing.Document);
+
+        var first = await Replays.StartAsync(108, 0.001, CancellationToken.None);
+        var second = await Replays.StartAsync(109, 0.001, CancellationToken.None);
+        Replays.Running.ShouldBe([first.MatchId, second.MatchId], ignoreOrder: true);
+        Replays.Stop(first.MatchId);
+        Replays.Stop(second.MatchId);
     }
 
     private static async Task WaitFor(Func<Task<bool>> condition)

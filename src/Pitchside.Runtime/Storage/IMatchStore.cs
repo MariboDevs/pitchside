@@ -10,6 +10,9 @@ public interface IMatchStore
 {
     Task SaveMatchAsync(StoredMatch match, CancellationToken cancellationToken);
 
+    /// <summary>Stores the match only if no match with its id exists; false when one does. Replays use it to run once.</summary>
+    Task<bool> TryCreateMatchAsync(StoredMatch match, CancellationToken cancellationToken);
+
     Task<StoredMatch?> GetMatchAsync(string matchId, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<StoredMatch>> ListMatchesAsync(CancellationToken cancellationToken);

@@ -39,6 +39,14 @@ Producer (Replay or Live) --> IEventBus --> MatchIngestConsumer --> MatchActor (
 - Idempotency: the actor ignores an `IngestEvent` whose `seq` is not exactly `lastSeq + 1`; an older seq is
   dropped and counted; a gap raises a `GapDetected` log at Warning and requests a resend from the store.
 - The actor is the only writer. Reads go through `GetState` snapshots, never shared mutable state.
+- Writes and pushes go through a per-match `MatchOutbox` owned by the supervisor, so they survive an actor
+  restart: writes land one at a time in issue order and are retried until they succeed, so the stored events are
+  always a gapless prefix, and a restarted actor waits for earlier writes before it rebuilds. Pushes stay in order
+  across a restart.
+- Lifecycle: `SetLifecycle(matchId, status)` carries the producer's pause, resume and stop to the actor, which
+  persists and broadcasts the status. `Completed` and `Stopped` are terminal in the actor and in every store.
+- Match ids are plain tokens (`[A-Za-z0-9_-]{1,64}`); the supervisor refuses anything else, and unsubscribing or a
+  lifecycle change never creates a match actor.
 
 ### Event bus (`IEventBus`)
 
@@ -69,9 +77,11 @@ Documents, each its own C# record and each its own Cosmos container, partition k
 | `audit` | written by WP-07 | ulid |
 
 - `InMemoryMatchStore`: dictionaries, used by tests and the default local mode.
-- `CosmosMatchStore`: `Microsoft.Azure.Cosmos` with `DefaultAzureCredential`, containers created on startup
-  if missing (idempotent), serverless-compatible (no throughput set). Point reads by id and partition key;
-  queries only with the partition key in the filter. Retries left to the SDK's defaults.
+- `CosmosMatchStore`: `Microsoft.Azure.Cosmos` with `DefaultAzureCredential`. In Azure the database and
+  containers are provisioned by Bicep (WP-09), because Entra ID data-plane roles cannot create them; startup checks
+  they exist and fails with a clear message if not. The key-authenticated local emulator creates them on startup
+  (idempotent). Serverless-compatible (no throughput set). Point reads by id and partition key; queries only with
+  the partition key in the filter. Status updates are ETag-conditional replaces. Retries left to the SDK's defaults.
 - Local Cosmos: the Aspire AppHost runs the Cosmos DB Linux emulator through
   `Aspire.Hosting.Azure.CosmosDB` `RunAsEmulator()`, so `Storage:Provider=Cosmos` works on a laptop with
   Docker. Tests never need it; `InMemory` is the test provider.

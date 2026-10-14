@@ -19,6 +19,12 @@ public sealed class InMemoryMatchStore : IMatchStore
         return Task.CompletedTask;
     }
 
+    public Task<bool> TryCreateMatchAsync(StoredMatch match, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        return Task.FromResult(_matches.TryAdd(match.MatchId, match));
+    }
+
     public Task<StoredMatch?> GetMatchAsync(string matchId, CancellationToken cancellationToken) =>
         Task.FromResult(_matches.GetValueOrDefault(matchId));
 
