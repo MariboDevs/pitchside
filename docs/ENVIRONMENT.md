@@ -44,29 +44,28 @@ provisioning command.
 | Project endpoint | `https://ais-pitchside-dev.services.ai.azure.com/api/projects/pitchside-dev` |
 | OpenAI endpoint | `https://ais-pitchside-dev.openai.azure.com/` |
 | Services endpoint | `https://ais-pitchside-dev.cognitiveservices.azure.com/` |
-| Deployment `pitchside-fast` | gpt-5-mini, version 2025-08-07, GlobalStandard, capacity 50 (50K tokens per minute) |
-| Deployment `pitchside-quality` | **not created**, see "Needs a human" |
+| Deployment `pitchside-fast` | gpt-6-luna, version 2026-09-22, GlobalStandard, capacity 100 (100K tokens per minute) |
+| Deployment `pitchside-quality` | gpt-6.1-sol, version 2026-09-29, GlobalStandard, capacity 100 (100K tokens per minute) |
 
 Models chosen from `az cognitiveservices model list --location southafricanorth` (newest GA, not preview):
 
 | Role | Intended model | State |
 | --- | --- | --- |
-| fast | `gpt-6-luna` 2026-09-22, the fast cost-efficient model of the GPT-6 family | quota limit 0 in all three preferred regions; `pitchside-fast` runs gpt-5-mini until quota arrives |
-| quality | `gpt-6.1-sol` 2026-09-29, the newest GA general-purpose model, no access request needed | quota limit 0 in all three preferred regions; not deployed |
+| fast | `gpt-6-luna` 2026-09-22, the fast cost-efficient model of the GPT-6 family | deployed 14 October as `pitchside-fast` |
+| quality | `gpt-6.1-sol` 2026-09-29, the newest GA general-purpose model, no access request needed | deployed 14 October as `pitchside-quality` |
 
-Chat quota the subscription holds today (thousand tokens per minute, GlobalStandard unless stated):
+Quota history. On 8 October the subscription sat on the Foundry Free Tier (Tier 0), which carries quota only
+for gpt-5-mini, gpt-4.1-mini and o4-mini, so every GPT-6 model reported a limit of 0 and `pitchside-fast` ran
+gpt-5-mini as a stand-in. Two quota request forms were submitted on 8 October; the first was declined for
+regional capacity in South Africa North. On 14 October the subscription was on Tier 1 with 1,000K tokens per
+minute GlobalStandard for gpt-6-luna, gpt-6-sol, gpt-6-astra and gpt-6.1-sol in South Africa North, and both
+deployments were created at 100K each. Verified on 14 October: one chat completion per deployment with a
+bearer token from `az account get-access-token --resource https://cognitiveservices.azure.com` returned
+HTTP 200 with model ids `gpt-6-luna-2026-09-22` and `gpt-6.1-sol-2026-09-29`.
 
-| Region | Models with quota |
-| --- | --- |
-| southafricanorth | gpt-5-mini 500, gpt-4.1-mini 200, o4-mini 100, gpt-oss-120b 5000 |
-| westeurope | the same, plus gpt-5.4-mini 200 on DataZoneStandard |
-| swedencentral | the same, plus gpt-5.4-mini 200 on DataZoneStandard and older models on Standard |
-
-Every GPT-5.4, 5.5, 5.6, 6 and 6.1 model reports a limit of 0 on GlobalStandard and DataZoneStandard in all
-three regions. The Microsoft Learn quota page says lower quota tiers need a quota request for the GPT-6
-family. Verified: one chat completion against `pitchside-fast` with a bearer token from
-`az account get-access-token --resource https://cognitiveservices.azure.com` returned HTTP 200 and the model
-id `gpt-5-mini-2025-08-07`.
+The Azure CLI profile on this machine also holds the sipho@smesnapshot.com sponsorship subscription and the
+default has been observed to switch to it between sessions. Every provisioning command passes
+`--subscription 1641c920-b05d-4921-8a24-029ca939893a` explicitly.
 
 ### Role assignments
 
@@ -161,22 +160,7 @@ commits only this file.
 
 ## Needs a human
 
-1. **Foundry quota for the GPT-6 models.** Open the Azure portal, Quotas, Azure OpenAI (or Microsoft Foundry
-   in the portal, Quota), region South Africa North, and request GlobalStandard quota for `gpt-6.1-sol`
-   and `gpt-6-luna` (100K tokens per minute each is ample for the demo). The request form is linked from
-   the quota blade. When granted, run from this repository:
-
-   ```bash
-   az cognitiveservices account deployment create -g rg-pitchside-dev -n ais-pitchside-dev \
-     --deployment-name pitchside-quality --model-name gpt-6.1-sol --model-version 2026-09-29 \
-     --model-format OpenAI --sku-name GlobalStandard --sku-capacity 50
-   az cognitiveservices account deployment create -g rg-pitchside-dev -n ais-pitchside-dev \
-     --deployment-name pitchside-fast --model-name gpt-6-luna --model-version 2026-09-22 \
-     --model-format OpenAI --sku-name GlobalStandard --sku-capacity 50
-   ```
-
-   The second command swaps the model behind `pitchside-fast` in place; deployment names do not change.
-   If the quota request is refused, the fallback with quota today is gpt-5-mini for both roles.
+1. **Foundry quota.** Resolved on 14 October; both GPT-6 deployments exist. Nothing to do.
 2. **Fabric.** The tenant has no Fabric licence. Sign in to the Fabric portal as sipho@maribodevs.com, open
    Settings (gear), Admin portal, Tenant settings, and confirm "Users can create Fabric items" is enabled;
    then from the account manager (top right) choose "Start trial" to get a trial capacity for dev. If the
