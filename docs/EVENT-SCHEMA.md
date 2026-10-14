@@ -140,3 +140,15 @@ in; `headline` is a code template. Types, priorities and rules are the table in
 - The 90-second match-wide gap is measured on period clock and resets at half time. A moment inside the gap
   is dropped unless its priority is higher than the one that opened it; goal, red card, penalty, half time and
   full time are never limited and never open a gap.
+
+## Narratives
+
+The agent crew (`src/Pitchside.Agents`) turns a moment into text. Its contract is
+[`schemas/narrative.schema.json`](../schemas/narrative.schema.json) and `src/Pitchside.Contracts/Narrative.cs`.
+A narrative's `id` is `{momentId}:{persona}:{language}`; the base narrative is persona `base`, language `en`.
+
+Each sentence is written with `[[fact.key]]` tokens in place of every number, and its `citations` are the keys
+of those tokens. `renderedText` is produced by code, substituting each token with the fact's value at its
+precision. `status` is `verified` (passed the fact-checker), `fallback` (the moment type's code template after
+two failed explainer attempts), `rejected` or `draft`. Run the whole crew offline with
+`dotnet run --project src/Pitchside.Cli -- narrate --seed 7 --provider scripted`.
