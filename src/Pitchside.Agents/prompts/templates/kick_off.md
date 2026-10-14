@@ -1,2 +1,1 @@
-Kick-off between {{homeName}} and {{awayName}}.
-The match is under way in the Meridian League.
+{{homeName}} and {{awayName}} kick off in the Meridian League at minute [[match.clock.minute]].

@@ -15,4 +15,5 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Foundry:Endpoint` | | the Azure OpenAI or Foundry resource endpoint; calls go to its `/openai/v1/` path, keyless | WP-04 |
 | `Foundry:Deployments:Fast` | | deployment name for the explainer, persona writer and translator | WP-04 |
 | `Foundry:Deployments:Quality` | | deployment name for half-time and full-time narratives and the agent fact-check | WP-04 |
+| `Foundry:TimeoutSeconds` | `4` | deadline for one model call; a call past it counts as a failed attempt, so retry and the template fallback still land inside the latency budget | WP-04 |
 | `Speech:Provider` | `None` | `None`, `Azure` | WP-10 |
