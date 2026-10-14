@@ -11,7 +11,8 @@ public sealed class NarrativeSchemaTests
     [Fact]
     public async Task Every_seed_7_narrative_validates_and_round_trips()
     {
-        var workflow = Crew.Workflow();
+        // The full crew, so every persona variant with its subject and every language is validated too.
+        var workflow = Crew.FullWorkflow();
         foreach (var detected in Matches.Moments(7))
         {
             var context = await workflow.RunAsync(detected.WorkItem, CancellationToken.None);

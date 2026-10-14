@@ -100,7 +100,8 @@ export class Control implements OnInit {
   });
 
   ngOnInit(): void {
-    void this.session.connect(this.matchId());
+    // The control room is the one viewer that receives every persona variant in every language (WP06-R2).
+    void this.session.connect(this.matchId(), { persona: 'all', language: 'en' });
   }
 
   protected clockOf(period: number, clockMs: number): string {
@@ -140,6 +141,14 @@ export class Control implements OnInit {
 
   protected entryFor(moment: Moment): OverlayEntry | undefined {
     return this.session.overlay().get(`${moment.id}:lower_third`);
+  }
+
+  protected variantsOf(moment: Moment) {
+    return this.session.variantsOf(moment.id).filter((n) => n.id !== `${moment.id}:base:en`);
+  }
+
+  protected variantLabel(n: { persona: string; subject: string | null; language: string }): string {
+    return `${n.persona.replace('_', ' ')}${n.subject ? ` (${n.subject})` : ''} · ${n.language}`;
   }
 
   protected narrativeOf(moment: Moment) {

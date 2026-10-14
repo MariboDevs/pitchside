@@ -103,7 +103,7 @@ Client to server:
 | --- | --- | --- |
 | `JoinMatch` | `matchId` | adds the connection to group `match:{id}`; replies with `MatchSnapshot` |
 | `LeaveMatch` | `matchId` | |
-| `SetViewer` | `matchId`, `ViewerPreferences { persona, language, clubId?, playerId? }` | stored per connection; used by WP-06 |
+| `SetViewer` | `matchId`, `ViewerPreferences { persona, language, clubId?, playerId? }` | stored per connection; WP-06 delivers each connection only the narratives its preferences match; persona `all` is the control room and receives every variant |
 
 Server to client (group `match:{id}`):
 
@@ -112,7 +112,7 @@ Server to client (group `match:{id}`):
 | `Event` | `MatchEvent` | every ingested event |
 | `FactSheet` | `FactSheet` | every 5 events or on a moment, whichever first |
 | `Moment` | `Moment` | each detected moment |
-| `Narrative` | WP-04 contract | each verified narrative |
+| `Narrative` | WP-04 contract | each verified narrative, to the connections whose viewer preferences it matches (WP-06) |
 | `OverlayEntry` | WP-05 contract | each scheduled entry |
 | `MatchStatus` | `{ matchId, status, lastSeq, period, clockMs }` | state changes and every 10 s |
 

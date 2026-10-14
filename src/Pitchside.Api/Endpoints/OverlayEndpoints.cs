@@ -48,7 +48,7 @@ public static class OverlayEndpoints
         }).WithName("SetApprovalMode");
 
         group.MapGet("/narratives", async Task<Results<Ok<IReadOnlyList<Narrative>>, NotFound>> (
-            string matchId, string? persona, string? language, IMatchStore store, CancellationToken ct) =>
+            string matchId, string? persona, string? language, string? subject, IMatchStore store, CancellationToken ct) =>
         {
             if (await store.GetMatchAsync(matchId, ct).ConfigureAwait(false) is null)
             {
@@ -57,7 +57,7 @@ public static class OverlayEndpoints
 
             var narratives = await store.GetNarrativesAsync(matchId, ct).ConfigureAwait(false);
             return TypedResults.Ok<IReadOnlyList<Narrative>>([.. narratives.Where(n =>
-                (persona is null || n.Persona == persona) && (language is null || n.Language == language))]);
+                (persona is null || n.Persona == persona) && (language is null || n.Language == language) && (subject is null || n.Subject == subject))]);
         }).WithName("GetNarratives");
 
         group.MapGet("/facts/series", GetSeriesAsync).WithName("GetFactSeries");

@@ -114,7 +114,9 @@ Objection { string SentenceIndex; string Kind; string Detail }   // Kind: uncite
 - **WP04-R9 Latency budget.** From moment detection to verified base narrative: p50 under 4 s, p95 under
   10 s on the Fast deployment. Measured by the integration test harness against the scripted provider for
   the code path, and recorded by WP-07 against Foundry.
-- **WP04-R10 Determinism of ids.** Narrative ids are derivable: `{momentId}:{persona}:{language}`.
+- **WP04-R10 Determinism of ids.** Narrative ids are derivable: `{momentId}:{persona}:{language}`. A variant
+  written for one club or one player (WP-06's club fan and player focus) carries that club or player id in the
+  optional `subject` field, and its id is `{momentId}:{persona}.{subject}:{language}`.
 
 ## Files
 

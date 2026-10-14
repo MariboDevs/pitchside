@@ -133,9 +133,25 @@ public static class CommandLine
             .AddEnvironmentVariables()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Agents:Provider"] = provider })
             .Build();
+        // Without --personas and --languages the command writes the base English narrative only, as in WP-04.
+        string[] personas = options.GetValueOrDefault("personas") switch
+        {
+            null => [],
+            "all" => [.. Personas.Viewer],
+            var list => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+        };
+        string[] languages = options.TryGetValue("languages", out var languageList)
+            ? languageList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : [Languages.English];
+        var everyVariant = options.ContainsKey("personas") || options.ContainsKey("languages");
         await using var services = new ServiceCollection()
             .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning))
             .AddPitchsideAgents(configuration)
+            .Configure<AgentsOptions>(agents =>
+            {
+                agents.Personas = personas;
+                agents.Languages = languages;
+            })
             .BuildServiceProvider();
         var workflow = services.GetRequiredService<MomentWorkflow>();
 
@@ -157,10 +173,22 @@ public static class CommandLine
                 var context = await workflow.RunAsync(new MomentWorkItem(moment, sheet, match.Document), CancellationToken.None).ConfigureAwait(false);
                 var narrative = context.BaseNarrative!;
                 unresolved += narrative.Status == NarrativeStatus.Rejected ? 1 : 0;
-                await output.WriteLineAsync(string.Format(
-                    culture,
-                    "{0,-34} {1,-9} attempts={2}  {3}",
-                    moment.Id, narrative.Status.ToString().ToLowerInvariant(), context.Attempts, narrative.RenderedText)).ConfigureAwait(false);
+                if (!everyVariant)
+                {
+                    await output.WriteLineAsync(string.Format(
+                        culture,
+                        "{0,-34} {1,-9} attempts={2}  {3}",
+                        moment.Id, narrative.Status.ToString().ToLowerInvariant(), context.Attempts, narrative.RenderedText)).ConfigureAwait(false);
+                    continue;
+                }
+
+                foreach (var variant in context.Narratives)
+                {
+                    await output.WriteLineAsync(string.Format(
+                        culture,
+                        "{0,-60} {1,-9} {2}",
+                        variant.Id, variant.Status.ToString().ToLowerInvariant(), variant.RenderedText)).ConfigureAwait(false);
+                }
             }
         }
 

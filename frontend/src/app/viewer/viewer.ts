@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } f
 import { Club, LANGUAGES, PERSONAS, Player } from '../core/contracts';
 import { findFact, formatFact } from '../core/format';
 import { MatchSession } from '../core/match-session';
+import { resolveVariant } from '../core/variant';
 import { ViewerStore } from '../core/viewer-store';
 import { LowerThird, LowerThirdChip } from '../shared/lower-third/lower-third';
 import { Pitch } from '../shared/pitch/pitch';
@@ -16,6 +17,8 @@ interface ViewerCard {
   text: string;
   lang: string;
   chips: LowerThirdChip[];
+  pending: boolean;
+  note: string | null;
 }
 
 const PLAYER_STRIP = [
@@ -75,11 +78,13 @@ export class Viewer implements OnInit {
       return [];
     }
 
-    const { persona, language } = this.preferences();
+    const viewer = this.preferences();
+    const narratives = this.session.narratives();
     const cards: ViewerCard[] = [];
     for (const moment of [...this.session.moments()].reverse()) {
-      const narrative = this.session.narrativeFor(moment.id, persona, language);
-      if (!narrative || (narrative.status !== 'verified' && narrative.status !== 'fallback')) {
+      const view = resolveVariant(moment, viewer, narratives);
+      const narrative = view.narrative;
+      if (!narrative && view.state !== 'writing') {
         continue;
       }
 
@@ -94,9 +99,16 @@ export class Viewer implements OnInit {
         id: moment.id,
         club,
         headline: moment.headline,
-        text: narrative.renderedText,
-        lang: narrative.language,
+        text: narrative?.renderedText ?? '',
+        lang: narrative?.language ?? viewer.language,
         chips: (entry?.chips ?? []).map((c) => ({ label: c.label, value: c.display })),
+        pending: view.state === 'writing',
+        note:
+          view.state === 'not_involved'
+            ? `${this.followed()?.name ?? 'Your player'} is not involved in this moment`
+            : view.englishFallback
+              ? 'Shown in English'
+              : null,
       });
       if (cards.length === 5) {
         break;

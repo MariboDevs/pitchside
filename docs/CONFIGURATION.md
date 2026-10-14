@@ -20,6 +20,8 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Agents:Provider` | `Scripted` | `Scripted`, `Foundry` | WP-04 |
 | `Agents:MaxConcurrentMoments` | `2` | moment workflows run at once per host; the rest queue in the moment sink | WP-04 |
 | `Agents:AgentFactCheck` | `true` | whether the second, model-based fact-check pass runs after the code check | WP-04 |
+| `Agents:Personas` | `analyst`, `casual`, `club_fan`, `player_focus` | the viewer personas written for every moment; an empty list writes the base narrative only | WP-06 |
+| `Agents:Languages` | `en`, `af`, `zu`, `es` | the languages every narrative is written in; English is always written, the others are translated | WP-06 |
 | `Foundry:Endpoint` | | the Azure OpenAI or Foundry resource endpoint; calls go to its `/openai/v1/` path, keyless | WP-04 |
 | `Foundry:Deployments:Fast` | | deployment name for the explainer, persona writer and translator | WP-04 |
 | `Foundry:Deployments:Quality` | | deployment name for half-time and full-time narratives and the agent fact-check | WP-04 |

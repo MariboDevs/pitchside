@@ -49,7 +49,7 @@ public static class ExplainerInput
         return [.. sheet.Facts.Where(f => evidence.Contains(f.Key) || prefixes.Any(p => f.Key.StartsWith(p, StringComparison.Ordinal)))];
     }
 
-    private static JsonObject Base(MomentContext context)
+    internal static JsonObject Base(MomentContext context)
     {
         var variables = TemplateVariables.FromMoment(context.Moment, context.Document);
         var subset = Subset(context.Moment, context.FactSheet, variables.GetValueOrDefault("side"));
@@ -86,5 +86,5 @@ public static class ExplainerInput
         };
     }
 
-    private static readonly JsonSerializerOptions Serialization = new() { WriteIndented = false };
+    internal static readonly JsonSerializerOptions Serialization = new() { WriteIndented = false };
 }

@@ -137,6 +137,8 @@ export interface Narrative {
   matchId: string;
   momentId: string;
   persona: string;
+  /** The club id of a club_fan variant or the player id of a player_focus one. */
+  subject: string | null;
   language: string;
   factSheetSeq: number;
   sentences: NarrativeSentence[];
