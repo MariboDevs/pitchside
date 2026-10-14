@@ -7,8 +7,11 @@ using Pitchside.Runtime.Storage;
 
 namespace Pitchside.Api.Hubs;
 
-/// <summary>Builds the one message a late joiner needs: the match, the live fact sheet, every moment, its narratives.</summary>
-public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSupervisorActor> supervisor)
+/// <summary>
+/// Builds the one message a late joiner needs: the match, the live fact sheet, every moment, the narratives for its
+/// viewer preferences, the overlay timeline and the approval mode.
+/// </summary>
+public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSupervisorActor> supervisor, Broadcast.OverlayCoordinator overlay)
 {
     public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(3);
 
@@ -25,6 +28,13 @@ public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSuperv
         var sheet = await matches.Ask<FactSheet>(new GetFactSheet(matchId), AskTimeout, cancellationToken).ConfigureAwait(false);
         var moments = await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false);
         var narratives = await store.GetNarrativesAsync(matchId, cancellationToken).ConfigureAwait(false);
-        return new MatchSnapshot(match, sheet, moments, [.. narratives.Where(n => n.Persona == viewer.Persona && n.Language == viewer.Language)]);
+        var entries = await overlay.EntriesAsync(matchId, cancellationToken).ConfigureAwait(false);
+        return new MatchSnapshot(
+            match,
+            sheet,
+            moments,
+            [.. narratives.Where(n => n.Persona == viewer.Persona && n.Language == viewer.Language)],
+            entries,
+            overlay.Mode(matchId));
     }
 }

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pitchside.maribodevs.com/schemas/overlay-entry.schema.json",
+  "title": "Pitchside overlay entry",
+  "description": "A narrative placed on the broadcast timeline. Times are period clock milliseconds.",
+  "type": "object",
+  "required": ["id", "matchId", "momentId", "layer", "slot", "priority", "inAtMs", "outAtMs", "period", "narrativeId", "chips", "state", "fullWidth"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+:(score_bug|lower_third|stat_chip|ribbon)$" },
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
+    "momentId": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+$" },
+    "layer": { "type": "string", "enum": ["score_bug", "lower_third", "stat_chip", "ribbon"] },
+    "slot": { "type": "string", "enum": ["top_left", "bottom", "right_rail"] },
+    "priority": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "inAtMs": { "type": "integer", "minimum": 0 },
+    "outAtMs": { "type": "integer", "minimum": 0 },
+    "period": { "type": "integer", "enum": [1, 2] },
+    "narrativeId": { "type": "string" },
+    "chips": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["label", "factKey", "display"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string" },
+          "factKey": { "type": "string" },
+          "display": { "type": "string" }
+        }
+      }
+    },
+    "state": { "type": "string", "enum": ["scheduled", "held", "aired", "expired"] },
+    "fullWidth": { "type": "boolean" }
+  }
+}

@@ -14,4 +14,8 @@ public interface IMatchBroadcaster
     Task NarrativeAsync(Narrative narrative, CancellationToken cancellationToken);
 
     Task StatusAsync(MatchStatusUpdate status, CancellationToken cancellationToken);
+
+    Task OverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken);
+
+    Task ApprovalModeAsync(ApprovalModeUpdate update, CancellationToken cancellationToken);
 }
