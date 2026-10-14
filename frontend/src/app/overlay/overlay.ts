@@ -58,8 +58,14 @@ export class Overlay implements OnInit, OnDestroy {
     return match ? { period: Number(match[1]), clockMs: Number(match[2]) } : null;
   });
 
+  /** Where the timeline is: the presentation clock, which keeps moving between events so every card gets its window. */
   protected readonly clock = computed<ClockPosition>(
     () => this.pinned() ?? this.session.presentationClock(),
+  );
+
+  /** What the score bug shows: the hub's match clock, which stops when the match pauses or ends. */
+  protected readonly matchClock = computed<ClockPosition>(
+    () => this.pinned() ?? this.session.clock(),
   );
 
   /** The fact series up to the clock: the xG race and, when pinned, the score and momentum at that moment. */

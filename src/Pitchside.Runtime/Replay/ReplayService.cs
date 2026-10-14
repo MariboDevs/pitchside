@@ -30,7 +30,13 @@ public sealed partial class ReplayService(
     private readonly ConcurrentDictionary<string, ReplayRun> _runs = new(StringComparer.Ordinal);
     private readonly Lock _startLock = new();
 
+    // Kept after a run ends: an instant replay publishes far faster than its match actor consumes, so the match is
+    // still being played from the bus after its run is gone. One entry per replay, and a match id replays once.
+    private readonly ConcurrentDictionary<string, bool> _instant = new(StringComparer.Ordinal);
+
     public IReadOnlyCollection<string> Running => [.. _runs.Keys];
+
+    public bool IsInstant(string matchId) => _instant.TryGetValue(matchId, out var instant) && instant;
 
     public async Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken)
     {
@@ -64,6 +70,7 @@ public sealed partial class ReplayService(
                 throw new ReplayConflictException($"{matchId} is already stored; a match id is replayed once per store.");
             }
 
+            _instant[matchId] = speed == 0;
             run.Completion = Task.Run(() => PublishAsync(run, match.Events, speed), CancellationToken.None);
             LogStarted(matchId, seed, speed);
             return new ReplayStarted(matchId, seed, speed, match.Events.Count);

@@ -77,6 +77,43 @@ public sealed class OverlaySchedulerTests
     }
 
     [Fact]
+    public void A_card_whose_narrative_arrives_late_takes_the_free_gap_at_its_own_moment()
+    {
+        var later = Place([], Fixture.At(Swing.Moment, 200_000, 60)).Single();
+        var earlier = Place([later], Fixture.At(Swing.Moment, 100_000, 60)).ShouldHaveSingleItem();
+
+        earlier.InAtMs.ShouldBe(102_000);
+        earlier.State.ShouldBe(OverlayState.Scheduled);
+    }
+
+    [Fact]
+    public void A_card_that_does_not_fit_before_the_next_one_queues_behind_it()
+    {
+        var next = Place([], Fixture.At(Swing.Moment, 105_000, 60)).Single();
+        var squeezed = Place([next], Fixture.At(Swing.Moment, 100_000, 60), words: 30).ShouldHaveSingleItem();
+
+        squeezed.InAtMs.ShouldBe(next.OutAtMs + OverlayScheduler.ExitMs);
+    }
+
+    [Fact]
+    public void An_overdue_card_leaves_the_card_on_screen_and_the_queue_alone()
+    {
+        var onScreen = Place([], Fixture.At(Swing.Moment, 100_000, 60)).Single();
+        var late = onScreen with
+        {
+            Id = "MER-7:M:9004:red_card:lower_third",
+            MomentId = "MER-7:M:9004:red_card",
+            Priority = 1_000,
+            InAtMs = onScreen.InAtMs + 1_000,
+            OutAtMs = onScreen.InAtMs + 7_000,
+        };
+
+        var written = OverlayScheduler.Place([onScreen], late, late.InAtMs - 1, new Dictionary<string, int>());
+
+        written.ShouldHaveSingleItem().State.ShouldBe(OverlayState.Expired);
+    }
+
+    [Fact]
     public void A_goal_carries_the_score_chips_with_values_from_code()
     {
         var entry = Place([], Goal.Moment).ShouldHaveSingleItem();
