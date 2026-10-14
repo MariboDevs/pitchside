@@ -9,7 +9,9 @@ namespace Pitchside.Api.Hubs;
 
 /// <summary>
 /// The live match hub at <c>/hubs/match</c>. A client joins a match's group and is complete after the snapshot it
-/// gets back; from then on it receives every event, fact sheet, moment, narrative and status as they happen.
+/// gets back; from then on it receives every event, fact sheet, moment, narrative and status as they happen. The
+/// connection joins the group before the snapshot is read, so nothing falls between the two: a push that arrives
+/// while the snapshot is built may also be in it, and clients drop what they already hold by id and seq.
 /// </summary>
 public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, IRequiredActor<MatchSupervisorActor> supervisor) : Hub<IMatchClient>
 {
@@ -19,17 +21,35 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
 
     public async Task<MatchSnapshot> JoinMatch(string matchId)
     {
-        var snapshot = await snapshots.BuildAsync(matchId, viewers.Get(Context.ConnectionId, matchId), Context.ConnectionAborted).ConfigureAwait(false)
-            ?? throw new HubException($"No match '{matchId}'.");
+        if (!MatchSupervisorActor.IsValidMatchId(matchId) || !await snapshots.ExistsAsync(matchId, Context.ConnectionAborted).ConfigureAwait(false))
+        {
+            throw new HubException($"No match '{matchId}'.");
+        }
+
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(matchId), Context.ConnectionAborted).ConfigureAwait(false);
-        (await supervisor.GetAsync(Context.ConnectionAborted).ConfigureAwait(false)).Tell(new Subscribe(matchId, Context.ConnectionId), ActorRefs.NoSender);
-        return snapshot;
+        try
+        {
+            var snapshot = await snapshots.BuildAsync(matchId, viewers.Get(Context.ConnectionId, matchId), Context.ConnectionAborted).ConfigureAwait(false)
+                ?? throw new HubException($"No match '{matchId}'.");
+            viewers.Join(Context.ConnectionId, matchId);
+            (await supervisor.GetAsync(Context.ConnectionAborted).ConfigureAwait(false)).Tell(new Subscribe(matchId, Context.ConnectionId), ActorRefs.NoSender);
+            return snapshot;
+        }
+        catch
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, Group(matchId), CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task LeaveMatch(string matchId)
     {
+        if (!viewers.Leave(Context.ConnectionId, matchId))
+        {
+            return;
+        }
+
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, Group(matchId), Context.ConnectionAborted).ConfigureAwait(false);
-        viewers.Remove(Context.ConnectionId, matchId);
         (await supervisor.GetAsync(Context.ConnectionAborted).ConfigureAwait(false)).Tell(new Unsubscribe(matchId, Context.ConnectionId), ActorRefs.NoSender);
     }
 
@@ -40,9 +60,18 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
         return Task.CompletedTask;
     }
 
-    public override Task OnDisconnectedAsync(Exception? exception)
+    public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        viewers.RemoveConnection(Context.ConnectionId);
-        return base.OnDisconnectedAsync(exception);
+        var joined = viewers.RemoveConnection(Context.ConnectionId);
+        if (joined.Count > 0)
+        {
+            var matches = await supervisor.GetAsync(CancellationToken.None).ConfigureAwait(false);
+            foreach (var matchId in joined)
+            {
+                matches.Tell(new Unsubscribe(matchId, Context.ConnectionId), ActorRefs.NoSender);
+            }
+        }
+
+        await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
     }
 }

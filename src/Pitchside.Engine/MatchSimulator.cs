@@ -39,7 +39,7 @@ public sealed class MatchSimulator
         var awaySheet = SquadFactory.Create(away, _rng);
         _document = new MatchDocument(
             SchemaVersion.Current,
-            $"MER-{seed}",
+            MatchIdFor(seed),
             seed,
             MeridianLeague.Name,
             $"{home.Club.Name} Stadium",
@@ -57,6 +57,9 @@ public sealed class MatchSimulator
         _homeForm = Math.Exp(_rng.Gaussian(-0.5 * options.FormSpread * options.FormSpread, options.FormSpread));
         _awayForm = Math.Exp(_rng.Gaussian(-0.5 * options.FormSpread * options.FormSpread, options.FormSpread));
     }
+
+    /// <summary>The id of the match a seed produces, known without simulating it.</summary>
+    public static string MatchIdFor(long seed) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"MER-{seed}");
 
     public static SimulatedMatch Simulate(long seed, EngineClub home, EngineClub away, DateTimeOffset kickoff, SimulationOptions? options = null)
     {
