@@ -115,9 +115,17 @@ The subscription bills in USD. R2,500 at the September 2026 rate of about R16.4 
 
 ### Fabric
 
-Not enabled. The Fabric REST API answers `UserNotLicensed` for capacities, workspaces and admin tenant
-settings, and no `Microsoft.Fabric/capacities` resource exists. See "Needs a human". No F capacity is created
-in Phase 0; WP-12 creates it.
+| Item | Value |
+| --- | --- |
+| Trial capacity | `Trial-20261014T172212Z-sJ_44vBLKEyx5iy2Lj5HJw`, SKU FTL4, South Africa North, active, 60 days from 14 October 2026 |
+| Capacity id | `2f03905a-f931-496e-8e8c-49485a21c5a5` |
+| Capacity administrator | mario@siphomaribodevs.onmicrosoft.com (the tenant's native member account); sipho@maribodevs.com has Admin through the Fabric administrator role |
+| Workspace | `pitchside-dev`, id `74e1627c-0077-4c79-a543-84c9af743169`, assigned to the trial capacity |
+
+The trial had to be started from the native account because sipho@maribodevs.com exists in the tenant as an
+external identity and Fabric reports it ineligible for a capacity trial. The trial ends around 13 December,
+after judging. WP-12 creates the paid F2 capacity (`fabric.bicep`) and moves the workspace to it; the trial
+is the dev capacity until then.
 
 ## GitHub (MariboDevs/pitchside, internal repository, organisation on the Enterprise plan)
 
@@ -161,10 +169,7 @@ commits only this file.
 ## Needs a human
 
 1. **Foundry quota.** Resolved on 14 October; both GPT-6 deployments exist. Nothing to do.
-2. **Fabric.** The tenant has no Fabric licence. Sign in to the Fabric portal as sipho@maribodevs.com, open
-   Settings (gear), Admin portal, Tenant settings, and confirm "Users can create Fabric items" is enabled;
-   then from the account manager (top right) choose "Start trial" to get a trial capacity for dev. If the
-   admin portal refuses the account, assign the Fabric administrator role in Microsoft Entra first.
+2. **Fabric.** Resolved on 14 October; trial capacity and `pitchside-dev` workspace exist. Nothing to do.
 3. **Copilot seat.** Assign a Copilot Business seat to siphomaribo in the organisation (Settings, Copilot,
    Access) so that automatic code review and the coding agent work; the ruleset rule is already in place.
    Then in Settings, Copilot, Policies confirm "Copilot code review" and "Copilot coding agent" are enabled.
