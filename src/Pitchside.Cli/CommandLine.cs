@@ -130,8 +130,8 @@ public static class CommandLine
         var seed = long.Parse(options.GetValueOrDefault("seed", "7"), culture);
         var provider = options.GetValueOrDefault("provider", "scripted");
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Agents:Provider"] = provider })
             .AddEnvironmentVariables()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Agents:Provider"] = provider })
             .Build();
         await using var services = new ServiceCollection()
             .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning))
