@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "{{subjectName}} supporters will remember minute [[match.clock.minute]] of this one." },
+  { "text": "{{subjectName}} have [[{{subjectSide}}.shots]] shots and [[{{subjectSide}}.xg]] expected goals so far." }
+] }

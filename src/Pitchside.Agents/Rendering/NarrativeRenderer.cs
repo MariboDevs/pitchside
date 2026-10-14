@@ -6,18 +6,22 @@ namespace Pitchside.Agents.Rendering;
 
 /// <summary>
 /// Produces the text a viewer reads by substituting every <c>[[key]]</c> token with the fact's value at its
-/// precision. This is the only path from a number on the fact sheet to a number on screen.
+/// precision, formatted for the narrative's language. This is the only path from a number on the fact sheet to a
+/// number on screen.
 /// </summary>
 public static class NarrativeRenderer
 {
-    public static string Render(IReadOnlyList<NarrativeSentence> sentences, FactSheet sheet)
+    private static readonly NumberFormatInfo DecimalPoint = CultureInfo.InvariantCulture.NumberFormat;
+    private static readonly NumberFormatInfo DecimalComma = new() { NumberDecimalSeparator = ",", NegativeSign = "-" };
+
+    public static string Render(IReadOnlyList<NarrativeSentence> sentences, FactSheet sheet, string language = Languages.English)
     {
         ArgumentNullException.ThrowIfNull(sentences);
         ArgumentNullException.ThrowIfNull(sheet);
-        return string.Join(' ', sentences.Select(s => RenderSentence(s.Text, sheet).Trim()));
+        return string.Join(' ', sentences.Select(s => RenderSentence(s.Text, sheet, language).Trim()));
     }
 
-    public static string RenderSentence(string text, FactSheet sheet)
+    public static string RenderSentence(string text, FactSheet sheet, string language = Languages.English)
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(sheet);
@@ -25,18 +29,25 @@ public static class NarrativeRenderer
         {
             var key = match.Groups[1].Value.Trim();
             var fact = sheet.Find(key) ?? throw new InvalidOperationException($"Cannot render [[{key}]]: it is not on the fact sheet.");
-            return Format(fact);
+            return Format(fact, language);
         });
     }
 
-    /// <summary>A fact's value as shown: numbers at the fact's precision, invariant culture; text as is.</summary>
-    public static string Format(Fact fact)
+    /// <summary>
+    /// A fact's value as shown: numbers at the fact's precision with the language's decimal separator (a comma for
+    /// Afrikaans and Spanish, a point for English and isiZulu), no grouping; text as is. The separators are fixed
+    /// here rather than read from the operating system's culture data, so every machine renders the same text.
+    /// </summary>
+    public static string Format(Fact fact, string language = Languages.English)
     {
         ArgumentNullException.ThrowIfNull(fact);
         return fact.Value.Number is { } number
-            ? number.ToString("F" + fact.Precision.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture)
+            ? number.ToString("F" + fact.Precision.ToString(CultureInfo.InvariantCulture), NumberFormat(language))
             : fact.Value.Text ?? string.Empty;
     }
+
+    public static NumberFormatInfo NumberFormat(string language) =>
+        language is Languages.Afrikaans or Languages.Spanish ? DecimalComma : DecimalPoint;
 
     /// <summary>The share of sentences citing at least one fact.</summary>
     public static double CitationCoverage(IReadOnlyList<NarrativeSentence> sentences)

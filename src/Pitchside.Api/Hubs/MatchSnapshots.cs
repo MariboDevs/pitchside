@@ -8,8 +8,8 @@ using Pitchside.Runtime.Storage;
 namespace Pitchside.Api.Hubs;
 
 /// <summary>
-/// Builds the one message a late joiner needs: the match, the live fact sheet, every moment, the narratives for its
-/// viewer preferences (and the base English ones every view falls back to), the overlay timeline and the approval mode.
+/// Builds the one message a late joiner needs: the match, the live fact sheet, every moment, the narratives its viewer
+/// preferences receive (<see cref="NarrativeAudience"/>), the overlay timeline and the approval mode.
 /// The fact sheet, the moments, the status and the last seq come from the match actor in one reply, so they agree with
 /// each other even while their store writes are still landing.
 /// </summary>
@@ -37,8 +37,7 @@ public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSuperv
             match with { Status = live.View.Status, LastSeq = live.View.LastSeq },
             live.FactSheet,
             [.. live.Moments],
-            [.. narratives.Where(n => (n.Persona == viewer.Persona && n.Language == viewer.Language)
-                || (n.Persona == Personas.Base && n.Language == Languages.English))],
+            [.. narratives.Where(n => NarrativeAudience.Receives(viewer, n))],
             entries,
             overlay.Mode(matchId));
     }

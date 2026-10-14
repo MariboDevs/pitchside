@@ -7,10 +7,11 @@
   "required": ["id", "matchId", "momentId", "persona", "language", "factSheetSeq", "sentences", "renderedText", "status", "provenance", "evaluation"],
   "additionalProperties": false,
   "properties": {
-    "id": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+:[a-z_]+:[a-z]{2}$" },
+    "id": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+:[a-z_]+(\\.[A-Z0-9-]+)?:[a-z]{2}$" },
     "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
     "momentId": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+$" },
     "persona": { "type": "string", "enum": ["base", "analyst", "casual", "club_fan", "player_focus"] },
+    "subject": { "type": ["string", "null"], "pattern": "^[A-Z0-9-]+$", "description": "The club id for club_fan, the player id for player_focus; null otherwise." },
     "language": { "type": "string", "enum": ["en", "af", "zu", "es"] },
     "factSheetSeq": { "type": "integer", "minimum": 1 },
     "sentences": {

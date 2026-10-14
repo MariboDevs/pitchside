@@ -9,5 +9,11 @@ public static class Personas
     public const string ClubFan = "club_fan";
     public const string PlayerFocus = "player_focus";
 
+    /// <summary>
+    /// Not a narrative persona: the viewer setting of the control room, which receives every variant in every
+    /// language rather than one.
+    /// </summary>
+    public const string All = "all";
+
     public static IReadOnlyList<string> Viewer { get; } = [Analyst, Casual, ClubFan, PlayerFocus];
 }
