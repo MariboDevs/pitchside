@@ -2,7 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { apiBase } from './api-base';
-import { ApprovalMode, FactSheet, OverlayEntry, ReplayStarted, StoredMatch } from './contracts';
+import {
+  ApprovalMode,
+  FactSheet,
+  MatchEvent,
+  OverlayEntry,
+  ReplayStarted,
+  StoredMatch,
+} from './contracts';
 
 /** The match REST API under /api/v1. */
 @Injectable({ providedIn: 'root' })
@@ -23,6 +30,14 @@ export class MatchApi {
     return firstValueFrom(
       this.http.get<FactSheet>(`${apiBase()}/api/v1/matches/${matchId}/facts`, {
         params: { atSeq },
+      }),
+    );
+  }
+
+  events(matchId: string, fromSeq: number, toSeq: number): Promise<MatchEvent[]> {
+    return firstValueFrom(
+      this.http.get<MatchEvent[]>(`${apiBase()}/api/v1/matches/${matchId}/events`, {
+        params: { fromSeq, toSeq },
       }),
     );
   }

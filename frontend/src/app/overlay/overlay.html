@@ -32,7 +32,7 @@
       />
     }
 
-    <div class="lower">
+    <div class="lower" [class.lower--full]="card()?.fullWidth">
       @if (card(); as c) {
         <app-lower-third
           animate.enter="card-enter"

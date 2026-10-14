@@ -107,5 +107,14 @@ public sealed class OverlayEndpointsTests : IClassFixture<PitchsideApiFactory>, 
         last.GetProperty("asOfSeq").GetInt32().ShouldBe(1623);
         last.GetProperty("values").GetProperty("away.xg").GetDouble().ShouldBeGreaterThan(0);
         (await _client.GetAsync("/api/v1/matches/MER-7/facts/series")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var repeated = await _client.GetAsync("/api/v1/matches/MER-7/facts/series?keys=home.xg,home.xg&every=400");
+        repeated.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Hold_and_air_on_an_unknown_match_are_not_found()
+    {
+        (await _client.PostAsync("/api/v1/matches/MER-404/overlay/MER-404:M:0001:goal:lower_third/hold", null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await _client.PostAsync("/api/v1/matches/MER-404/overlay/MER-404:M:0001:goal:lower_third/air", null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 }

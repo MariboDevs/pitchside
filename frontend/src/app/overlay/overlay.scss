@@ -12,6 +12,10 @@
   pointer-events: none;
   font-size: 2.6vh;
   color: var(--color-text-strong);
+
+  // Club monograms' letters at the 28 px minimum, in a box that still fits three of them.
+  --monogram-letters: 0.875em;
+  --monogram-box: 2.6em;
 }
 
 .top {
@@ -42,6 +46,16 @@
   bottom: var(--safe);
   width: min(70vw, calc(100vw - 2 * var(--safe)));
   min-height: 10.4vh;
+
+  // Broadcast minimum: no text under 28 px at 1080p (2.6vh), however the shared card scales its lines.
+  --lower-third-text-size: 1em;
+  --lower-third-chips-size: 1em;
+  --chip-label-size: 1em;
+}
+
+// The full-time card spans the whole title-safe width.
+.lower--full {
+  width: calc(100vw - 2 * var(--safe));
 }
 
 .stage--vertical {
