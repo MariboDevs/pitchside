@@ -54,12 +54,19 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
             await Task.Delay(100);
         }
 
+        // Where the pipeline stood, so a failure on a loaded runner says whether ingestion or the broadcast stalled.
+        var matches = await _factory.Services.GetRequiredService<IRequiredActor<MatchSupervisorActor>>().GetAsync();
+        var state = await matches.Ask<MatchStateView>(new GetState("MER-11"), TimeSpan.FromSeconds(5));
+        var replaying = _factory.Services.GetRequiredService<Pitchside.Runtime.Replay.IReplayService>().Running;
+        var diagnostics = $"joined at seq {snapshot.Match.LastSeq}; actor {state.Status} at seq {state.LastSeq} with {state.Subscribers} subscribers; "
+            + $"replaying [{string.Join(", ", replaying)}]; received {received.Count} messages";
+
         await client.DeleteAsync("/api/v1/replays/MER-11");
         var log = received.ToList();
-        log.ShouldContain(r => r.Kind == "event");
-        log.ShouldContain(r => r.Kind == "facts");
-        log.ShouldContain(r => r.Kind == "moment");
-        log.ShouldContain(r => r.Kind == "narrative");
+        log.ShouldContain(r => r.Kind == "event", diagnostics);
+        log.ShouldContain(r => r.Kind == "facts", diagnostics);
+        log.ShouldContain(r => r.Kind == "moment", diagnostics);
+        log.ShouldContain(r => r.Kind == "narrative", diagnostics);
 
         var lastEvent = 0;
         foreach (var (kind, seq) in log)
