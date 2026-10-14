@@ -88,6 +88,22 @@ public sealed class MatchActorTests : TestKit
     }
 
     [Fact]
+    public async Task A_second_gap_behind_a_resend_is_requested_too()
+    {
+        var actor = await NewActorAsync();
+        Ingest(actor, 1);
+        await AwaitAssertAsync(async () => (await StoredEventsAsync(1)).ShouldBe(1), Wait);
+        foreach (var seq in new[] { 2, 3, 4, 6, 7 })
+        {
+            await _store.AppendEventAsync(Sample.Events[seq - 1], CancellationToken.None);
+        }
+
+        Ingest(actor, 5, 8);
+
+        await AwaitAssertAsync(async () => (await StateAsync(actor)).LastSeq.ShouldBe(8), Wait);
+    }
+
+    [Fact]
     public async Task A_restart_rebuilds_the_state_from_the_store()
     {
         var supervisor = Sys.ActorOf(Props.Create(() => new MatchSupervisorActor(_store, _broadcaster, _sink, new UnusedReplays(), _progress)), "matches");

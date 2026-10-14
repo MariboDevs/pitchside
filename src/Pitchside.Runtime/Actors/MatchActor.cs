@@ -208,13 +208,24 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
     private void OnResend(ResendLoaded resend)
     {
         _gapRequested = false;
+        var before = _lastSeq;
         foreach (var e in resend.Events.OrderBy(e => e.Seq))
         {
             Ingest(e);
         }
 
-        // The store may not have the missing events yet; ask again rather than wait for the next arrival.
-        if (_pending.Count > 0 && !_gapRequested)
+        if (_pending.Count == 0 || _gapRequested)
+        {
+            return;
+        }
+
+        // Progress means the next gap is a different one, behind a later buffered event: ask for it now. No progress
+        // means the store does not have the events yet: ask again after a pause rather than loop.
+        if (_lastSeq > before)
+        {
+            RequestGap();
+        }
+        else
         {
             Timers.StartSingleTimer("gap", RetryGap.Instance, GapRetryDelay);
         }
