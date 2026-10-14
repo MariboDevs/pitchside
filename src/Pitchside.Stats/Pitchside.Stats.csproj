@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Stats</RootNamespace>
+    <Description>The stats layer: every number a viewer sees, computed incrementally from events by code alone, with a stable key per fact.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Contracts/Pitchside.Contracts.csproj" />
+  </ItemGroup>
+</Project>
