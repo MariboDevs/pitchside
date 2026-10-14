@@ -3,6 +3,7 @@
     <Project Path="src/Pitchside.Contracts/Pitchside.Contracts.csproj" />
     <Project Path="src/Pitchside.Engine/Pitchside.Engine.csproj" />
     <Project Path="src/Pitchside.Cli/Pitchside.Cli.csproj" />
+    <Project Path="src/Pitchside.Moments/Pitchside.Moments.csproj" />
     <Project Path="src/Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
     <Project Path="src/Pitchside.Api/Pitchside.Api.csproj" />
     <Project Path="src/Pitchside.AppHost/Pitchside.AppHost.csproj" />
@@ -10,6 +11,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Pitchside.Engine.Tests/Pitchside.Engine.Tests.csproj" />
+    <Project Path="tests/Pitchside.Moments.Tests/Pitchside.Moments.Tests.csproj" />
     <Project Path="tests/Pitchside.Stats.Tests/Pitchside.Stats.Tests.csproj" />
   </Folder>
 </Solution>
