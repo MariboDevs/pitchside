@@ -22,14 +22,11 @@ public sealed class PromptCatalogTests
     public void An_unknown_prompt_throws() => Should.Throw<KeyNotFoundException>(() => Crew.Catalog.Get("translator"));
 
     [Fact]
-    public void The_forbidden_list_holds_the_required_words()
+    public void The_forbidden_list_is_hashes_only()
     {
-        foreach (var word in new[] { "odds", "bet", "bookmaker", "wager" })
-        {
-            Crew.Catalog.ForbiddenWords.ShouldContain(word);
-        }
-
-        Crew.Catalog.ForbiddenWords.ShouldNotContain(w => w.StartsWith('#'));
+        Crew.Catalog.ForbiddenHashes.Count.ShouldBeGreaterThanOrEqualTo(20);
+        Crew.Catalog.ForbiddenHashes.ShouldAllBe(h => h.Length == 64 && h.All(char.IsAsciiHexDigitLower));
+        Crew.Catalog.ForbiddenHashes.Distinct().Count().ShouldBe(Crew.Catalog.ForbiddenHashes.Count);
     }
 
     [Fact]

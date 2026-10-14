@@ -12,7 +12,7 @@ internal static class Crew
 {
     public static PromptCatalog Catalog { get; } = new();
 
-    public static CodeFactChecker Checker { get; } = new(Catalog.ForbiddenWords);
+    public static CodeFactChecker Checker { get; } = new(Catalog.ForbiddenHashes);
 
     public static MomentWorkflow Workflow(IChatProvider? provider = null, bool agentFactCheck = true) => new(
         provider ?? new ScriptedChatProvider(),

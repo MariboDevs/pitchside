@@ -35,9 +35,9 @@ public sealed partial class PromptCatalog
             }
         }
 
-        var forbidden = assembly.GetManifestResourceNames().SingleOrDefault(n => n == PromptPrefix + "forbidden.txt")
-            ?? throw new InvalidOperationException("prompts/forbidden.txt is not embedded.");
-        ForbiddenWords = [.. Read(assembly, forbidden)
+        var forbidden = assembly.GetManifestResourceNames().SingleOrDefault(n => n == PromptPrefix + "forbidden.sha256")
+            ?? throw new InvalidOperationException("prompts/forbidden.sha256 is not embedded.");
+        ForbiddenHashes = [.. Read(assembly, forbidden)
             .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Where(line => !line.StartsWith('#'))];
     }
@@ -46,8 +46,11 @@ public sealed partial class PromptCatalog
 
     public IReadOnlyCollection<string> TemplateTypes => _templates.Keys;
 
-    /// <summary>Words that may never appear in a narrative, whole word, any case.</summary>
-    public IReadOnlyList<string> ForbiddenWords { get; }
+    /// <summary>
+    /// SHA-256 of each word that may never appear in a narrative (see <see cref="Checking.CodeFactChecker.Hash"/>).
+    /// The words themselves are never committed.
+    /// </summary>
+    public IReadOnlyList<string> ForbiddenHashes { get; }
 
     public Prompt Get(string name) => _latest.TryGetValue(name, out var prompt)
         ? prompt

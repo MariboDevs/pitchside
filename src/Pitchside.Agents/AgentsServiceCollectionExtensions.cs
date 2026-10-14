@@ -24,7 +24,7 @@ public static class AgentsServiceCollectionExtensions
         services.Configure<FoundryOptions>(configuration.GetSection(FoundryOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<PromptCatalog>();
-        services.TryAddSingleton(sp => new CodeFactChecker(sp.GetRequiredService<PromptCatalog>().ForbiddenWords));
+        services.TryAddSingleton(sp => new CodeFactChecker(sp.GetRequiredService<PromptCatalog>().ForbiddenHashes));
         services.TryAddSingleton<IPersonaWriter, BaseOnlyPersonaWriter>();
         services.TryAddSingleton<ITranslator, EnglishOnlyTranslator>();
         services.TryAddSingleton<INarrativePublisher, InMemoryNarrativeLog>();
