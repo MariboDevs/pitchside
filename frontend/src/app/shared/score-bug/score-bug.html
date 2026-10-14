@@ -1,0 +1,10 @@
+<div class="bug" [class.bug--app]="variant() === 'app'" data-testid="score-bug">
+  <app-monogram [club]="document().home.club" size="lg" />
+  <span class="score tabular" aria-live="polite">
+    <span class="sr-only">{{ document().home.club.name }}</span> {{ home() }}
+    <span class="dash" aria-hidden="true">–</span>
+    {{ away() }} <span class="sr-only">{{ document().away.club.name }}</span>
+  </span>
+  <app-monogram [club]="document().away.club" size="lg" />
+  <span class="clock tabular" data-testid="match-clock">{{ clock() }}</span>
+</div>

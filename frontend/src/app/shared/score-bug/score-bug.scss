@@ -1,0 +1,45 @@
+:host {
+  display: inline-block;
+}
+
+.bug {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.3em 0.55em;
+  border-radius: 0.35em;
+  background: var(--color-panel);
+  box-shadow: inset 0 0 0 1px var(--color-panel-highlight);
+  color: var(--color-text-strong);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.score {
+  min-width: 3.4em;
+  text-align: center;
+}
+
+.dash {
+  color: var(--color-text-muted);
+}
+
+.clock {
+  padding-left: 0.5em;
+  margin-left: 0.15em;
+  border-left: 1px solid var(--color-panel-highlight);
+  font-weight: 600;
+}
+
+.bug--app {
+  font-size: 1.25rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,0 +1,109 @@
+<main class="viewer">
+  @if (session.document(); as doc) {
+    <header class="head">
+      <app-score-bug
+        variant="app"
+        [document]="doc"
+        [home]="session.score().home"
+        [away]="session.score().away"
+        [period]="session.clock().period"
+        [clockMs]="session.clock().clockMs"
+      />
+      @if (session.connection() !== 'live') {
+        <span class="pill pill--waiting" role="status">{{ session.connection() }}</span>
+      }
+    </header>
+
+    <div class="body">
+      <section class="pitch-panel" aria-label="Pitch">
+        <app-pitch [document]="doc" [events]="session.events()" />
+      </section>
+
+      <section class="controls" aria-label="Viewing mode">
+        <app-segmented-control
+          label="Persona"
+          [options]="personas"
+          [value]="preferences().persona"
+          (changed)="setPersona($event)"
+        />
+        <app-segmented-control
+          label="Language"
+          [options]="languages"
+          [value]="preferences().language"
+          (changed)="setLanguage($event)"
+        />
+        @if (preferences().persona === 'club_fan') {
+          <label class="pick">
+            <span>Your club</span>
+            <select class="input" [value]="preferences().clubId ?? ''" (change)="setClub($event)">
+              <option value="">Choose a club</option>
+              <option [value]="doc.home.club.id">{{ doc.home.club.name }}</option>
+              <option [value]="doc.away.club.id">{{ doc.away.club.name }}</option>
+            </select>
+          </label>
+        }
+        @if (preferences().persona === 'player_focus') {
+          <label class="pick">
+            <span>Player to follow</span>
+            <select
+              class="input"
+              [value]="preferences().playerId ?? ''"
+              (change)="setPlayer($event)"
+            >
+              <option value="">Choose a player</option>
+              @for (squad of squads(); track squad.club.id) {
+                <optgroup [label]="squad.club.name">
+                  @for (player of squad.players; track player.id) {
+                    <option [value]="player.id">#{{ player.shirtNumber }} {{ player.name }}</option>
+                  }
+                </optgroup>
+              }
+            </select>
+          </label>
+        }
+      </section>
+
+      @if (strip(); as s) {
+        <section
+          class="strip"
+          [attr.aria-label]="s.player.name + ' in numbers'"
+          data-testid="player-strip"
+        >
+          <h2 class="strip-name">{{ s.player.name }}</h2>
+          <dl class="strip-stats">
+            @for (stat of s.stats; track stat.label) {
+              <div class="stat">
+                <dt>{{ stat.label }}</dt>
+                <dd class="tabular">{{ stat.value }}</dd>
+              </div>
+            }
+          </dl>
+          @if (s.tags.length > 0) {
+            <ul class="badges">
+              @for (tag of s.tags; track tag) {
+                <li class="pill pill--ok">{{ tag }}</li>
+              }
+            </ul>
+          }
+        </section>
+      }
+
+      <section class="cards" aria-label="Latest moments" aria-live="polite">
+        @for (card of cards(); track card.id) {
+          <app-lower-third
+            class="card"
+            [club]="card.club"
+            [headline]="card.headline"
+            [text]="card.text"
+            [chips]="card.chips"
+            [lang]="card.lang"
+          />
+        } @empty {
+          <p class="muted">Moments appear here as the match unfolds.</p>
+        }
+      </section>
+    </div>
+  } @else {
+    <p class="muted loading" role="status">{{ session.error() ?? 'Joining the match' }}</p>
+  }
+</main>
