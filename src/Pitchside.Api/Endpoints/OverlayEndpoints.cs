@@ -72,7 +72,9 @@ public static class OverlayEndpoints
     private static async Task<Results<Ok<IReadOnlyList<FactSeriesPoint>>, NotFound, ValidationProblem>> GetSeriesAsync(
         string matchId, string? keys, int? every, IMatchStore store, CancellationToken ct)
     {
-        var wanted = (keys ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var wanted = (keys ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
         var step = every ?? 10;
         if (wanted.Length is 0 or > 12 || step is < 1 or > 500)
         {

@@ -59,6 +59,25 @@
           }
         </select>
       </div>
+      @if (offFeed().length > 0) {
+        <ol
+          class="feed feed--evidence"
+          aria-label="Cited events earlier in the match"
+          data-testid="evidence"
+        >
+          @for (e of offFeed(); track e.seq) {
+            <li class="event event--hit">
+              <span class="tabular muted">{{ clockOf(e.period, e.clockMs) }}</span>
+              @if (clubOf(e.teamId); as club) {
+                <app-monogram [club]="club" size="sm" />
+              }
+              <span class="type">{{ e.type }}</span>
+              <span class="player">{{ playerName(e.playerId) }}</span>
+              <span class="qualifier tabular muted">{{ qualifier(e) }}</span>
+            </li>
+          }
+        </ol>
+      }
       <ol class="feed" data-testid="feed">
         @for (e of feed(); track e.seq) {
           <li class="event" [class.event--hit]="highlighted().has(e.id)">

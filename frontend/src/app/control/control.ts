@@ -4,9 +4,11 @@ import {
   ElementRef,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { toApiError } from '../core/api-error';
@@ -60,7 +62,13 @@ export class Control implements OnInit {
   protected readonly selected = signal(0);
   protected readonly highlighted = signal<ReadonlySet<string>>(new Set());
   protected readonly sheets = signal<ReadonlyMap<number, FactSheet>>(new Map());
-  protected readonly paused = signal(false);
+  /** From the match's own lifecycle, so a replay paused elsewhere, or before this page opened, reads as paused. */
+  protected readonly paused = computed(
+    () => (this.session.status()?.status ?? this.session.match()?.status) === 'paused',
+  );
+  /** Cited events that are no longer in the live feed, fetched when a moment is inspected. */
+  protected readonly evidence = signal<ReadonlyMap<string, MatchEvent>>(new Map());
+  private readonly loadingSheets = new Set<number>();
   protected readonly error = signal<string | null>(null);
 
   private readonly names = computed(() => {
@@ -169,21 +177,74 @@ export class Control implements OnInit {
     return findFact(this.sheets().get(moment.factSheetSeq), key)?.derivedFrom ?? [];
   }
 
-  protected async select(index: number): Promise<void> {
-    this.selected.set(index);
-    const moment = this.moments()[index];
-    if (moment && !this.sheets().has(moment.factSheetSeq)) {
-      try {
-        const sheet = await this.api.factsAt(this.matchId(), moment.factSheetSeq);
-        this.sheets.update((all) => new Map(all).set(moment.factSheetSeq, sheet));
-      } catch (error) {
-        this.error.set(toApiError(error));
+  /** The cited events a hover names that the live feed no longer shows, in match order. */
+  protected readonly offFeed = computed(() => {
+    const inFeed = new Set(this.feed().map((e) => e.id));
+    return [...this.highlighted()]
+      .filter((id) => !inFeed.has(id))
+      .map((id) => this.evidence().get(id))
+      .filter((e): e is MatchEvent => !!e)
+      .sort((a, b) => a.seq - b.seq);
+  });
+
+  constructor() {
+    // The selected moment is expanded, the first one included, so its sheet and evidence load as soon as it exists.
+    effect(() => {
+      const moment = this.current();
+      if (moment && !this.sheets().has(moment.factSheetSeq)) {
+        untracked(() => void this.loadSheet(moment));
       }
-    }
+    });
+  }
+
+  protected select(index: number): void {
+    this.selected.set(index);
   }
 
   protected highlight(ids: string[]): void {
     this.highlighted.set(new Set(ids));
+  }
+
+  private async loadSheet(moment: Moment): Promise<void> {
+    if (this.loadingSheets.has(moment.factSheetSeq)) {
+      return;
+    }
+
+    this.loadingSheets.add(moment.factSheetSeq);
+    try {
+      const sheet = await this.api.factsAt(this.matchId(), moment.factSheetSeq);
+      this.sheets.update((all) => new Map(all).set(moment.factSheetSeq, sheet));
+      await this.loadEvidence(moment, sheet);
+    } catch (error) {
+      this.error.set(toApiError(error));
+    } finally {
+      this.loadingSheets.delete(moment.factSheetSeq);
+    }
+  }
+
+  /** Fetches the events the moment's narrative cites that the session no longer holds. */
+  private async loadEvidence(moment: Moment, sheet: FactSheet): Promise<void> {
+    const narrative = this.narrativeOf(moment);
+    const keys = new Set(narrative?.sentences.flatMap((s) => s.citations) ?? []);
+    const held = new Set([...this.session.events().map((e) => e.id), ...this.evidence().keys()]);
+    const missing = sheet.facts
+      .filter((f) => keys.has(f.key))
+      .flatMap((f) => f.derivedFrom)
+      .filter((id) => !held.has(id));
+    const seqs = missing
+      .map((id) => Number(id.slice(id.lastIndexOf('-') + 1)))
+      .filter((n) => n > 0);
+    if (seqs.length === 0) {
+      return;
+    }
+
+    const wanted = new Set(missing);
+    const events = await this.api.events(this.matchId(), Math.min(...seqs), Math.max(...seqs));
+    this.evidence.update((all) => {
+      const next = new Map(all);
+      events.filter((e) => wanted.has(e.id)).forEach((e) => next.set(e.id, e));
+      return next;
+    });
   }
 
   protected async hold(moment: Moment | undefined): Promise<void> {
@@ -207,11 +268,10 @@ export class Control implements OnInit {
   }
 
   protected async togglePause(): Promise<void> {
-    const pausing = !this.paused();
+    // The button follows the match status the hub pushes back, not a local guess.
     await this.run(() =>
-      pausing ? this.api.pause(this.matchId()) : this.api.resume(this.matchId()),
+      this.paused() ? this.api.resume(this.matchId()) : this.api.pause(this.matchId()),
     );
-    this.paused.set(pausing);
   }
 
   protected onKey(event: KeyboardEvent): void {
@@ -236,11 +296,11 @@ export class Control implements OnInit {
         break;
       case 'j':
       case 'J':
-        void this.select(Math.min(last, this.selected() + 1));
+        this.select(Math.min(last, this.selected() + 1));
         break;
       case 'k':
       case 'K':
-        void this.select(Math.max(0, this.selected() - 1));
+        this.select(Math.max(0, this.selected() - 1));
         break;
       case '/':
         event.preventDefault();
