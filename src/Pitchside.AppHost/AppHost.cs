@@ -15,8 +15,7 @@ if (string.Equals(builder.Configuration["Storage:Provider"], "Cosmos", StringCom
         .WithEnvironment("Storage__Provider", "Cosmos");
 }
 
-// The agent crew as its own service, as it runs in Azure. Agents:Provider defaults to Scripted, so it runs
-// offline; set it to Foundry with Foundry:Endpoint and the deployment names in user-secrets to call the models.
-builder.AddProject<Projects.Pitchside_Agents_Host>("agents");
+// The agent crew runs inside the API (Pitchside:RunAgentsInApi) until moments reach the separate agent host over
+// the event bus; a host started here would read an empty in-process sink.
 
 builder.Build().Run();

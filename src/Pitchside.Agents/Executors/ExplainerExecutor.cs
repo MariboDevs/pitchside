@@ -19,6 +19,8 @@ public sealed class ExplainerExecutor(IChatProvider provider, PromptCatalog cata
 {
     public const string ExecutorId = "explainer";
     public const string PromptName = "explainer";
+    public const int MinSentences = 1;
+    public const int MaxSentences = 3;
 
     public override async ValueTask<MomentContext> HandleAsync(MomentContext message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
@@ -39,7 +41,7 @@ public sealed class ExplainerExecutor(IChatProvider provider, PromptCatalog cata
             activity?.SetTag("pitchside.tokens.out", result.TokensOut);
             draft = new NarrativeDraft(attempt, Parse(result.Text), Provenance(result.Provider, result.Model, prompt, attempt), null);
         }
-        catch (Exception ex) when (ex is JsonException or FormatException or InvalidOperationException or HttpRequestException or System.ClientModel.ClientResultException)
+        catch (Exception ex) when (ProviderFailure.IsRecoverable(ex))
         {
             activity?.SetTag("pitchside.error", ex.GetType().Name);
             draft = new NarrativeDraft(attempt, [], Provenance(provider.Name, provider.Name, prompt, attempt), ex.Message);
@@ -74,10 +76,13 @@ public sealed class ExplainerExecutor(IChatProvider provider, PromptCatalog cata
             throw new FormatException("The answer has no 'sentences' array.");
         }
 
-        return [.. sentences.EnumerateArray()
+        List<NarrativeSentence> parsed = [.. sentences.EnumerateArray()
             .Select(s => s.ValueKind == JsonValueKind.String ? s.GetString() : s.TryGetProperty("text", out var t) ? t.GetString() : null)
             .Select(t => t ?? throw new FormatException("A sentence has no text."))
             .Select(NarrativeRenderer.Cite)];
+        return parsed.Count is >= MinSentences and <= MaxSentences
+            ? parsed
+            : throw new FormatException($"The answer has {parsed.Count} sentences; {MinSentences} to {MaxSentences} are allowed.");
     }
 
     private NarrativeProvenance Provenance(string providerName, string model, Prompt prompt, int attempt) =>

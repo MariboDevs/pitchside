@@ -6,6 +6,9 @@ public static class ObjectionKinds
     /// <summary>A digit outside a <c>[[key]]</c> token.</summary>
     public const string UncitedNumber = "uncited_number";
 
+    /// <summary>A sentence with no <c>[[key]]</c> token, so nothing it says is tied to the fact sheet.</summary>
+    public const string UncitedSentence = "uncited_sentence";
+
     /// <summary>A token whose key is not on the fact sheet.</summary>
     public const string UnknownFact = "unknown_fact";
 

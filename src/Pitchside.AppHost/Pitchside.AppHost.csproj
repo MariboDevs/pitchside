@@ -14,6 +14,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Pitchside.Api/Pitchside.Api.csproj" />
-    <ProjectReference Include="../Pitchside.Agents.Host/Pitchside.Agents.Host.csproj" />
   </ItemGroup>
 </Project>

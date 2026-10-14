@@ -53,11 +53,13 @@ public sealed class FactCheckExecutor(CodeFactChecker checker, IChatProvider pro
         try
         {
             var result = await provider.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            activity?.SetTag("pitchside.factcheck.provider", result.Provider);
+            activity?.SetTag("pitchside.factcheck.model", result.Model);
             activity?.SetTag("pitchside.factcheck.tokens.in", result.TokensIn);
             activity?.SetTag("pitchside.factcheck.tokens.out", result.TokensOut);
             return new Verdict(Unsupported(result.Text));
         }
-        catch (Exception ex) when (ex is JsonException or FormatException or InvalidOperationException or HttpRequestException or System.ClientModel.ClientResultException)
+        catch (Exception ex) when (ProviderFailure.IsRecoverable(ex))
         {
             // The code verdict already passed on everything a viewer could be misled by; a failed tone check does
             // not hold the moment back, and the trace records that it did not run.

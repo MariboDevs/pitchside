@@ -61,6 +61,13 @@ public sealed partial class MomentWorkflowRunner(
         {
             LogCancelled(item.Moment.Id);
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A fault here is a bug or a publisher outage, not a model failure (those become fallbacks inside the
+            // workflow). It is logged with the moment id so the moment can be replayed from the store, and the
+            // runner carries on with the next moment rather than stopping the host.
+            LogFailed(ex, item.Moment.Id);
+        }
         finally
         {
             gate.Release();
@@ -69,6 +76,9 @@ public sealed partial class MomentWorkflowRunner(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Moment workflow runner stopping with {Running} workflows in flight")]
     private partial void LogStopping(int running);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Moment {MomentId} failed in the workflow or while publishing")]
+    private partial void LogFailed(Exception exception, string momentId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Moment {MomentId} cancelled at shutdown")]
     private partial void LogCancelled(string momentId);
