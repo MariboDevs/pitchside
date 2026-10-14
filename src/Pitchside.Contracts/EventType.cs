@@ -16,4 +16,5 @@ public enum EventType
     Pressure,
     HalfEnd,
     FullTime,
+    Tracking,
 }

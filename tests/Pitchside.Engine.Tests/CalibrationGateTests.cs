@@ -6,11 +6,12 @@ namespace Pitchside.Engine.Tests;
 /// <summary>
 /// The build fails when the engine drifts away from real-league aggregates. The sample is small enough for CI,
 /// so tolerances here are the report's tolerances widened for sampling noise; the full report at 5,000 matches
-/// is the published evidence.
+/// is the published evidence. The sample grew from 600 to 1,000 matches with schema 0.2, because the result
+/// split's sampling noise at 600 matches (one standard error is 0.02) sat too close to the gate.
 /// </summary>
 public sealed class CalibrationGateTests
 {
-    private const int SampleSize = 600;
+    private const int SampleSize = 1000;
 
     [Fact]
     public void Synthetic_aggregates_track_the_real_league_targets()

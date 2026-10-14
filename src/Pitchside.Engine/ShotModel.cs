@@ -12,6 +12,12 @@ public static class ShotModel
     /// <summary>Probability a non-scoring shot is on target, chosen so overall on-target share lands at ~34%.</summary>
     private const double OnTargetWhenNotGoal = 0.258;
 
+    /// <summary>The penalty spot in the attacking frame: eleven metres out, central.</summary>
+    public static readonly Location PenaltySpot = new(94, 34);
+
+    /// <summary>The fixed xG of a penalty kick.</summary>
+    public const double PenaltyXg = 0.76;
+
     public static double SampleXg(Pcg32 rng, out Location location)
     {
         ArgumentNullException.ThrowIfNull(rng);
@@ -32,7 +38,7 @@ public static class ShotModel
 
         // Big chance: central, close.
         location = new Location(rng.Range(96, 104), rng.Range(26, 42));
-        return rng.Range(0.20, 0.70);
+        return rng.Range(0.20, 0.62);
     }
 
     public static ShotOutcome ResolveOutcome(Pcg32 rng, double xg)
