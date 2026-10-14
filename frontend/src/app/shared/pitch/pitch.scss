@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.pitch {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-card);
+  outline: 3px solid transparent;
+  transition: outline-color 600ms ease;
+}
+
+.pitch--flash {
+  outline-color: var(--flash);
+}
+
+.turf {
+  fill: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
+
+.lines {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-text-strong) 35%, transparent);
+  stroke-width: 0.3;
+}
+
+.mark--home {
+  fill: var(--home);
+}
+
+.mark--away {
+  fill: var(--away);
+}
+
+.ball {
+  fill: var(--color-text-strong);
+  stroke: var(--color-canvas);
+  stroke-width: 0.3;
+}

@@ -1,0 +1,35 @@
+:host {
+  display: inline-flex;
+}
+
+.monogram {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 0.4em;
+  background: var(--club-primary);
+  color: var(--club-secondary);
+  box-shadow: inset 0 0 0 0.12em color-mix(in srgb, var(--club-secondary) 55%, transparent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.monogram--sm {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.75rem;
+}
+
+.monogram--md {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1rem;
+}
+
+// Sized from the surrounding text: a box of about 1.7 em of the parent, letters at 0.6 em so three always fit.
+.monogram--lg {
+  width: 2.8em;
+  height: 2.8em;
+  font-size: 0.6em;
+}

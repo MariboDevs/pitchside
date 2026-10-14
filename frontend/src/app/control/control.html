@@ -1,0 +1,203 @@
+<main class="room">
+  <header class="bar">
+    <h1 class="title">Control room</h1>
+    @if (session.document(); as doc) {
+      <span class="fixture">{{ doc.home.club.name }} v {{ doc.away.club.name }}</span>
+      <span class="clock tabular">{{
+        clockOf(session.clock().period, session.clock().clockMs)
+      }}</span>
+      <span class="score tabular">{{ session.score().home }}-{{ session.score().away }}</span>
+    }
+    <span
+      class="pill"
+      [class.pill--ok]="session.connection() === 'live'"
+      [class.pill--waiting]="session.connection() !== 'live'"
+    >
+      {{ session.connection() }}
+    </span>
+    <div class="actions">
+      <button class="btn" type="button" (click)="togglePause()">
+        {{ paused() ? 'Resume' : 'Pause' }}
+      </button>
+      <button
+        class="btn"
+        type="button"
+        (click)="toggleApproval()"
+        [attr.aria-pressed]="session.approval() === 'approve'"
+      >
+        {{ session.approval() === 'approve' ? 'Approve before air' : 'Auto-air' }}
+      </button>
+    </div>
+    @if (error(); as message) {
+      <p class="alert" role="alert">{{ message }}</p>
+    }
+  </header>
+
+  <div class="columns">
+    <section class="column" aria-labelledby="feed-heading">
+      <h2 id="feed-heading" class="column-title">Feed</h2>
+      <div class="filters">
+        <input
+          #filter
+          class="input"
+          type="search"
+          placeholder="Filter ( / )"
+          aria-label="Filter the feed"
+          (input)="search.set(readValue($event))"
+        />
+        <select class="input" aria-label="Event type" (change)="typeFilter.set(readValue($event))">
+          <option value="">All types</option>
+          @for (type of feedTypes; track type) {
+            <option [value]="type">{{ type }}</option>
+          }
+        </select>
+        <select class="input" aria-label="Side" (change)="sideFilter.set(readValue($event))">
+          <option value="">Both sides</option>
+          @if (session.document(); as doc) {
+            <option [value]="doc.home.club.id">{{ doc.home.club.shortName }}</option>
+            <option [value]="doc.away.club.id">{{ doc.away.club.shortName }}</option>
+          }
+        </select>
+      </div>
+      <ol class="feed" data-testid="feed">
+        @for (e of feed(); track e.seq) {
+          <li class="event" [class.event--hit]="highlighted().has(e.id)">
+            <span class="tabular muted">{{ clockOf(e.period, e.clockMs) }}</span>
+            @if (clubOf(e.teamId); as club) {
+              <app-monogram [club]="club" size="sm" />
+            }
+            <span class="type">{{ e.type }}</span>
+            <span class="player">{{ playerName(e.playerId) }}</span>
+            <span class="qualifier tabular muted">{{ qualifier(e) }}</span>
+          </li>
+        }
+      </ol>
+    </section>
+
+    <section class="column" aria-labelledby="intel-heading">
+      <h2 id="intel-heading" class="column-title">Intelligence</h2>
+      <ol class="moments" data-testid="moments">
+        @for (moment of moments(); track moment.id; let i = $index) {
+          <li class="moment" [class.moment--selected]="selected() === i">
+            <button
+              class="moment-head"
+              type="button"
+              (click)="select(i)"
+              [attr.aria-expanded]="selected() === i"
+            >
+              <span class="tabular muted">{{ clockOf(moment.period, moment.clockMs) }}</span>
+              <span class="headline">{{ moment.headline }}</span>
+              @if (entryFor(moment); as entry) {
+                <span
+                  class="pill"
+                  [class.pill--ok]="entry.state === 'aired' || entry.state === 'scheduled'"
+                  [class.pill--waiting]="entry.state === 'held'"
+                >
+                  {{ entry.state }}
+                </span>
+              }
+            </button>
+            @if (selected() === i) {
+              <div class="moment-body">
+                @if (narrativeOf(moment); as n) {
+                  <p class="narrative">
+                    @for (sentence of n.sentences; track $index) {
+                      @for (part of parts(sentence.text); track $index) {
+                        @if (part.kind === 'text') {
+                          <span>{{ part.text }}</span>
+                        } @else {
+                          <button
+                            type="button"
+                            class="fact"
+                            [title]="
+                              part.key + ' from ' + citedSources(moment, part.key).join(', ')
+                            "
+                            (mouseenter)="highlight(citedSources(moment, part.key))"
+                            (focus)="highlight(citedSources(moment, part.key))"
+                            (mouseleave)="highlight([])"
+                            (blur)="highlight([])"
+                          >
+                            {{ citedValue(moment, part.key) }}
+                          </button>
+                        }
+                      }
+                      {{ ' ' }}
+                    }
+                  </p>
+                  <dl class="verdict">
+                    <div>
+                      <dt>Verdict</dt>
+                      <dd>{{ n.status }}</dd>
+                    </div>
+                    <div>
+                      <dt>Attempts</dt>
+                      <dd>{{ n.provenance.attempts }}</dd>
+                    </div>
+                    <div>
+                      <dt>Provider</dt>
+                      <dd>{{ n.provenance.provider }}</dd>
+                    </div>
+                    <div>
+                      <dt>Model</dt>
+                      <dd>{{ n.provenance.model }}</dd>
+                    </div>
+                    <div>
+                      <dt>Prompt</dt>
+                      <dd>{{ n.provenance.promptVersion }}</dd>
+                    </div>
+                    <div>
+                      <dt>Groundedness</dt>
+                      <dd>{{ n.evaluation.groundedness ?? 'pending' }}</dd>
+                    </div>
+                  </dl>
+                  <app-swimlane [narrative]="n" />
+                } @else {
+                  <p class="muted">The crew is writing this moment.</p>
+                }
+                <div class="moment-actions">
+                  <button
+                    class="btn"
+                    type="button"
+                    (click)="hold(moment)"
+                    [disabled]="entryFor(moment)?.state !== 'scheduled'"
+                  >
+                    Hold
+                  </button>
+                  <button
+                    class="btn btn--primary"
+                    type="button"
+                    (click)="air(moment)"
+                    [disabled]="entryFor(moment)?.state !== 'held'"
+                  >
+                    Air
+                  </button>
+                </div>
+              </div>
+            }
+          </li>
+        } @empty {
+          <li class="muted">No moments yet.</li>
+        }
+      </ol>
+    </section>
+
+    <section class="column" aria-labelledby="state-heading">
+      <h2 id="state-heading" class="column-title">State</h2>
+      @for (g of groupedFacts(); track g.group) {
+        <details class="facts" [open]="g.group !== 'player'">
+          <summary>
+            {{ g.group }} <span class="muted">({{ g.facts.length }})</span>
+          </summary>
+          <dl class="fact-list">
+            @for (fact of g.facts; track fact.key) {
+              <div class="fact-row">
+                <dt>{{ fact.key }}</dt>
+                <dd class="tabular">{{ fact.value }}</dd>
+              </div>
+            }
+          </dl>
+        </details>
+      }
+    </section>
+  </div>
+</main>

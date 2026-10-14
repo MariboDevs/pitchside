@@ -1,0 +1,8 @@
+<ol class="lane" aria-label="Agent trace">
+  @for (stage of stages(); track stage.name) {
+    <li class="stage" [class.stage--retried]="stage.retried">
+      <span class="name">{{ stage.name }}</span>
+      <span class="detail">{{ stage.detail }}</span>
+    </li>
+  }
+</ol>

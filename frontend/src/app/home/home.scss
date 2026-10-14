@@ -1,0 +1,123 @@
+@use 'breakpoints' as bp;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-accent);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.title {
+  margin: 0.25rem 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.2rem + 3.4vw, 3.25rem);
+  color: var(--color-text-strong);
+}
+
+.lede {
+  margin: 0;
+  color: var(--color-text-muted);
+  max-width: 40rem;
+}
+
+.panel {
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  border: 1px solid var(--color-edge);
+}
+
+.panel-title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--color-text-strong);
+}
+
+.start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.alert {
+  margin: var(--space-3) 0 0;
+  color: var(--color-alert);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.matches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-raised);
+}
+
+.teams {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.names {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+
+.links {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@include bp.from('lg') {
+  .match {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .links {
+    grid-column: auto;
+  }
+}

@@ -1,0 +1,52 @@
+:host {
+  display: block;
+}
+
+.race {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.base {
+  stroke: var(--color-panel-highlight);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.area--home {
+  fill: color-mix(in srgb, var(--home) 20%, transparent);
+}
+
+.area--away {
+  fill: color-mix(in srgb, var(--away) 20%, transparent);
+}
+
+.line {
+  fill: none;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.line--home {
+  stroke: var(--home);
+}
+
+.line--away {
+  stroke: var(--away);
+}
+
+.goal {
+  stroke: var(--color-text-strong);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.goal--home {
+  fill: var(--home);
+}
+
+.goal--away {
+  fill: var(--away);
+}
