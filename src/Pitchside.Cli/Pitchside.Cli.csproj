@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Pitchside.Engine/Pitchside.Engine.csproj" />
+    <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />
   </ItemGroup>
 </Project>
