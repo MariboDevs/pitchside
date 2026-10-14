@@ -108,6 +108,19 @@ public sealed class CosmosMatchStore(CosmosClient client, string databaseName) :
         return [.. items.Select(i => i.Payload).OrderBy(n => n.FactSheetSeq).ThenBy(n => n.Id, StringComparer.Ordinal)];
     }
 
+    public Task SaveOverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return Upsert(Overlay, new CosmosItem<OverlayEntry>(entry.Id, entry.MatchId, entry.InAtMs, entry), cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<OverlayEntry>> GetOverlayEntriesAsync(string matchId, CancellationToken cancellationToken)
+    {
+        var query = new QueryDefinition("SELECT * FROM c WHERE c.matchId = @matchId").WithParameter("@matchId", matchId);
+        var items = await Query<OverlayEntry>(Overlay, query, matchId, cancellationToken).ConfigureAwait(false);
+        return [.. items.Select(i => i.Payload).OrderBy(e => e.Period).ThenBy(e => e.InAtMs)];
+    }
+
     private Container Container(string name) => client.GetContainer(databaseName, name);
 
     private Task Upsert<T>(string container, CosmosItem<T> item, CancellationToken cancellationToken) =>
