@@ -95,8 +95,7 @@ public static class MatchEndpoints
 
         if (atSeq is null)
         {
-            var matches = await supervisor.GetAsync(ct).ConfigureAwait(false);
-            return TypedResults.Ok(await matches.Ask<FactSheet>(new GetFactSheet(matchId), Hubs.MatchSnapshots.AskTimeout, ct).ConfigureAwait(false));
+            return TypedResults.Ok(await LiveFactSheet.GetAsync(supervisor, store, match, ct).ConfigureAwait(false));
         }
 
         return TypedResults.Ok(await RecomputedFacts.AtAsync(store, match, atSeq.Value, ct).ConfigureAwait(false));

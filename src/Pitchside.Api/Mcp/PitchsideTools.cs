@@ -68,8 +68,7 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
                 : await RecomputedFacts.AtAsync(store, match, seq, cancellationToken).ConfigureAwait(false);
         }
 
-        var matches = await supervisor.GetAsync(cancellationToken).ConfigureAwait(false);
-        return await matches.Ask<FactSheet>(new GetFactSheet(matchId), Hubs.MatchSnapshots.AskTimeout, cancellationToken).ConfigureAwait(false);
+        return await LiveFactSheet.GetAsync(supervisor, store, match, cancellationToken).ConfigureAwait(false);
     }
 
     [McpServerTool(Name = "get_fact", ReadOnly = true, Idempotent = true)]
