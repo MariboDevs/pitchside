@@ -88,4 +88,19 @@ public sealed class UsageGuardTests
         guard.TryTake(UsageLimits.Replays, "10.0.1.1").Allowed.ShouldBeTrue();
         guard.TrackedCounts.ShouldBe(1);
     }
+
+    [Fact]
+    public void A_clock_that_steps_back_across_the_hour_never_reopens_a_full_window()
+    {
+        var clock = new ManualClock(TenPast.AddMinutes(50));
+        var guard = Guard(clock);
+        guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeTrue();
+        guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeTrue();
+
+        // A sample from just before the hour, applied after the new hour's quota is spent, counts in the new hour.
+        clock.Now = TenPast.AddMinutes(49);
+        guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeFalse();
+        clock.Now = TenPast.AddMinutes(51);
+        guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeFalse();
+    }
 }
