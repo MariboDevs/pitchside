@@ -140,36 +140,43 @@ public sealed partial class CodeFactChecker
     }
 
     /// <summary>
-    /// Every player a run of name words could refer to: each player whose name holds the run as a contiguous phrase.
-    /// A full name resolves to its player; a given name or a surname alone resolves to every player who has it, so a
-    /// shared surname counts as a mention of each of them and is refused unless all of them may be named.
+    /// Every player a run of name words could refer to. Each full name inside the run resolves to its player; each word
+    /// of the run not part of a full name resolves to every player whose name has that word, so a given name or a
+    /// shared surname counts as a mention of each of them and is refused unless all of them may be named. Matching
+    /// inside the run, not the run as a whole, keeps a name found when the run also holds other capitalised words,
+    /// such as a translated sentence's first word ("Ante Hugo Sato").
     /// </summary>
     private static IEnumerable<Player> MentionedPlayers(string text, IReadOnlyList<Player> roster)
     {
         var names = roster.Select(p => (Player: p, Words: Word().Matches(p.Name).Select(w => w.Value).ToArray())).ToList();
         foreach (var run in NameRuns(text))
         {
-            foreach (var (player, words) in names)
+            var covered = new bool[run.Count];
+            foreach (var (player, words) in names.Where(n => n.Words.Length > 1))
             {
-                if (ContainsPhrase(words, run))
+                for (var start = 0; start + words.Length <= run.Count; start++)
+                {
+                    if (words.Select((w, i) => string.Equals(w, run[start + i], StringComparison.Ordinal)).All(match => match))
+                    {
+                        Array.Fill(covered, true, start, words.Length);
+                        yield return player;
+                    }
+                }
+            }
+
+            for (var i = 0; i < run.Count; i++)
+            {
+                if (covered[i])
+                {
+                    continue;
+                }
+
+                foreach (var (player, words) in names.Where(n => n.Words.Contains(run[i], StringComparer.Ordinal)))
                 {
                     yield return player;
                 }
             }
         }
-    }
-
-    private static bool ContainsPhrase(IReadOnlyList<string> words, IReadOnlyList<string> phrase)
-    {
-        for (var start = 0; start + phrase.Count <= words.Count; start++)
-        {
-            if (phrase.Select((w, i) => string.Equals(w, words[start + i], StringComparison.Ordinal)).All(match => match))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /// <summary>

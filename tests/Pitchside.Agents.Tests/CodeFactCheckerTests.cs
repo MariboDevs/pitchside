@@ -55,6 +55,24 @@ public sealed class CodeFactCheckerTests
         }
     }
 
+    [Theory]
+    [InlineData("Ante Hugo Sato, Nathan Kim marca en el minuto [[match.clock.minute]].", "Hugo Sato")]
+    [InlineData("Nathan Kim marca en el minuto [[match.clock.minute]].", null)]
+    public void Player_focus_finds_a_name_inside_a_translated_run_of_capitalised_words(string text, string? forbidden)
+    {
+        var verdict = Crew.Checker.Check(
+            [NarrativeRenderer.Cite(text)], Goal.Sheet, Goal.Moment, Goal.Document, Languages.Spanish, new HashSet<string>(["INY-07"], StringComparer.Ordinal));
+        var named = verdict.Objections.Where(o => o.Kind == ObjectionKinds.ForbiddenContent).ToList();
+        if (forbidden is null)
+        {
+            named.ShouldBeEmpty(text);
+        }
+        else
+        {
+            named.ShouldContain(o => o.Detail.Contains(forbidden, StringComparison.Ordinal), text);
+        }
+    }
+
     [Fact]
     public void The_corpus_has_at_least_thirty_sentences() => Corpus().Count.ShouldBeGreaterThanOrEqualTo(30);
 
