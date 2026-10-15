@@ -43,7 +43,8 @@ public sealed partial class MomentWorkflowRunner(
 
     /// <summary>
     /// Runs one moment, publishing each narrative as soon as the workflow finishes it (WP06-R3), then any it ended
-    /// with that were not published yet, such as a template composed after a failed run. Each is published once.
+    /// with that were not published yet, such as a template composed after a failed run or a narrative whose early
+    /// publish failed. Each is published once; a failure in the end-of-run pass fails the moment.
     /// </summary>
     public async Task<MomentContext> ProcessAsync(MomentWorkItem item, CancellationToken cancellationToken)
     {
@@ -68,7 +69,21 @@ public sealed partial class MomentWorkflowRunner(
             }
         }
 
-        var context = await workflow.RunAsync(item, PublishOnceAsync, cancellationToken).ConfigureAwait(false);
+        // Publishing as each narrative completes is best effort: a failure there is logged and left to the end-of-run
+        // pass, so it never aborts the stage that wrote it or stops the translations written after it.
+        async Task PublishEarlyAsync(Narrative narrative, CancellationToken ct)
+        {
+            try
+            {
+                await PublishOnceAsync(narrative, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                LogEarlyPublishFailed(ex, narrative.Id);
+            }
+        }
+
+        var context = await workflow.RunAsync(item, PublishEarlyAsync, cancellationToken).ConfigureAwait(false);
         foreach (var narrative in context.Narratives)
         {
             await PublishOnceAsync(narrative, cancellationToken).ConfigureAwait(false);
@@ -106,6 +121,9 @@ public sealed partial class MomentWorkflowRunner(
             gate.Release();
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Narrative {NarrativeId} could not be published as it completed; the end of the run tries again")]
+    private partial void LogEarlyPublishFailed(Exception exception, string narrativeId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Moment workflow runner stopping with {Running} workflows in flight")]
     private partial void LogStopping(int running);
