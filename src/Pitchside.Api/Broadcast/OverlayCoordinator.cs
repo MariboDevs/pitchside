@@ -45,8 +45,8 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
 
         await SerialAsync(narrative.MatchId, async () =>
         {
-            var state = await StateAsync(narrative.MatchId, cancellationToken).ConfigureAwait(false);
-            await WriteAsync(book.Schedule(moment, narrative, sheet, match.Document, ReadyClock(state, moment)), cancellationToken).ConfigureAwait(false);
+            var readyClock = await ReadyClockAsync(narrative.MatchId, moment, cancellationToken).ConfigureAwait(false);
+            await WriteAsync(book.Schedule(moment, narrative, sheet, match.Document, readyClock), cancellationToken).ConfigureAwait(false);
             return 0;
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -54,12 +54,19 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
     /// <summary>
     /// The match clock the narrative was ready at, when that is a real-time clock: the match is still in play, in the
     /// moment's period, and not replaying as fast as possible. A finished match or an instant replay has a clock far
-    /// past its moments, so its cards are laid out from their moments instead, as a record of the match.
+    /// past its moments, so its cards are laid out from their moments instead, as a record of the match. An instant
+    /// replay never needs the actor's clock, so a card is placed even while the actor is too busy to answer.
     /// </summary>
-    private int? ReadyClock(MatchStateView state, Moment moment) =>
-        state.Status is MatchStatus.Live or MatchStatus.Paused && state.Period == moment.Period && !replays.IsInstant(state.MatchId)
-            ? state.ClockMs
-            : null;
+    private async Task<int?> ReadyClockAsync(string matchId, Moment moment, CancellationToken cancellationToken)
+    {
+        if (replays.IsInstant(matchId))
+        {
+            return null;
+        }
+
+        var state = await LiveStateAsync(matchId, cancellationToken).ConfigureAwait(false);
+        return state.Status is MatchStatus.Live or MatchStatus.Paused && state.Period == moment.Period ? state.ClockMs : null;
+    }
 
     public async Task<OverlayEntry?> HoldAsync(string matchId, string entryId, CancellationToken cancellationToken)
     {
@@ -70,7 +77,7 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
 
         return await SerialAsync(matchId, async () =>
         {
-            var (period, clockMs) = Clock(await StateAsync(matchId, cancellationToken).ConfigureAwait(false));
+            var (period, clockMs) = Clock(await LiveStateAsync(matchId, cancellationToken).ConfigureAwait(false));
             var entry = book.Hold(matchId, entryId, period, clockMs);
             await WriteAsync(entry is null ? [] : [entry], cancellationToken).ConfigureAwait(false);
             return entry;
@@ -86,7 +93,7 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
 
         return await SerialAsync(matchId, async () =>
         {
-            var state = await StateAsync(matchId, cancellationToken).ConfigureAwait(false);
+            var state = await LiveStateAsync(matchId, cancellationToken).ConfigureAwait(false);
             var written = book.Air(matchId, entryId, Math.Max(1, state.Period), state.ClockMs);
             await WriteAsync(written, cancellationToken).ConfigureAwait(false);
             return written.LastOrDefault(e => e.Id == entryId);
@@ -107,7 +114,7 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
     public async Task<IReadOnlyList<OverlayEntry>> EntriesAsync(string matchId, CancellationToken cancellationToken)
     {
         await EnsureLoadedAsync(matchId, cancellationToken).ConfigureAwait(false);
-        var (period, clockMs) = Clock(await StateAsync(matchId, cancellationToken).ConfigureAwait(false));
+        var (period, clockMs) = Clock(await ReadStateAsync(matchId, cancellationToken).ConfigureAwait(false));
         return [.. book.Entries(matchId).Select(e => OverlayScheduler.Resolve(e, period, clockMs))];
     }
 
@@ -166,10 +173,34 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         }
     }
 
-    private async Task<MatchStateView> StateAsync(string matchId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The match's status and clock from its actor, for a change that is stored: a hold or an air is timed against
+    /// it, so a clock that is behind would write a card into the past. An actor too busy to answer fails the change
+    /// with <see cref="AskTimeoutException"/>, and the producer tries again.
+    /// </summary>
+    private async Task<MatchStateView> LiveStateAsync(string matchId, CancellationToken cancellationToken)
     {
         var matches = await supervisor.GetAsync(cancellationToken).ConfigureAwait(false);
         return await matches.Ask<MatchStateView>(new GetState(matchId), Hubs.MatchSnapshots.AskTimeout, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The match's status and clock for a read. An actor deep in an instant replay's queue may not answer in time; the
+    /// stored status and the latest stored fact sheet's period and clock, a little behind, stand in rather than failing
+    /// the timeline read. Nothing is written from this clock.
+    /// </summary>
+    private async Task<MatchStateView> ReadStateAsync(string matchId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await LiveStateAsync(matchId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (AskTimeoutException)
+        {
+            var match = await store.GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false);
+            var sheet = await store.GetFactSheetAsync(matchId, int.MaxValue, cancellationToken).ConfigureAwait(false);
+            return new MatchStateView(matchId, match?.Status ?? MatchStatus.Scheduled, match?.LastSeq ?? 0, sheet?.Period ?? 0, sheet?.ClockMs ?? 0, 0, 0);
+        }
     }
 
     /// <summary>

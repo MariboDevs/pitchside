@@ -30,6 +30,9 @@ public sealed class InProcessEventBus : IEventBus
         }
     }
 
+    /// <summary>How many published events a consumer group has not read yet.</summary>
+    public int Backlog(string consumerGroup) => _groups.TryGetValue(consumerGroup, out var channel) ? channel.Reader.Count : 0;
+
     public async IAsyncEnumerable<EventEnvelope> SubscribeAsync(string consumerGroup, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await foreach (var envelope in Group(consumerGroup).Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))

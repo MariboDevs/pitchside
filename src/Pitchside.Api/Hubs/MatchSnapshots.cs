@@ -29,16 +29,38 @@ public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSuperv
             return null;
         }
 
-        var matches = await supervisor.GetAsync(cancellationToken).ConfigureAwait(false);
-        var live = await matches.Ask<LiveState>(new GetLiveState(matchId), AskTimeout, cancellationToken).ConfigureAwait(false);
         var narratives = await store.GetNarrativesAsync(matchId, cancellationToken).ConfigureAwait(false);
         var entries = await overlay.EntriesAsync(matchId, cancellationToken).ConfigureAwait(false);
+        var (state, sheet, moments) = await LiveAsync(match, cancellationToken).ConfigureAwait(false);
         return new MatchSnapshot(
-            match with { Status = live.View.Status, LastSeq = live.View.LastSeq },
-            live.FactSheet,
-            [.. live.Moments],
+            state,
+            sheet,
+            moments,
             [.. narratives.Where(n => NarrativeAudience.Receives(viewer, n))],
             entries,
             overlay.Mode(matchId));
+    }
+
+    /// <summary>
+    /// The match's status, fact sheet and moments from the match actor, which has them in agreement. An actor busy
+    /// with a long queue (an instant replay of a whole match) may not answer in time; the store's copy, a little
+    /// behind, stands in, and the pushes the connection already receives bring it up to date.
+    /// </summary>
+    private async Task<(StoredMatch Match, FactSheet? Sheet, IReadOnlyList<Moment> Moments)> LiveAsync(StoredMatch match, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var matches = await supervisor.GetAsync(cancellationToken).ConfigureAwait(false);
+            var live = await matches.Ask<LiveState>(new GetLiveState(match.MatchId), AskTimeout, cancellationToken).ConfigureAwait(false);
+            return (match with { Status = live.View.Status, LastSeq = live.View.LastSeq }, live.FactSheet, [.. live.Moments]);
+        }
+        catch (AskTimeoutException)
+        {
+            // Read again: the store moved on while the actor did not answer, and the client loads history up to LastSeq.
+            var latest = await store.GetMatchAsync(match.MatchId, cancellationToken).ConfigureAwait(false) ?? match;
+            var sheet = await store.GetFactSheetAsync(match.MatchId, int.MaxValue, cancellationToken).ConfigureAwait(false);
+            var moments = await store.GetMomentsAsync(match.MatchId, cancellationToken).ConfigureAwait(false);
+            return (latest, sheet, moments);
+        }
     }
 }
