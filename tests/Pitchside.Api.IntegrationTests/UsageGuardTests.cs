@@ -11,14 +11,14 @@ namespace Pitchside.Api.IntegrationTests;
 public sealed class UsageGuardTests
 {
     /// <summary>
-    /// Waits until the guard counts this many open connections: the handshake can complete before the hub takes the
-    /// slot, so a check made straight after StartAsync could run before the connection is counted.
+    /// Waits until the guard counts exactly this many open connections: the handshake can complete before the hub takes
+    /// a slot, and StopAsync can return before it gives one back, so a check made straight after either could race.
     /// </summary>
     private static async Task CountedAsync(HttpClient client, int connections)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (DateTime.UtcNow < deadline
-            && (await (await client.GetAsync("/api/v1/usage")).ReadAsync<UsageReport>()).Limits.Single(l => l.Name == UsageLimits.Connections).Used < connections)
+            && (await (await client.GetAsync("/api/v1/usage")).ReadAsync<UsageReport>()).Limits.Single(l => l.Name == UsageLimits.Connections).Used != connections)
         {
             await Task.Delay(50);
         }
@@ -66,6 +66,7 @@ public sealed class UsageGuardTests
         refused.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
 
         await first.StopAsync();
+        await CountedAsync(factory.CreateClient(), 0);
         await using var third = Connect();
         await third.StartAsync();
     }
