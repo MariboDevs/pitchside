@@ -12,7 +12,9 @@ namespace Pitchside.Api.Broadcast;
 /// judge's cost down: each scored narrative is stored again with <c>evaluation.groundedness</c> set and pushed to its
 /// watchers, so the control room shows the score. A narrative the judge cannot score keeps a null score. A storage
 /// read or write that fails puts the narrative back for the next batch, keeping any score already paid for, and at
-/// start the stored verified narratives that have no score yet are queued again, so a restart loses no work.
+/// start the stored verified narratives that have no score yet are queued again, so a restart loses no work; a scan
+/// that fails is tried again on the next tick. A narrative is judged at most once per process, however often it is
+/// queued.
 /// </summary>
 public sealed partial class GroundednessBatcher(
     IEvaluationProvider evaluator,
@@ -22,6 +24,10 @@ public sealed partial class GroundednessBatcher(
     ILogger<GroundednessBatcher> logger) : BackgroundService
 {
     private readonly Channel<Narrative> _queue = Channel.CreateUnbounded<Narrative>(new UnboundedChannelOptions { SingleReader = true });
+
+    // Read and written only by the batch loop.
+    private readonly HashSet<string> _judged = new(StringComparer.Ordinal);
+    private bool _recovered;
 
     /// <summary>Queues a narrative for the next batch; only verified narratives are scored.</summary>
     public void Enqueue(Narrative narrative)
@@ -39,6 +45,11 @@ public sealed partial class GroundednessBatcher(
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Math.Max(1, options.Value.BatchSeconds)));
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
+            if (!_recovered)
+            {
+                await RecoverAsync(stoppingToken).ConfigureAwait(false);
+            }
+
             var batch = new List<Narrative>();
             while (_queue.Reader.TryRead(out var narrative))
             {
@@ -56,7 +67,10 @@ public sealed partial class GroundednessBatcher(
         }
     }
 
-    /// <summary>Queues every stored verified narrative that has no score yet: the work a restart would otherwise drop.</summary>
+    /// <summary>
+    /// Queues every stored verified narrative that has no score yet: the work a restart would otherwise drop. A scan
+    /// that fails part way is run again on the next tick; what it queued twice is judged once.
+    /// </summary>
     private async Task RecoverAsync(CancellationToken cancellationToken)
     {
         try
@@ -71,6 +85,8 @@ public sealed partial class GroundednessBatcher(
                     }
                 }
             }
+
+            _recovered = true;
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
@@ -103,6 +119,12 @@ public sealed partial class GroundednessBatcher(
             {
                 if (narrative.Evaluation.Groundedness is null)
                 {
+                    // Already judged in this process (queued again by the start-up scan, or live after it): no second call.
+                    if (_judged.Contains(narrative.Id))
+                    {
+                        continue;
+                    }
+
                     if (!sheets.TryGetValue(narrative.FactSheetSeq, out var sheet))
                     {
                         sheet = sheets[narrative.FactSheetSeq] = await store.GetFactSheetAsync(matchId, narrative.FactSheetSeq, cancellationToken).ConfigureAwait(false);
@@ -114,6 +136,7 @@ public sealed partial class GroundednessBatcher(
                     }
 
                     var score = await JudgeAsync(new EvaluationItem(narrative, moment, sheet, document), cancellationToken).ConfigureAwait(false);
+                    _judged.Add(narrative.Id);
                     if (score is null)
                     {
                         continue;
@@ -156,7 +179,7 @@ public sealed partial class GroundednessBatcher(
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "The stored narratives could not be read at start, so none were queued for scoring")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The stored narratives could not be read at start; the scan runs again on the next tick")]
     private partial void LogRecoveryFailed(Exception exception);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Match {MatchId}: the moments could not be read, so {Count} narratives wait for the next batch")]
