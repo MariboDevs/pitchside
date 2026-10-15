@@ -56,7 +56,7 @@ public sealed partial class GroundednessBatcher(
         {
             moments = (await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false)).ToDictionary(m => m.Id, StringComparer.Ordinal);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             // No judgement has started, so the whole batch waits for the next tick rather than stopping the host.
             LogMomentsFailed(ex, matchId, narratives.Count);
@@ -93,7 +93,7 @@ public sealed partial class GroundednessBatcher(
                 await store.SaveNarrativeAsync(scored, cancellationToken).ConfigureAwait(false);
                 await broadcaster.NarrativeAsync(scored, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogScoreFailed(ex, narrative.Id);
             }
