@@ -120,6 +120,25 @@ public sealed class GroundednessBatcherTests
     }
 
     [Fact]
+    public async Task An_unscored_copy_saved_over_a_score_gets_the_score_back_without_a_second_judgement()
+    {
+        var store = await SeededAsync(new InMemoryMatchStore());
+        var judge = new CountingJudge();
+        using var batcher = Batcher(judge, store);
+        await batcher.StartAsync(CancellationToken.None);
+        batcher.Enqueue(For(Personas.Casual));
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+
+        // A publish retried after its early attempt failed saves the unscored copy again, then queues it.
+        await store.SaveNarrativeAsync(For(Personas.Casual), CancellationToken.None);
+        batcher.Enqueue(For(Personas.Casual));
+
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+        judge.Calls.ShouldBe(1);
+        await batcher.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
     public async Task A_start_up_scan_that_fails_is_run_again_on_the_next_tick()
     {
         var store = await SeededAsync(new FlakyStore(new InMemoryMatchStore(), failFirstList: true));
