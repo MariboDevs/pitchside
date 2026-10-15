@@ -218,6 +218,8 @@ public static class CommandLine
             return 1;
         }
 
+        // The simulation and the audit use the canonical id, so MER-007 reads as MER-7.
+        matchId = MatchSimulator.MatchIdFor(seed);
         var evaluation = options.GetValueOrDefault("provider", EvaluationOptions.LocalProvider);
         var agents = options.GetValueOrDefault("agents", AgentsOptions.ScriptedProvider);
         var configuration = new ConfigurationBuilder()
