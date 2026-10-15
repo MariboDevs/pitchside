@@ -8,7 +8,8 @@ using Pitchside.Runtime.Usage;
 namespace Pitchside.Agents.Workflow;
 
 /// <summary>
-/// Reads the moment sink and runs one workflow per moment, at most <c>Agents:MaxConcurrentMoments</c> at once.
+/// Reads the moment sink and runs one workflow per moment, at most <c>Agents:MaxConcurrentMoments</c> at once across
+/// the host (the <see cref="WorkflowGate"/> it shares).
 /// The sink is a queue, so a moment that arrives while the crew is busy waits rather than being dropped. Past the
 /// host's <c>UsageGuard:NarrativesPerHour</c> a moment is skipped, not queued, so a public demo cannot run up cost.
 /// </summary>
@@ -18,11 +19,14 @@ public sealed partial class MomentWorkflowRunner(
     INarrativePublisher publisher,
     IOptions<AgentsOptions> options,
     ILogger<MomentWorkflowRunner> logger,
-    UsageGuard? guard = null) : BackgroundService
+    UsageGuard? guard = null,
+    WorkflowGate? sharedGate = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var gate = new SemaphoreSlim(Math.Max(1, options.Value.MaxConcurrentMoments));
+        // The host's shared cap when there is one, so explain_moment calls count against it too.
+        using var ownGate = sharedGate is null ? new WorkflowGate(options) : null;
+        var gate = sharedGate ?? ownGate!;
         var running = new List<Task>();
         try
         {
@@ -92,7 +96,7 @@ public sealed partial class MomentWorkflowRunner(
         return context;
     }
 
-    private async Task RunGatedAsync(MomentWorkItem item, SemaphoreSlim gate, CancellationToken cancellationToken)
+    private async Task RunGatedAsync(MomentWorkItem item, WorkflowGate gate, CancellationToken cancellationToken)
     {
         try
         {
