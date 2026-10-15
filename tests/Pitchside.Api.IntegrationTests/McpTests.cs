@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Pitchside.Agents;
 using Pitchside.Agents.Workflow;
 using Pitchside.Runtime.Audit;
+using Pitchside.Runtime.Usage;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Pitchside.Api.Endpoints;
@@ -79,6 +80,15 @@ public sealed class McpTests : IClassFixture<PitchsideApiFactory>, IAsyncLifetim
         var fact = await CallAsync(mcp, "get_fact", new() { ["matchId"] = "MER-7", ["key"] = "match.score.away" });
         fact.GetProperty("fact").GetProperty("key").GetString().ShouldBe("match.score.away");
         fact.GetProperty("events").EnumerateArray().ShouldAllBe(e => e.GetProperty("type").GetString() == "goal");
+
+        // A rolling fact's evidence is the span it was computed over.
+        var rhythm = await CallAsync(mcp, "get_fact", new() { ["matchId"] = "MER-7", ["key"] = "match.rhythm" });
+        var window = rhythm.GetProperty("fact").GetProperty("window");
+        var (from, to) = (window.GetProperty("fromSeq").GetInt32(), window.GetProperty("toSeq").GetInt32());
+        var seqs = rhythm.GetProperty("events").EnumerateArray().Select(e => e.GetProperty("seq").GetInt32()).ToList();
+        seqs.ShouldNotBeEmpty();
+        seqs.Count.ShouldBeLessThanOrEqualTo(200);
+        seqs.ShouldAllBe(seq => seq >= from && seq <= to);
 
         var goals = await CallAsync(mcp, "list_moments", new() { ["matchId"] = "MER-7", ["type"] = "goal" });
         goals.GetArrayLength().ShouldBe(4);
@@ -206,6 +216,54 @@ public sealed class McpTests : IClassFixture<PitchsideApiFactory>, IAsyncLifetim
                 gate.Release();
             }
         }
+    }
+
+    [Fact]
+    public async Task Calls_without_a_stored_match_are_audited_and_can_be_read_back()
+    {
+        await using var mcp = await ConnectAsync(_factory);
+        await CallAsync(mcp, "list_matches", []);
+        (await mcp.CallToolAsync("get_match", new Dictionary<string, object?> { ["matchId"] = "MER-404" })).IsError.ShouldBe(true);
+        var http = _factory.CreateClient();
+
+        var server = await (await http.GetAsync("/api/v1/audit?scope=server")).ReadAsync<AuditPage>();
+        server.Items.ShouldContain(r => r.Stage == "mcp:list_matches" && r.MatchId == string.Empty);
+        var unknown = await (await http.GetAsync("/api/v1/audit?matchId=MER-404")).ReadAsync<AuditPage>();
+        unknown.Items.ShouldContain(r => r.Stage == "mcp:get_match" && r.Outcome == AuditOutcome.Error);
+        (await http.GetAsync("/api/v1/audit?scope=everything")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Explain_moment_past_the_hourly_limit_is_refused_audited_and_never_calls_a_model()
+    {
+        await using var limited = new ConfiguredApiFactory(new Dictionary<string, string?> { ["UsageGuard:Enabled"] = "true", ["UsageGuard:NarrativesPerHour"] = "1" });
+        var http = limited.CreateClient();
+        (await http.PostAsJsonAsync("/api/v1/replays", new { seed = 7, speed = 0 })).StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (DateTime.UtcNow < deadline && (await (await http.GetAsync("/api/v1/matches/MER-7/moments")).ReadAsync<List<Moment>>()).Count < 34)
+        {
+            await Task.Delay(200);
+        }
+
+        // The live runner spends the hour's one narrative on the first moment; wait for it to be counted.
+        while (DateTime.UtcNow < deadline && (await (await http.GetAsync("/api/v1/usage")).ReadAsync<UsageReport>()).Limits.Single(l => l.Name == UsageLimits.Narratives).Used < 1)
+        {
+            await Task.Delay(100);
+        }
+
+        async Task<int> ModelCallsAsync() =>
+            (await (await http.GetAsync("/api/v1/audit?matchId=MER-7&limit=500")).ReadAsync<AuditPage>()).Items.Count(r => !r.Stage.StartsWith("mcp:", StringComparison.Ordinal));
+        await Task.Delay(1_000);
+        var before = await ModelCallsAsync();
+
+        await using var mcp = await ConnectAsync(limited);
+        var refused = await mcp.CallToolAsync("explain_moment", new Dictionary<string, object?> { ["matchId"] = "MER-7", ["momentId"] = "MER-7:M:0324:goal" });
+
+        refused.IsError.ShouldBe(true);
+        refused.Content.OfType<TextContentBlock>().ShouldContain(c => c.Text.Contains("hourly narrative limit", StringComparison.Ordinal));
+        (await ModelCallsAsync()).ShouldBe(before);
+        var audit = await (await http.GetAsync("/api/v1/audit?matchId=MER-7&limit=500")).ReadAsync<AuditPage>();
+        audit.Items.ShouldContain(r => r.Stage == "mcp:explain_moment" && r.Outcome == AuditOutcome.Error);
     }
 
     [Fact]
