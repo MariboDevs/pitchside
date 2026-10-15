@@ -1,0 +1,50 @@
+<div
+  class="stage"
+  [class.stage--vertical]="vertical()"
+  [style.--safe]="safeArea()"
+  data-testid="overlay-stage"
+>
+  @if (session.document(); as doc) {
+    @if (session.live()) {
+      <div class="top">
+        <app-score-bug
+          [document]="doc"
+          [home]="score().home"
+          [away]="score().away"
+          [period]="matchClock().period"
+          [clockMs]="matchClock().clockMs"
+        />
+        <app-momentum-ribbon
+          class="ribbon"
+          [document]="doc"
+          [home]="momentum().home"
+          [away]="momentum().away"
+        />
+      </div>
+    }
+
+    @if (series().length > 1) {
+      <app-xg-race
+        class="race"
+        [document]="doc"
+        [series]="series()"
+        [orientation]="vertical() ? 'vertical' : 'horizontal'"
+      />
+    }
+
+    <div class="lower" [class.lower--full]="card()?.fullWidth">
+      @if (card(); as c) {
+        <app-lower-third
+          animate.enter="card-enter"
+          animate.leave="card-leave"
+          [club]="c.club"
+          [headline]="c.headline"
+          [text]="c.text"
+          [chips]="c.chips"
+          [fullWidth]="c.fullWidth"
+          [lang]="c.lang"
+        />
+      }
+    </div>
+  }
+</div>

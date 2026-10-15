@@ -11,6 +11,7 @@ public sealed class InMemoryMatchStore : IMatchStore
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, FactSheet>> _sheets = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Moment>> _moments = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Narrative>> _narratives = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, OverlayEntry>> _overlay = new(StringComparer.Ordinal);
 
     public Task SaveMatchAsync(StoredMatch match, CancellationToken cancellationToken)
     {
@@ -86,5 +87,17 @@ public sealed class InMemoryMatchStore : IMatchStore
     public Task<IReadOnlyList<Narrative>> GetNarrativesAsync(string matchId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<Narrative>>(_narratives.TryGetValue(matchId, out var narratives)
             ? [.. narratives.Values.OrderBy(n => n.FactSheetSeq).ThenBy(n => n.Id, StringComparer.Ordinal)]
+            : []);
+
+    public Task SaveOverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        _overlay.GetOrAdd(entry.MatchId, _ => new(StringComparer.Ordinal))[entry.Id] = entry;
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<OverlayEntry>> GetOverlayEntriesAsync(string matchId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<OverlayEntry>>(_overlay.TryGetValue(matchId, out var entries)
+            ? [.. entries.Values.OrderBy(e => e.Period).ThenBy(e => e.InAtMs)]
             : []);
 }

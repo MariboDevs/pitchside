@@ -1,0 +1,42 @@
+<svg
+  class="race"
+  [class.race--vertical]="orientation() === 'vertical'"
+  [attr.viewBox]="'0 0 ' + width() + ' ' + height()"
+  preserveAspectRatio="none"
+  role="img"
+  [attr.aria-label]="
+    'Expected goals race, ' +
+    document().home.club.name +
+    ' above, ' +
+    document().away.club.name +
+    ' below'
+  "
+  [style.--home]="document().home.club.primaryColour"
+  [style.--away]="document().away.club.primaryColour"
+  data-testid="xg-race"
+>
+  @if (orientation() === 'horizontal') {
+    <line
+      class="base"
+      x1="0"
+      [attr.y1]="height() / 2"
+      [attr.x2]="width()"
+      [attr.y2]="height() / 2"
+    />
+  } @else {
+    <line
+      class="base"
+      [attr.x1]="width() / 2"
+      y1="0"
+      [attr.x2]="width() / 2"
+      [attr.y2]="height()"
+    />
+  }
+  <path class="area area--home" [attr.d]="home().area" />
+  <path class="area area--away" [attr.d]="away().area" />
+  <path class="line line--home" [attr.d]="home().line" />
+  <path class="line line--away" [attr.d]="away().line" />
+  @for (goal of goals(); track $index) {
+    <circle [class]="'goal goal--' + goal.side" [attr.cx]="goal.x" [attr.cy]="goal.y" r="6" />
+  }
+</svg>

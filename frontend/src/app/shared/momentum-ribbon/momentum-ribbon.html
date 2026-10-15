@@ -1,0 +1,20 @@
+<div
+  class="ribbon"
+  role="img"
+  [attr.aria-label]="
+    'Momentum: ' +
+    document().home.club.name +
+    ' ' +
+    home() +
+    ', ' +
+    document().away.club.name +
+    ' ' +
+    away()
+  "
+  [style.--home]="document().home.club.primaryColour"
+  [style.--away]="document().away.club.primaryColour"
+  data-testid="momentum-ribbon"
+>
+  <span class="home" [style.width.%]="homeShare()"></span>
+  <span class="away"></span>
+</div>

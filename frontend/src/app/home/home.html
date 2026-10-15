@@ -1,0 +1,70 @@
+<main class="page">
+  <header class="masthead">
+    <p class="eyebrow">Meridian League</p>
+    <h1 class="title">Pitchside</h1>
+    <p class="lede">
+      Live match intelligence where every number comes from code and every sentence cites it.
+    </p>
+  </header>
+
+  <section class="panel" aria-labelledby="start-heading">
+    <h2 id="start-heading" class="panel-title">Start a replay</h2>
+    <form class="start" [formGroup]="form" (ngSubmit)="start()">
+      <label class="field">
+        <span>Seed</span>
+        <input class="input tabular" type="number" min="1" formControlName="seed" />
+      </label>
+      <label class="field">
+        <span>Speed</span>
+        <input class="input tabular" type="number" min="0" step="0.5" formControlName="speed" />
+      </label>
+      <button class="btn btn--primary" type="submit" [disabled]="starting() || form.invalid">
+        Start replay
+      </button>
+    </form>
+    @if (error(); as message) {
+      <p class="alert" role="alert">{{ message }}</p>
+    }
+  </section>
+
+  <section class="panel" aria-labelledby="matches-heading">
+    <h2 id="matches-heading" class="panel-title">Matches</h2>
+    @if (matches(); as list) {
+      @if (list.length === 0) {
+        <p class="muted">No matches yet. Start a replay above.</p>
+      } @else {
+        <ul class="matches">
+          @for (match of list; track match.matchId) {
+            <li class="match" data-testid="match-row">
+              <div class="teams">
+                <app-monogram [club]="match.document.home.club" size="sm" />
+                <span class="names"
+                  >{{ match.document.home.club.name }} v {{ match.document.away.club.name }}</span
+                >
+                <app-monogram [club]="match.document.away.club" size="sm" />
+              </div>
+              <span [class]="statusTone(match.status)">{{ match.status }}</span>
+              <nav class="links" [attr.aria-label]="'Open ' + match.matchId">
+                <a class="btn btn--ghost" [routerLink]="['/viewer', match.matchId]">Viewer</a>
+                <a class="btn btn--ghost" [routerLink]="['/control', match.matchId]"
+                  >Control room</a
+                >
+                <a
+                  class="btn btn--ghost"
+                  [routerLink]="['/overlay', match.matchId]"
+                  [queryParams]="{ aspect: '16x9' }"
+                  >Overlay</a
+                >
+                <button class="btn btn--ghost" type="button" (click)="copyOverlay(match.matchId)">
+                  {{ copied() === match.matchId ? 'Copied' : 'Open in OBS' }}
+                </button>
+              </nav>
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      <p class="muted">Loading matches</p>
+    }
+  </section>
+</main>

@@ -1,0 +1,26 @@
+:host {
+  display: inline-flex;
+}
+
+.chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1em;
+  padding: 0.25em 0.6em;
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--color-text-strong) 7%, transparent);
+}
+
+.label {
+  font-size: var(--chip-label-size, 0.55em);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-text-strong);
+}

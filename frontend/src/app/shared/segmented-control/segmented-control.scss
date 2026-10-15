@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-raised);
+}
+
+.segment {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 2rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius-chip) - 2px);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segment--on {
+  background: var(--color-accent);
+  color: var(--color-canvas);
+}

@@ -1,0 +1,9 @@
+<span
+  class="monogram"
+  [class]="'monogram--' + size()"
+  [style.--club-primary]="club().primaryColour"
+  [style.--club-secondary]="club().secondaryColour"
+  [attr.aria-label]="club().name"
+  role="img"
+  >{{ letters() }}</span
+>

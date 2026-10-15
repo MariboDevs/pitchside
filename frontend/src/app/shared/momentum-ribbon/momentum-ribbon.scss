@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+.ribbon {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--color-panel);
+}
+
+.home {
+  background: var(--home);
+  transition: width var(--duration-ribbon) var(--ease-enter);
+}
+
+.away {
+  flex: 1;
+  background: var(--away);
+}

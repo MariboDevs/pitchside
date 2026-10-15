@@ -57,4 +57,8 @@ public sealed class FlakyAppendStore(IMatchStore inner, IReadOnlyDictionary<int,
     public Task SaveNarrativeAsync(Narrative narrative, CancellationToken cancellationToken) => inner.SaveNarrativeAsync(narrative, cancellationToken);
 
     public Task<IReadOnlyList<Narrative>> GetNarrativesAsync(string matchId, CancellationToken cancellationToken) => inner.GetNarrativesAsync(matchId, cancellationToken);
+
+    public Task SaveOverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken) => inner.SaveOverlayEntryAsync(entry, cancellationToken);
+
+    public Task<IReadOnlyList<OverlayEntry>> GetOverlayEntriesAsync(string matchId, CancellationToken cancellationToken) => inner.GetOverlayEntriesAsync(matchId, cancellationToken);
 }

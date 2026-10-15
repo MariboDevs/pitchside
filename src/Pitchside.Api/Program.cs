@@ -31,6 +31,8 @@ builder.Services.AddSignalR().AddJsonProtocol(options =>
 builder.Services.AddSingleton<IMatchBroadcaster, SignalRMatchBroadcaster>();
 builder.Services.AddSingleton<ViewerRegistry>();
 builder.Services.AddSingleton<MatchSnapshots>();
+builder.Services.AddSingleton<Pitchside.Overlay.OverlayBook>();
+builder.Services.AddSingleton<OverlayCoordinator>();
 builder.Services.AddPitchsideRuntime(builder.Configuration);
 
 var pitchside = builder.Configuration.GetSection(PitchsideOptions.SectionName).Get<PitchsideOptions>() ?? new PitchsideOptions();
@@ -47,6 +49,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.MapDefaultEndpoints();
 app.MapMatchEndpoints();
+app.MapOverlayEndpoints();
 if (string.Equals(pitchside.Mode, PitchsideOptions.ReplayMode, StringComparison.OrdinalIgnoreCase))
 {
     app.MapReplayEndpoints();

@@ -28,6 +28,10 @@ internal sealed class RecordingBroadcaster : IMatchBroadcaster
         return Record("status", status.LastSeq);
     }
 
+    public Task OverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken) => Record("overlay", entry.InAtMs);
+
+    public Task ApprovalModeAsync(ApprovalModeUpdate update, CancellationToken cancellationToken) => Record("approval", 0);
+
     private Task Record(string kind, int seq)
     {
         _pushes.Enqueue((kind, seq));

@@ -1,0 +1,14 @@
+<div class="segments" role="radiogroup" [attr.aria-label]="label()">
+  @for (option of options(); track option.id) {
+    <button
+      type="button"
+      class="segment touch-target"
+      role="radio"
+      [attr.aria-checked]="option.id === value()"
+      [class.segment--on]="option.id === value()"
+      (click)="changed.emit(option.id)"
+    >
+      {{ option.label }}
+    </button>
+  }
+</div>
