@@ -18,6 +18,8 @@ public sealed class PersonaExecutor(IPersonaWriter writer) : Executor<MomentCont
             return message;
         }
 
+        // The base goes out before any variant is written, so the overlay never waits on a persona.
+        await message.PublishAsync(baseNarrative, cancellationToken).ConfigureAwait(false);
         var variants = await writer.WriteAsync(message, baseNarrative, cancellationToken).ConfigureAwait(false);
         activity?.SetTag("pitchside.variants", variants.Count);
         return message with { Narratives = message.Narratives.AddRange(variants) };

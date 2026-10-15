@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } f
 import { Club, LANGUAGES, PERSONAS, Player } from '../core/contracts';
 import { findFact, formatFact } from '../core/format';
 import { MatchSession } from '../core/match-session';
-import { resolveVariant } from '../core/variant';
+import { resolveVariant, textLanguage } from '../core/variant';
 import { ViewerStore } from '../core/viewer-store';
 import { LowerThird, LowerThirdChip } from '../shared/lower-third/lower-third';
 import { Pitch } from '../shared/pitch/pitch';
@@ -100,7 +100,8 @@ export class Viewer implements OnInit {
         club,
         headline: moment.headline,
         text: narrative?.renderedText ?? '',
-        lang: narrative?.language ?? viewer.language,
+        // English text is marked English: a fallback translation, and the "writing for you" placeholder.
+        lang: narrative ? textLanguage(narrative) : 'en',
         chips: (entry?.chips ?? []).map((c) => ({ label: c.label, value: c.display })),
         pending: view.state === 'writing',
         note:

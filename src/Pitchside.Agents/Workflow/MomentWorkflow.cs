@@ -51,7 +51,13 @@ public sealed partial class MomentWorkflow(
     }
 
     /// <summary>Runs the workflow for one moment and returns its final context, never without a base narrative.</summary>
-    public async Task<MomentContext> RunAsync(MomentWorkItem item, CancellationToken cancellationToken)
+    public Task<MomentContext> RunAsync(MomentWorkItem item, CancellationToken cancellationToken) => RunAsync(item, null, cancellationToken);
+
+    /// <summary>
+    /// Runs the workflow for one moment, handing each narrative to <paramref name="publish"/> the moment it is final,
+    /// and returns the final context, never without a base narrative.
+    /// </summary>
+    public async Task<MomentContext> RunAsync(MomentWorkItem item, Func<Narrative, CancellationToken, Task>? publish, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(item);
         using var activity = AgentTelemetry.Source.StartActivity(AgentTelemetry.MomentActivity);
@@ -65,6 +71,7 @@ public sealed partial class MomentWorkflow(
             FactSheet = item.FactSheet,
             Document = item.Document,
             Trace = activity?.Context ?? default,
+            Publish = publish,
         };
 
         MomentContext? result = null;
