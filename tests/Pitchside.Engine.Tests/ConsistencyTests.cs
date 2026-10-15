@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Pitchside.Contracts;
 using Pitchside.Engine;
 
@@ -223,21 +225,32 @@ public sealed class ConsistencyTests
         }
     }
 
+    /// <summary>
+    /// No club name, short name or the league's name contains a forbidden word: real club and competition names and
+    /// the wagering vocabulary. The words are read as SHA-256 hashes from the agents' deny-list, so none is committed in
+    /// plain text; every substring of each name is hashed, which keeps the check a "contains" check.
+    /// </summary>
     [Fact]
     public void Nothing_in_the_league_names_a_real_club_or_competition()
     {
-        var forbidden = new[] { "Withheld01", "Withheld02", "Withheld03", "Withheld04", "Withheld05", "Withheld06", "Withheld07", "Withheld08", "Withheld09", "Withheld10" };
-        foreach (var club in MeridianLeague.Clubs)
-        {
-            foreach (var word in forbidden)
-            {
-                club.Club.Name.ShouldNotContain(word);
-            }
-        }
+        var forbidden = File.ReadAllLines(RepositoryRoot.Combine("src", "Pitchside.Agents", "prompts", "forbidden.sha256"))
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith('#'))
+            .ToHashSet(StringComparer.Ordinal);
+        forbidden.Count.ShouldBeGreaterThan(0);
 
-        foreach (var word in forbidden)
+        var names = MeridianLeague.Clubs.SelectMany(c => new[] { c.Club.Name, c.Club.ShortName }).Append(MeridianLeague.Name);
+        foreach (var name in names)
         {
-            MeridianLeague.Name.ShouldNotContain(word);
+            var lower = name.ToLowerInvariant();
+            for (var start = 0; start < lower.Length; start++)
+            {
+                for (var length = 1; start + length <= lower.Length; length++)
+                {
+                    var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(lower.Substring(start, length))));
+                    forbidden.ShouldNotContain(hash, $"'{name}' contains a forbidden word.");
+                }
+            }
         }
     }
 }
