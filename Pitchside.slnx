@@ -4,6 +4,7 @@
     <Project Path="src/Pitchside.Engine/Pitchside.Engine.csproj" />
     <Project Path="src/Pitchside.Evaluation/Pitchside.Evaluation.csproj" />
     <Project Path="src/Pitchside.Cli/Pitchside.Cli.csproj" />
+    <Project Path="src/Pitchside.Mcp.Stdio/Pitchside.Mcp.Stdio.csproj" />
     <Project Path="src/Pitchside.Moments/Pitchside.Moments.csproj" />
     <Project Path="src/Pitchside.Overlay/Pitchside.Overlay.csproj" />
     <Project Path="src/Pitchside.Runtime/Pitchside.Runtime.csproj" />

@@ -11,9 +11,12 @@
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+    <PackageReference Include="JsonSchema.Net" />
+    <PackageReference Include="ModelContextProtocol" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Pitchside.Api/Pitchside.Api.csproj" />
+    <ProjectReference Include="../../src/Pitchside.Mcp.Stdio/Pitchside.Mcp.Stdio.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
