@@ -41,6 +41,7 @@ public sealed class ReplayServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    [Trait("Category", "Timing")]
     public async Task Speed_zero_replays_the_sample_in_under_five_seconds_and_stores_every_event()
     {
         var stopwatch = Stopwatch.StartNew();
