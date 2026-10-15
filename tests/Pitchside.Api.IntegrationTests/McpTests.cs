@@ -2,7 +2,14 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Json.Schema;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Pitchside.Agents;
+using Pitchside.Agents.Workflow;
+using Pitchside.Runtime.Audit;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Pitchside.Api.Endpoints;
@@ -84,6 +91,13 @@ public sealed class McpTests : IClassFixture<PitchsideApiFactory>, IAsyncLifetim
         Validate("narrative.schema.json", narrative.GetProperty("narrative"));
         narrative.GetProperty("trace").GetProperty("sentences").GetArrayLength().ShouldBeGreaterThan(0);
 
+        // The goal has a player-focus narrative per involved player: subject picks one, and leaving it out is an error.
+        var focus = await CallAsync(mcp, "get_narrative", new() { ["matchId"] = "MER-7", ["momentId"] = "MER-7:M:0324:goal", ["persona"] = "player_focus", ["subject"] = "INY-07" });
+        focus.GetProperty("narrative").GetProperty("subject").GetString().ShouldBe("INY-07");
+        var ambiguous = await mcp.CallToolAsync("get_narrative", new Dictionary<string, object?> { ["matchId"] = "MER-7", ["momentId"] = "MER-7:M:0324:goal", ["persona"] = "player_focus" });
+        ambiguous.IsError.ShouldBe(true);
+        ambiguous.Content.OfType<TextContentBlock>().ShouldContain(c => c.Text.Contains("subject", StringComparison.Ordinal));
+
         var timeline = await CallAsync(mcp, "get_overlay_timeline", new() { ["matchId"] = "MER-7" });
         timeline.GetArrayLength().ShouldBe(34);
         Validate("overlay-entry.schema.json", timeline[0]);
@@ -158,7 +172,41 @@ public sealed class McpTests : IClassFixture<PitchsideApiFactory>, IAsyncLifetim
         calls.ShouldAllBe(r => r.MomentId == "MER-7:M:0324:goal" && r.Provider == "mcp");
     }
 
-    private static async Task<McpClient> ConnectAsync(PitchsideApiFactory factory, string? key = null)
+    [Fact]
+    public async Task Explain_moment_waits_its_turn_under_the_hosts_workflow_cap()
+    {
+        var gate = _factory.Services.GetRequiredService<WorkflowGate>();
+        var slots = _factory.Services.GetRequiredService<IOptions<AgentsOptions>>().Value.MaxConcurrentMoments;
+        for (var i = 0; i < slots; i++)
+        {
+            await gate.WaitAsync(CancellationToken.None);
+        }
+
+        await using var mcp = await ConnectAsync(_factory);
+        var call = mcp.CallToolAsync("explain_moment", new Dictionary<string, object?> { ["matchId"] = "MER-7", ["momentId"] = "MER-7:M:0324:goal" }).AsTask();
+        await Task.Delay(500);
+        call.IsCompleted.ShouldBeFalse();
+
+        for (var i = 0; i < slots; i++)
+        {
+            gate.Release();
+        }
+
+        (await call).IsError.ShouldNotBe(true);
+    }
+
+    [Fact]
+    public async Task A_tool_call_keeps_its_result_when_the_audit_write_fails()
+    {
+        await using var failing = _factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services => services.AddSingleton<IAuditStore, FailingAuditStore>()));
+        await using var mcp = await ConnectAsync(failing);
+
+        var result = await mcp.CallToolAsync("list_matches", new Dictionary<string, object?>());
+
+        result.IsError.ShouldNotBe(true);
+    }
+
+    private static async Task<McpClient> ConnectAsync(WebApplicationFactory<Program> factory, string? key = null)
     {
         var options = new HttpClientTransportOptions
         {
