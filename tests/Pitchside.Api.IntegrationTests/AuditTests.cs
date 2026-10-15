@@ -66,4 +66,18 @@ public sealed class AuditTests : IClassFixture<PitchsideApiFactory>, IAsyncLifet
         (await _client.GetAsync("/api/v1/audit?matchId=MER-7&limit=0")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await _client.GetAsync("/api/v1/audit?matchId=MER-404")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task A_cursor_past_the_end_is_an_empty_page_for_a_known_match_and_404_for_an_unknown_one()
+    {
+        const string PastTheEnd = "7ZZZZZZZZZZZZZZZZZZZZZZZZZ";
+
+        var response = await _client.GetAsync($"/api/v1/audit?matchId=MER-7&after={PastTheEnd}");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var page = await response.ReadAsync<AuditPage>();
+        page.Items.ShouldBeEmpty();
+        page.Next.ShouldBeNull();
+
+        (await _client.GetAsync($"/api/v1/audit?matchId=MER-404&after={PastTheEnd}")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
 }
