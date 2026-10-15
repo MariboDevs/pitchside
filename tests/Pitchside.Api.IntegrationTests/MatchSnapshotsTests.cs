@@ -5,6 +5,9 @@ using Pitchside.Api.Endpoints;
 using Pitchside.Api.Hubs;
 using Pitchside.Contracts;
 using Pitchside.Engine;
+using Pitchside.Overlay;
+using Pitchside.Runtime.Broadcast;
+using Pitchside.Runtime.Replay;
 using Pitchside.Runtime.Actors;
 using Pitchside.Runtime.Storage;
 
@@ -24,12 +27,18 @@ public sealed class MatchSnapshotsTests
 
         using var system = ActorSystem.Create("snapshots-test");
         var silent = system.ActorOf(Props.Create(() => new SilentActor()));
-        var snapshots = new MatchSnapshots(store, new FixedRequiredActor<MatchSupervisorActor>(silent), factory.Services.GetRequiredService<OverlayCoordinator>());
+        // Both readers of the actor are given the one that never answers: the overlay's clock and the snapshot itself.
+        var supervisor = new FixedRequiredActor<MatchSupervisorActor>(silent);
+        var overlay = new OverlayCoordinator(
+            new OverlayBook(), store, factory.Services.GetRequiredService<IMatchBroadcaster>(), supervisor, factory.Services.GetRequiredService<IReplayService>());
+        var snapshots = new MatchSnapshots(store, supervisor, overlay);
+        await store.UpdateMatchStatusAsync(match.Document.MatchId, MatchStatus.Live, 15, CancellationToken.None);
 
         var snapshot = await snapshots.BuildAsync(match.Document.MatchId, new ViewerPreferences(Personas.Base, Languages.English), CancellationToken.None);
 
         snapshot.ShouldNotBeNull();
         snapshot.Match.Status.ShouldBe(MatchStatus.Live);
+        snapshot.Match.LastSeq.ShouldBe(15);
         snapshot.FactSheet!.AsOfSeq.ShouldBe(10);
         await system.Terminate();
     }
