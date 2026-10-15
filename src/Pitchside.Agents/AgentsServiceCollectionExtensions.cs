@@ -23,7 +23,15 @@ public static class AgentsServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        services.Configure<AgentsOptions>(configuration.GetSection(AgentsOptions.SectionName));
+        var agents = configuration.GetSection(AgentsOptions.SectionName);
+        services.Configure<AgentsOptions>(options =>
+        {
+            agents.Bind(options);
+
+            // The binder appends configured array entries to the defaults; a configured list replaces them instead.
+            options.Personas = Replace(agents.GetSection(nameof(AgentsOptions.Personas)), options.Personas);
+            options.Languages = Replace(agents.GetSection(nameof(AgentsOptions.Languages)), options.Languages);
+        });
         services.Configure<FoundryOptions>(configuration.GetSection(FoundryOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<PromptCatalog>();
@@ -75,4 +83,8 @@ public static class AgentsServiceCollectionExtensions
         services.AddHostedService(sp => sp.GetRequiredService<MomentWorkflowRunner>());
         return services;
     }
+
+    /// <summary>The configured list when the setting is present (an empty value gives an empty list), else the defaults.</summary>
+    private static string[] Replace(IConfigurationSection section, string[] defaults) =>
+        section.Exists() ? section.GetChildren().Select(c => c.Value).OfType<string>().ToArray() : defaults;
 }
