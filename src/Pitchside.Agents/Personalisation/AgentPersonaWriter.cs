@@ -60,7 +60,9 @@ public sealed partial class AgentPersonaWriter(
             }
         }
 
-        var numbers = sentences.Sum(s => NarrativeTokens.Written(s.Text).Count);
+        // Every number a viewer sees: each token occurrence, and each number written outside a token, such as the
+        // shirt number the code checker allows beside a named player.
+        var numbers = sentences.Sum(s => NarrativeTokens.Written(s.Text).Count + NumberRun().Count(NarrativeTokens.Strip(s.Text)));
         if (spec.MaxNumbers is { } maxNumbers && numbers > maxNumbers)
         {
             objections.Add(new Objection(ObjectionKinds.WholeDraft, ObjectionKinds.InvalidOutput,
@@ -116,4 +118,7 @@ public sealed partial class AgentPersonaWriter(
 
     [GeneratedRegex(@"\S+", RegexOptions.CultureInvariant)]
     private static partial Regex Word();
+
+    [GeneratedRegex(@"\p{Nd}+", RegexOptions.CultureInvariant)]
+    private static partial Regex NumberRun();
 }
