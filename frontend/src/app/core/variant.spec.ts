@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Moment, Narrative } from './contracts';
-import { resolveVariant, textLanguage, variantId } from './variant';
+import { VARIANT_WAIT_MS, resolveVariant, textLanguage, variantId } from './variant';
 
 const moment = { id: 'MER-7:M:0324:goal', playerIds: ['INY-07', 'INY-04'] } as Moment;
 
@@ -92,5 +92,34 @@ describe('textLanguage', () => {
       'en',
     );
     expect(textLanguage(narrative(variantId(moment.id, 'analyst', 'af')))).toBe('af');
+  });
+});
+
+describe('waiting for a variant', () => {
+  const generated = Date.parse('2026-10-25T15:00:00Z');
+  const base = {
+    ...narrative(variantId(moment.id, 'base', 'en')),
+    provenance: { fallback: false, generatedUtc: '2026-10-25T15:00:00Z' },
+  } as Narrative;
+
+  it('holds the writing slot while the variant may still come', () => {
+    const view = resolveVariant(
+      moment,
+      { persona: 'casual', language: 'zu' },
+      map(base),
+      generated + 5_000,
+    );
+    expect(view.state).toBe('writing');
+  });
+
+  it('shows the base once the variant is overdue', () => {
+    const view = resolveVariant(
+      moment,
+      { persona: 'casual', language: 'zu' },
+      map(base),
+      generated + VARIANT_WAIT_MS + 1,
+    );
+    expect(view.narrative).toBe(base);
+    expect(view.state).toBe('ready');
   });
 });
