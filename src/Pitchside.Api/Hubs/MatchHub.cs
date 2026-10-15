@@ -1,9 +1,11 @@
 using Akka.Actor;
 using Akka.Hosting;
 using Microsoft.AspNetCore.SignalR;
+using Pitchside.Api.Middleware;
 using Pitchside.Contracts;
 using Pitchside.Runtime.Actors;
 using Pitchside.Runtime.Messages;
+using Pitchside.Runtime.Usage;
 
 namespace Pitchside.Api.Hubs;
 
@@ -13,7 +15,7 @@ namespace Pitchside.Api.Hubs;
 /// connection joins the group before the snapshot is read, so nothing falls between the two: a push that arrives
 /// while the snapshot is built may also be in it, and clients drop what they already hold by id and seq.
 /// </summary>
-public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, IRequiredActor<MatchSupervisorActor> supervisor) : Hub<IMatchClient>
+public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, IRequiredActor<MatchSupervisorActor> supervisor, UsageGuard guard) : Hub<IMatchClient>
 {
     public const string Path = "/hubs/match";
 
@@ -62,8 +64,16 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
         return Task.CompletedTask;
     }
 
+    /// <summary>Counts the caller's open connections for the usage guard; <see cref="UsageGuardMiddleware"/> refuses past the limit.</summary>
+    public override Task OnConnectedAsync()
+    {
+        guard.Connected(ClientKey.Of(Context.GetHttpContext()));
+        return base.OnConnectedAsync();
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        guard.Disconnected(ClientKey.Of(Context.GetHttpContext()));
         var joined = viewers.RemoveConnection(Context.ConnectionId);
         if (joined.Count > 0)
         {

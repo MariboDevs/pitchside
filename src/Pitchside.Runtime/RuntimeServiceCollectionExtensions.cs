@@ -13,6 +13,7 @@ using Pitchside.Runtime.Bus;
 using Pitchside.Runtime.MomentSink;
 using Pitchside.Runtime.Replay;
 using Pitchside.Runtime.Storage;
+using Pitchside.Runtime.Usage;
 
 namespace Pitchside.Runtime;
 
@@ -37,6 +38,7 @@ public static class RuntimeServiceCollectionExtensions
         services.Configure<BusOptions>(configuration.GetSection(BusOptions.SectionName));
         services.Configure<ReplayOptions>(configuration.GetSection(ReplayOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
+        services.AddUsageGuard(configuration);
         services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
         services.TryAddSingleton<IMatchBroadcaster, NullMatchBroadcaster>();
         services.TryAddSingleton<IMomentSink, ChannelMomentSink>();
