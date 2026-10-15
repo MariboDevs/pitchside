@@ -23,6 +23,11 @@ jobs:
       - name: Restore
         run: dotnet restore Pitchside.slnx
 
+      - name: No vulnerable packages, transitive included
+        run: |
+          dotnet list Pitchside.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable-packages.txt
+          if grep -q "has the following vulnerable packages" vulnerable-packages.txt; then exit 1; fi
+
       - name: Build (warnings are errors)
         run: dotnet build Pitchside.slnx --no-restore --configuration Release
 
@@ -31,6 +36,9 @@ jobs:
 
       - name: Calibration report (fails when the engine drifts from the real-league targets)
         run: dotnet run --project src/Pitchside.Cli --no-build --configuration Release -- calibrate --matches 2000 --report artifacts/calibration-report.md
+
+      - name: Evaluation report (scripted crew, local groundedness proxy)
+        run: dotnet run --project src/Pitchside.Cli --no-build --configuration Release -- evaluate --match MER-7 --provider local --report artifacts/evaluation-report-MER-7.md
 
       - name: Sample match is reproducible
         run: |
@@ -66,6 +74,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: No high or critical npm advisories
+        run: npm audit --audit-level=high
+
       - name: Lint
         run: npm run lint
 
@@ -93,3 +104,17 @@ jobs:
           path: |
             artifacts/screens/
             frontend/test-results/
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog over the pushed commits
+        uses: trufflesecurity/trufflehog@v3.96.0
+        with:
+          version: 3.96.0
+          extra_args: --results=verified,unknown
