@@ -9,6 +9,7 @@
     <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />
     <ProjectReference Include="../Pitchside.Moments/Pitchside.Moments.csproj" />
     <ProjectReference Include="../Pitchside.Agents/Pitchside.Agents.csproj" />
+    <ProjectReference Include="../Pitchside.Evaluation/Pitchside.Evaluation.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
