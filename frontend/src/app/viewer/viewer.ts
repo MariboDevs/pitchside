@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Club, LANGUAGES, PERSONAS, Player } from '../core/contracts';
 import { findFact, formatFact } from '../core/format';
 import { MatchSession } from '../core/match-session';
@@ -46,12 +55,16 @@ const PLAYER_STRIP = [
 export class Viewer implements OnInit {
   protected readonly session = inject(MatchSession);
   private readonly store = inject(ViewerStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly matchId = input.required<string>();
 
   protected readonly personas = PERSONAS;
   protected readonly languages = LANGUAGES;
   protected readonly preferences = this.store.preferences;
+
+  /** The wall clock, a second at a time, so a variant that never arrives gives way to the base narrative. */
+  private readonly now = signal(Date.now());
 
   protected readonly squads = computed(() => {
     const doc = this.session.document();
@@ -82,7 +95,7 @@ export class Viewer implements OnInit {
     const narratives = this.session.narratives();
     const cards: ViewerCard[] = [];
     for (const moment of [...this.session.moments()].reverse()) {
-      const view = resolveVariant(moment, viewer, narratives);
+      const view = resolveVariant(moment, viewer, narratives, this.now());
       const narrative = view.narrative;
       if (!narrative && view.state !== 'writing') {
         continue;
@@ -139,6 +152,8 @@ export class Viewer implements OnInit {
   });
 
   ngOnInit(): void {
+    const clock = setInterval(() => this.now.set(Date.now()), 1_000);
+    this.destroyRef.onDestroy(() => clearInterval(clock));
     const prefs = this.preferences();
     void this.session.connect(this.matchId(), prefs);
   }
