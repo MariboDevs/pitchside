@@ -51,9 +51,20 @@ public sealed partial class MomentWorkflowRunner(
         var published = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>(StringComparer.Ordinal);
         async Task PublishOnceAsync(Narrative narrative, CancellationToken ct)
         {
-            if (published.TryAdd(narrative.Id, true))
+            if (!published.TryAdd(narrative.Id, true))
+            {
+                return;
+            }
+
+            try
             {
                 await publisher.PublishAsync(narrative, ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Not published after all: the end-of-run pass may publish it, or a template with the same id, again.
+                published.TryRemove(narrative.Id, out _);
+                throw;
             }
         }
 

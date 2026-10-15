@@ -10,6 +10,12 @@ export interface VariantView {
   englishFallback: boolean;
 }
 
+/**
+ * How long a viewer waits for its persona or language variant once the base narrative exists. A variant that has not
+ * arrived by then (lost to a restart, or never written for a match narrated before WP-06) gives way to the base.
+ */
+export const VARIANT_WAIT_MS = 20_000;
+
 /** The derivable narrative id, `{momentId}:{persona}[.{subject}]:{language}`. */
 export function variantId(
   momentId: string,
@@ -28,13 +34,15 @@ function usable(narrative: Narrative | undefined): boolean {
 
 /**
  * Picks the narrative a viewer reads for a moment (WP06-R2, R3). A variant that has not arrived yet is a "writing for
- * you" slot while the base narrative exists; a rejected variant gives way to the base narrative; a followed player
+ * you" slot while the base narrative exists, for at most VARIANT_WAIT_MS; a rejected variant gives way to the base
+ * narrative; a followed player
  * who is not on the moment gets the casual card, marked as not involved.
  */
 export function resolveVariant(
   moment: Moment,
   viewer: ViewerPreferences,
   narratives: ReadonlyMap<string, Narrative>,
+  nowMs: number = Date.now(),
 ): VariantView {
   const language = viewer.language;
   const baseCandidate =
@@ -73,7 +81,8 @@ export function resolveVariant(
     return { narrative: variant, state, englishFallback: fellBack(variant) };
   }
 
-  if (variant?.status === 'rejected' || !base) {
+  const waitedOut = !!base && nowMs - Date.parse(base.provenance.generatedUtc) > VARIANT_WAIT_MS;
+  if (variant?.status === 'rejected' || !base || waitedOut) {
     return { narrative: base, state, englishFallback: fellBack(base) };
   }
 
