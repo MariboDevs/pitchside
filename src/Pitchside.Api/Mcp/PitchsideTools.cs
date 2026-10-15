@@ -81,6 +81,15 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
     {
         var sheet = await GetFactSheetAsync(matchId, null, cancellationToken).ConfigureAwait(false);
         var fact = sheet.Find(key) ?? throw new McpException($"No fact '{key}' on {matchId}'s sheet.");
+
+        // The live sheet can be ahead of the store by the events still being written; wait for them, so a score is
+        // never returned without the event that made it.
+        var durable = services.GetRequiredService<DurableProgress>();
+        if (!await durable.WaitForAsync(matchId, sheet.AsOfSeq, Hubs.MatchSnapshots.AskTimeout, cancellationToken).ConfigureAwait(false))
+        {
+            throw new McpException($"{matchId}'s events up to seq {sheet.AsOfSeq} are still being stored; try again.");
+        }
+
         var events = await NarrativeTraces.EventsAsync(store, matchId, fact.DerivedFrom.ToHashSet(StringComparer.Ordinal), cancellationToken).ConfigureAwait(false);
         return new FactWithEvents(fact, sheet.AsOfSeq, [.. events.TakeLast(MaxEvents)]);
     }

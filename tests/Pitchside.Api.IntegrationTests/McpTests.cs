@@ -175,24 +175,37 @@ public sealed class McpTests : IClassFixture<PitchsideApiFactory>, IAsyncLifetim
     [Fact]
     public async Task Explain_moment_waits_its_turn_under_the_hosts_workflow_cap()
     {
+        await using var mcp = await ConnectAsync(_factory);
         var gate = _factory.Services.GetRequiredService<WorkflowGate>();
         var slots = _factory.Services.GetRequiredService<IOptions<AgentsOptions>>().Value.MaxConcurrentMoments;
-        for (var i = 0; i < slots; i++)
+        var held = 0;
+        try
         {
-            await gate.WaitAsync(CancellationToken.None);
+            for (; held < slots; held++)
+            {
+                await gate.WaitAsync(CancellationToken.None);
+            }
+
+            var call = mcp.CallToolAsync("explain_moment", new Dictionary<string, object?> { ["matchId"] = "MER-7", ["momentId"] = "MER-7:M:0324:goal" }).AsTask();
+            await Task.Delay(500);
+            call.IsCompleted.ShouldBeFalse();
+
+            // Free the slots before awaiting, so the call can run; the finally below then has nothing left to give back.
+            for (; held > 0; held--)
+            {
+                gate.Release();
+            }
+
+            (await call).IsError.ShouldNotBe(true);
         }
-
-        await using var mcp = await ConnectAsync(_factory);
-        var call = mcp.CallToolAsync("explain_moment", new Dictionary<string, object?> { ["matchId"] = "MER-7", ["momentId"] = "MER-7:M:0324:goal" }).AsTask();
-        await Task.Delay(500);
-        call.IsCompleted.ShouldBeFalse();
-
-        for (var i = 0; i < slots; i++)
+        finally
         {
-            gate.Release();
+            // A failed assertion must not leave the shared fixture's gate exhausted for the tests after it.
+            for (; held > 0; held--)
+            {
+                gate.Release();
+            }
         }
-
-        (await call).IsError.ShouldNotBe(true);
     }
 
     [Fact]
