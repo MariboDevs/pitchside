@@ -86,12 +86,47 @@ public sealed class GroundednessBatcherTests
     [Fact]
     public async Task A_save_that_fails_is_retried_without_a_second_judgement()
     {
-        var store = await SeededAsync(new FailOnceSaveStore(new InMemoryMatchStore()));
+        var store = await SeededAsync(new FlakyStore(new InMemoryMatchStore(), failFirstSave: true));
         var judge = new CountingJudge();
         using var batcher = Batcher(judge, store);
         await batcher.StartAsync(CancellationToken.None);
 
         batcher.Enqueue(For(Personas.Casual));
+
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+        judge.Calls.ShouldBe(1);
+        await batcher.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task A_narrative_queued_again_on_a_later_tick_is_judged_once()
+    {
+        var store = await SeededAsync(new InMemoryMatchStore());
+        var judge = new CountingJudge();
+        using var batcher = Batcher(judge, store);
+        await batcher.StartAsync(CancellationToken.None);
+
+        batcher.Enqueue(For(Personas.Casual));
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+
+        // The same unscored narrative again, as when the start-up scan and the live publisher both queue it.
+        batcher.Enqueue(For(Personas.Casual));
+        await Task.Delay(2_500);
+
+        judge.Calls.ShouldBe(1);
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+        await batcher.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task A_start_up_scan_that_fails_is_run_again_on_the_next_tick()
+    {
+        var store = await SeededAsync(new FlakyStore(new InMemoryMatchStore(), failFirstList: true));
+        await store.SaveMatchAsync(new StoredMatch(Pitchside.Engine.MatchSimulator.Simulate(7).Document, MatchStatus.Completed, 0, DateTimeOffset.UnixEpoch), CancellationToken.None);
+        await store.SaveNarrativeAsync(For(Personas.Casual), CancellationToken.None);
+        var judge = new CountingJudge();
+        using var batcher = Batcher(judge, store);
+        await batcher.StartAsync(CancellationToken.None);
 
         (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
         judge.Calls.ShouldBe(1);

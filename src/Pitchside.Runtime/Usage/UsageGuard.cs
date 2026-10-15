@@ -35,10 +35,13 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
     /// <summary>Counts one use of an hourly limit, refusing it when the limit is reached and the guard is enabled.</summary>
     public UsageDecision TryTake(string limit, string key)
     {
-        var now = time.GetUtcNow().ToUnixTimeSeconds();
-        var window = now / 3600;
         lock (_lock)
         {
+            // The clock is read under the lock, so two callers at the turn of the hour can never apply their counts out
+            // of order; a window never moves backwards.
+            var now = time.GetUtcNow().ToUnixTimeSeconds();
+            var window = Math.Max(now / 3600, _currentWindow);
+
             // Once per hour, when a new window starts, every count from an earlier one is dropped, so the table holds
             // only the callers of the current hour rather than every address the host has ever seen.
             if (window != _currentWindow)
