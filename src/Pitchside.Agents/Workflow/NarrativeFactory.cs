@@ -3,7 +3,7 @@ using Pitchside.Contracts;
 
 namespace Pitchside.Agents.Workflow;
 
-/// <summary>Builds a narrative for a moment: derivable id, rendered text and citation coverage from code.</summary>
+/// <summary>Builds a narrative for a moment: derivable id, rendered text and evaluation figures from code.</summary>
 public static class NarrativeFactory
 {
     public static Narrative Create(
@@ -31,7 +31,10 @@ public static class NarrativeFactory
             RenderedText = renderable ? NarrativeRenderer.Render(sentences, context.FactSheet, language) : string.Empty,
             Status = status,
             Provenance = provenance,
-            Evaluation = new NarrativeEvaluation(NarrativeRenderer.CitationCoverage(sentences), null),
+            Evaluation = new NarrativeEvaluation(
+                NarrativeRenderer.CitationCoverage(sentences, context.FactSheet),
+                NarrativeRenderer.FactDensity(sentences),
+                null),
         };
     }
 }

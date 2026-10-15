@@ -46,7 +46,7 @@ the heart of the Foundry story.
   "renderedText": "Amanzi lead 2-1 after their third big chance of the half. Nkosi's xG is now 0.91 from 4 shots.",
   "status": "verified",
   "provenance": { "provider": "foundry", "model": "<deployment name>", "promptVersion": "explainer-v3", "attempts": 1, "generatedUtc": "...", "fallback": false },
-  "evaluation": { "citationCoverage": 1.0, "groundedness": null }
+  "evaluation": { "citationCoverage": 1.0, "factDensity": 2.5, "groundedness": null }
 }
 ```
 
@@ -54,6 +54,9 @@ the heart of the Foundry story.
   produced by code substituting each token with the fact's value at `precision`. The model never writes a
   digit; if it does, the checker catches it.
 - `status` is `draft`, `verified`, `rejected`, `fallback`.
+- `evaluation` is filled by code and the evaluation pass (WP-07): `citationCoverage` is written tokens that
+  resolve over tokens written (1.0 for every verified narrative), `factDensity` is tokens per sentence, and
+  `groundedness` is null until WP-07's evaluation pass scores it.
 - The base narrative is persona `base`, language `en`. Persona and language variants reference the same
   `momentId` and carry their own citations, verified the same way.
 
