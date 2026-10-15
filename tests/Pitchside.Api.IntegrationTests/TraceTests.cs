@@ -7,10 +7,15 @@ namespace Pitchside.Api.IntegrationTests;
 
 public sealed class TraceTests : IClassFixture<PitchsideApiFactory>, IAsyncLifetime
 {
+    private readonly PitchsideApiFactory _factory;
     private readonly HttpClient _client;
     private List<Narrative> _narratives = [];
 
-    public TraceTests(PitchsideApiFactory factory) => _client = factory.CreateClient();
+    public TraceTests(PitchsideApiFactory factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient();
+    }
 
     public async Task InitializeAsync()
     {
@@ -23,7 +28,7 @@ public sealed class TraceTests : IClassFixture<PitchsideApiFactory>, IAsyncLifet
             await Task.Delay(200);
         }
 
-        _narratives.Count.ShouldBe(752);
+        _narratives.Count.ShouldBe(752, await MatchProgress.DescribeAsync(_factory.Services, "MER-7"));
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
