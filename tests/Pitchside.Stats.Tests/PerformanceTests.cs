@@ -10,6 +10,7 @@ namespace Pitchside.Stats.Tests;
 public sealed class PerformanceTests
 {
     [Fact]
+    [Trait("Category", "Timing")]
     public void The_whole_sample_snapshots_at_every_event_in_under_two_seconds()
     {
         var document = SampleMatch.Document;
