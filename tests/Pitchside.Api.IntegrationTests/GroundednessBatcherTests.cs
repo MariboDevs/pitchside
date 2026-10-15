@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Pitchside.Api.Broadcast;
@@ -149,5 +150,19 @@ public sealed class GroundednessBatcherTests
         (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
         judge.Calls.ShouldBe(1);
         await batcher.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task A_saved_narrative_whose_broadcast_fails_is_still_scored()
+    {
+        await using var factory = new ConfiguredApiFactory(new Dictionary<string, string?> { ["Evaluation:BatchSeconds"] = "1" });
+        var services = factory.Services;
+        var store = await SeededAsync(services.GetRequiredService<IMatchStore>());
+        var publisher = new StoreAndBroadcastNarrativePublisher(
+            store, new NarrativeFailingBroadcaster(), services.GetRequiredService<OverlayCoordinator>(), services.GetRequiredService<GroundednessBatcher>());
+
+        await Should.ThrowAsync<InvalidOperationException>(() => publisher.PublishAsync(For(Personas.Casual), CancellationToken.None));
+
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldNotBeNull();
     }
 }
