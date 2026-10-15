@@ -38,5 +38,5 @@ Review findings and runtime faults found after a package merged, fixed against t
 | Aired card's no-expiry override after a restart | accepted (owner's decision on #11) | See the WP-05 row |
 | MessagePack pin in `Directory.Packages.props` | maintainer | Drop it once Aspire.Hosting resolves a patched MessagePack |
 | Akka.Hosting `ActorRegistry.GetAsync` race | upstream | Worked around by `RegisteredActor`; worth reporting to Akka.Hosting with the reproduction from #16 |
-| Real-name guard in `ConsistencyTests` | WP-00 | `Nothing_in_the_league_names_a_real_club_or_competition` lists real names in plain text; hash them as `prompts/forbidden.sha256` does before the history goes public on 25 October |
+| Real names in earlier commits | owner | `ConsistencyTests` now checks club and league names against the hashed deny-list, so the working tree holds no real name in plain text. The removed list is still in the history from the first engine commit onwards; removing it there needs a history rewrite of `main` and a force push, which only the owner can decide on before 25 October |
 | Foundry runs | local session | The "Needs a local session" items in the WP-04, WP-06 and WP-07 rows have not run; the Foundry endpoint is not yet exercised |
