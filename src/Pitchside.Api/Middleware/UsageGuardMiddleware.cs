@@ -18,7 +18,10 @@ public sealed class UsageGuardMiddleware(RequestDelegate next, UsageGuard guard,
         ArgumentNullException.ThrowIfNull(context);
         var key = ClientKey.Of(context);
         var request = context.Request;
-        if (HttpMethods.IsPost(request.Method) && request.Path.Equals("/api/v1/replays", StringComparison.OrdinalIgnoreCase))
+
+        // Routing accepts a trailing slash, so the limits must match with or without one.
+        var path = request.Path.Value?.TrimEnd('/') ?? string.Empty;
+        if (HttpMethods.IsPost(request.Method) && path.Equals("/api/v1/replays", StringComparison.OrdinalIgnoreCase))
         {
             var decision = guard.TryTake(UsageLimits.Replays, key);
             if (!decision.Allowed)
@@ -27,7 +30,7 @@ public sealed class UsageGuardMiddleware(RequestDelegate next, UsageGuard guard,
                 return;
             }
         }
-        else if (IsNewHubConnection(request) && !guard.CanConnect(key))
+        else if (IsNewHubConnection(request, path) && !guard.CanConnect(key))
         {
             await RefuseAsync(context, ConnectionRetryAfter, "Connection limit reached", "This address has too many live connections open.").ConfigureAwait(false);
             return;
@@ -36,9 +39,9 @@ public sealed class UsageGuardMiddleware(RequestDelegate next, UsageGuard guard,
         await next(context).ConfigureAwait(false);
     }
 
-    private static bool IsNewHubConnection(HttpRequest request) =>
+    private static bool IsNewHubConnection(HttpRequest request, string path) =>
         request.Path.StartsWithSegments(MatchHub.Path, StringComparison.OrdinalIgnoreCase)
-        && (request.Path.Value!.EndsWith("/negotiate", StringComparison.OrdinalIgnoreCase)
+        && (path.EndsWith("/negotiate", StringComparison.OrdinalIgnoreCase)
             || (request.HttpContext.WebSockets.IsWebSocketRequest && !request.Query.ContainsKey("id")));
 
     private async Task RefuseAsync(HttpContext context, TimeSpan retryAfter, string title, string detail)
