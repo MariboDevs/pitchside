@@ -41,7 +41,8 @@ and an audit record of every model call. The README's headline numbers come from
 - **WP07-R6 Audit record.** Every model call writes an `AuditRecord { id (ulid), matchId, momentId, stage,
   provider, model, promptVersion, promptHash, inputTokens, outputTokens, latencyMs, outcome, requestId,
   utc }` to the `audit` container. Prompt text is not stored; its hash is. `GET /api/v1/audit?matchId=` pages
-  them; the control room's trace swimlane reads them.
+  them; the control room's trace swimlane reads them. Records with no match (an MCP `list_matches` call) are
+  read with `scope=server`, and records about a match id that was never stored are still returned.
 - **WP07-R7 Golden masters for narratives.** With the scripted provider, the full seed-7 narrative set is
   committed under `tests/Pitchside.Agents.Tests/golden/seed-7.narratives.jsonl` and compared exactly. A
   prompt or checker change that alters them updates the golden in the same pull request with a reason.
