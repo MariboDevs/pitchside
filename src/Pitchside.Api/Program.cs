@@ -3,7 +3,9 @@ using Pitchside.Agents.Workflow;
 using Pitchside.Api;
 using Pitchside.Api.Broadcast;
 using Pitchside.Api.Endpoints;
+using Microsoft.AspNetCore.HttpOverrides;
 using Pitchside.Api.Hubs;
+using Pitchside.Api.Middleware;
 using Pitchside.Contracts;
 using Pitchside.Evaluation;
 using Pitchside.Runtime;
@@ -48,15 +50,29 @@ if (pitchside.RunAgentsInApi)
     builder.Services.AddMomentWorkflowRunner();
 }
 
+// Behind the Container Apps ingress the caller's address arrives in X-Forwarded-For. The ingress appends the address
+// it saw, so only the last entry is trusted (ForwardLimit 1); the usage guard counts per-caller limits against it.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
+app.UseForwardedHeaders();
 app.UseMiddleware<RequestIdMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseWebSockets();
+app.UseMiddleware<UsageGuardMiddleware>();
 app.MapDefaultEndpoints();
 app.MapMatchEndpoints();
 app.MapOverlayEndpoints();
 app.MapAuditEndpoints();
 app.MapTraceEndpoints();
+app.MapUsageEndpoints();
 if (string.Equals(pitchside.Mode, PitchsideOptions.ReplayMode, StringComparison.OrdinalIgnoreCase))
 {
     app.MapReplayEndpoints();

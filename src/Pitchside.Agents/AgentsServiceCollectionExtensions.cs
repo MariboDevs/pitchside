@@ -11,6 +11,7 @@ using Pitchside.Agents.Providers;
 using Pitchside.Agents.Workflow;
 using Pitchside.Runtime.Audit;
 using Pitchside.Runtime.MomentSink;
+using Pitchside.Runtime.Usage;
 
 namespace Pitchside.Agents;
 
@@ -26,6 +27,7 @@ public static class AgentsServiceCollectionExtensions
         services.Configure<FoundryOptions>(configuration.GetSection(FoundryOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<PromptCatalog>();
+        services.AddUsageGuard(configuration);
         services.TryAddSingleton(sp => new CodeFactChecker(sp.GetRequiredService<PromptCatalog>().ForbiddenHashes));
         services.TryAddSingleton(sp => new NarrativeVerifier(
             sp.GetRequiredService<CodeFactChecker>(),
