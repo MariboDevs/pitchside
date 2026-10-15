@@ -39,7 +39,11 @@ public static class AuditEndpoints
 
         var key = server ? string.Empty : matchId!;
         var items = await audit.ListAsync(key, after, size, ct).ConfigureAwait(false);
-        if (!server && items.Count == 0 && after is null && await store.GetMatchAsync(key, ct).ConfigureAwait(false) is null)
+        // An empty page is 404 only for a match that is neither stored nor audited: past the end of a known match's
+        // records it is an empty page, with or without a cursor.
+        if (!server && items.Count == 0
+            && await store.GetMatchAsync(key, ct).ConfigureAwait(false) is null
+            && (after is null || (await audit.ListAsync(key, null, 1, ct).ConfigureAwait(false)).Count == 0))
         {
             return TypedResults.NotFound();
         }

@@ -72,14 +72,21 @@ public sealed partial class AgentTranslator(
         }
 
         // Every word surviving is not enough: "Nathan Kim and Femi Zielinski" must not come back as "Nathan Zielinski
-        // and Femi Kim", so each full name the English carries must appear in the translation as often, as a phrase.
+        // and Femi Kim", so each full name must appear in the translation exactly as often as in the English, as a
+        // phrase: not split, swapped or dropped, and not repeated or added either.
         foreach (var name in names.Where(n => NameWord().Count(n) > 1).Distinct(StringComparer.Ordinal))
         {
             var phrase = string.Join(@"\s+", NameWord().Matches(name).Select(m => Regex.Escape(m.Value)));
             var pattern = new Regex($@"(?<!\p{{L}}){phrase}(?!\p{{L}})", RegexOptions.CultureInvariant);
-            if (pattern.Count(translated) < pattern.Count(english))
+            var want = pattern.Count(english);
+            var got = pattern.Count(translated);
+            if (got < want)
             {
                 problems.Add($"The name '{name}' was split, swapped or dropped.");
+            }
+            else if (got > want)
+            {
+                problems.Add($"The name '{name}' was repeated or added.");
             }
         }
 
