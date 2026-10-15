@@ -141,6 +141,11 @@ public sealed class PersonaTests
         AgentPersonaWriter.ShapeObjections(PersonaSpecs.Casual, [NarrativeRenderer.Cite("Shots [[home.shots]] and still [[home.shots]].")])
             .ShouldContain(o => o.Detail.Contains("2 numbers", StringComparison.Ordinal));
 
+    [Fact]
+    public void The_casual_number_limit_counts_a_shirt_number_written_outside_a_token() =>
+        AgentPersonaWriter.ShapeObjections(PersonaSpecs.Casual, [NarrativeRenderer.Cite("Nathan Kim, #7, scores at [[match.clock.minute]].")])
+            .ShouldContain(o => o.Detail.Contains("2 numbers", StringComparison.Ordinal));
+
     private static async Task<Narrative> OnlyAsync(FakeChatProvider provider, MomentContext context, string persona)
     {
         var variants = await Crew.Personas(provider).WriteAsync(context, context.BaseNarrative!, CancellationToken.None);

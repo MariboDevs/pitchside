@@ -2,8 +2,11 @@ using Microsoft.Extensions.AI;
 
 namespace Pitchside.Evaluation.Tests;
 
-/// <summary>A judge model that always gives one answer, or fails when it has none, and keeps what it was shown.</summary>
-internal sealed class JudgeChatClient(string? answer) : IChatClient
+/// <summary>
+/// A judge model that always gives one answer, or fails when it has none (with the given exception, or an
+/// <see cref="InvalidOperationException"/>), and keeps what it was shown.
+/// </summary>
+internal sealed class JudgeChatClient(string? answer, Exception? failure = null) : IChatClient
 {
     public List<ChatMessage> Seen { get; } = [];
 
@@ -11,7 +14,7 @@ internal sealed class JudgeChatClient(string? answer) : IChatClient
     {
         Seen.AddRange(messages);
         return answer is null
-            ? throw new InvalidOperationException("The judge is unavailable.")
+            ? throw failure ?? new InvalidOperationException("The judge is unavailable.")
             : Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, answer)) { ModelId = "judge" });
     }
 

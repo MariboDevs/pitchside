@@ -103,4 +103,19 @@ public sealed class UsageGuardTests
         clock.Now = TenPast.AddMinutes(51);
         guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeFalse();
     }
+
+    [Fact]
+    public void A_use_given_back_comes_off_the_hour_it_was_taken_in()
+    {
+        var clock = new ManualClock(TenPast.AddMinutes(49));
+        var guard = new UsageGuard(Options.Create(new UsageGuardOptions { ReplaysPerHourPerIp = 1 }), clock, true);
+
+        // A reserves just before the hour; B starts just after it; then A's replay fails and gives its use back.
+        var a = guard.TryTake(UsageLimits.Replays, "10.0.0.1");
+        clock.Now = TenPast.AddMinutes(50);
+        guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeTrue();
+        guard.Release(UsageLimits.Replays, "10.0.0.1", a.Window);
+
+        guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeFalse();
+    }
 }

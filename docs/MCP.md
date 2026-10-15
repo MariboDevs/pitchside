@@ -31,7 +31,7 @@ The stdio host reads `PITCHSIDE_MCP_URL` (default `http://localhost:5180/mcp`) a
 
 Every tool is read-only except `explain_moment`, which is a model call: it counts against
 `UsageGuard:NarrativesPerHour` and, when `Mcp:ApiKey` is set, needs that key in the `X-Pitchside-Key` header.
-Every call writes an audit record with stage `mcp:{tool}` (`GET /api/v1/audit?matchId=`). Numbers in results come
+Every call writes an audit record with stage `mcp:{tool}` (`GET /api/v1/audit?matchId=`, or `?scope=server` for calls with no match, such as `list_matches`). Numbers in results come
 from code; a narrative's numbers are `[[fact.key]]` tokens that `renderedText` resolves.
 
 ## Try it

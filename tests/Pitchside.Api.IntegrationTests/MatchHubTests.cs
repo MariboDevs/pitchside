@@ -71,6 +71,8 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
         log.ShouldContain(r => r.Kind == "narrative", diagnostics);
         log.ShouldContain(r => r.Kind == "overlay", diagnostics);
 
+        // A fact sheet or moment can arrive before the first event this connection receives: its event was pushed
+        // just before the connection joined, and the snapshot carries it. Order is checked from the first event on.
         var lastEvent = 0;
         foreach (var (kind, seq) in log)
         {
@@ -79,6 +81,9 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
                 case "event":
                     seq.ShouldBeGreaterThan(lastEvent);
                     lastEvent = seq;
+                    break;
+                case "facts" or "moment" when lastEvent == 0:
+                    seq.ShouldBeLessThanOrEqualTo(log.First(r => r.Kind == "event").Seq, $"{kind} at {seq} came before every event received");
                     break;
                 case "facts" or "moment":
                     seq.ShouldBe(lastEvent, $"{kind} at {seq} must follow its event");

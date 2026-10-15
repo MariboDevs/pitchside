@@ -73,6 +73,17 @@ public sealed class TranslatorTests
     }
 
     [Fact]
+    public void Swapped_surnames_are_a_mismatch_even_though_every_word_survives()
+    {
+        IReadOnlyList<NarrativeSentence> source = [Rendering.NarrativeRenderer.Cite("Nathan Kim and Femi Zielinski combine in minute [[match.clock.minute]].")];
+        string[] names = ["Nathan Kim", "Femi Zielinski"];
+
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Nathan Kim y Femi Zielinski combinan en el minuto [[match.clock.minute]].")], names).ShouldBeEmpty();
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Nathan Zielinski y Femi Kim combinan en el minuto [[match.clock.minute]].")], names)
+            .ShouldContain(m => m.Contains("'Nathan Kim'", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task A_translation_keeps_its_personas_shape_or_falls_back()
     {
         var context = await BaseAsync();
