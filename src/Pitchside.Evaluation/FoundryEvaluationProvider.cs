@@ -1,0 +1,97 @@
+using System.Globalization;
+using System.Text;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI.Evaluation;
+using Microsoft.Extensions.AI.Evaluation.Quality;
+using Pitchside.Contracts;
+using Pitchside.Runtime.Audit;
+
+namespace Pitchside.Evaluation;
+
+/// <summary>
+/// Groundedness judged by a Foundry deployment through <c>Microsoft.Extensions.AI.Evaluation.Quality</c>'s
+/// groundedness evaluator (WP07-R2): the context is the facts the narrative cites and the moment's evidence, the
+/// response is the rendered text, and the evaluator's 1 to 5 score is normalised to 0 to 1. Each judgement is a model
+/// call, so it writes an audit record with stage <c>groundedness</c>.
+/// </summary>
+public sealed class FoundryEvaluationProvider(IChatClient judge, IAuditStore audit, TimeProvider time) : IEvaluationProvider
+{
+    public const string ProviderName = "foundry";
+    public const string Stage = "groundedness";
+    public static readonly string PromptVersion = $"groundedness-evaluator-{typeof(GroundednessEvaluator).Assembly.GetName().Version}";
+
+    private readonly GroundednessEvaluator _evaluator = new();
+
+    public string Name => ProviderName;
+
+    public async Task<double?> ScoreAsync(EvaluationItem item, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        var started = time.GetTimestamp();
+        var outcome = AuditOutcome.Error;
+        NumericMetric? metric = null;
+        try
+        {
+            var question = new ChatMessage(ChatRole.User, $"Describe the {item.Moment.Type.Replace('_', ' ')} moment for a {item.Narrative.Persona.Replace('_', ' ')} viewer.");
+            var response = new ChatResponse(new ChatMessage(ChatRole.Assistant, item.Narrative.RenderedText));
+            var result = await _evaluator.EvaluateAsync(
+                [question],
+                response,
+                new ChatConfiguration(judge),
+                [new GroundednessEvaluatorContext(Context(item))],
+                cancellationToken).ConfigureAwait(false);
+            metric = result.Get<NumericMetric>(GroundednessEvaluator.GroundednessMetricName);
+            outcome = AuditOutcome.Ok;
+            return Normalise(metric.Value);
+        }
+        finally
+        {
+            await AuditAsync(item, started, outcome, metric).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>The evaluator's 1 (poor) to 5 (excellent) as 0 to 1; null stays null.</summary>
+    public static double? Normalise(double? score) => score is { } s ? Math.Clamp((s - 1) / 4, 0, 1) : null;
+
+    /// <summary>The grounding context: each cited or evidential fact as <c>key = value unit</c>, one per line.</summary>
+    public static string Context(EvaluationItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        var keys = item.Narrative.Sentences.SelectMany(s => s.Citations).Concat(item.Moment.Evidence.FactKeys).Distinct(StringComparer.Ordinal);
+        var context = new StringBuilder();
+        foreach (var fact in keys.Select(item.Sheet.Find).OfType<Fact>())
+        {
+            var value = fact.Value.Number is { } number
+                ? number.ToString("F" + fact.Precision.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture)
+                : fact.Value.Text;
+            context.Append(CultureInfo.InvariantCulture, $"{fact.Key} = {value}{(fact.Unit is null ? string.Empty : " " + fact.Unit)}").Append('\n');
+        }
+
+        return context.ToString();
+    }
+
+    private async Task AuditAsync(EvaluationItem item, long started, AuditOutcome outcome, NumericMetric? metric)
+    {
+        var now = time.GetUtcNow();
+        await audit.SaveAsync(new AuditRecord
+        {
+            Id = Ulid.New(now),
+            MatchId = item.Narrative.MatchId,
+            MomentId = item.Narrative.MomentId,
+            Stage = Stage,
+            Provider = ProviderName,
+            Model = Metadata(metric, "eval-model") ?? string.Empty,
+            PromptVersion = PromptVersion,
+            PromptHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(PromptVersion))),
+            InputTokens = long.TryParse(Metadata(metric, "eval-input-tokens"), CultureInfo.InvariantCulture, out var input) ? input : 0,
+            OutputTokens = long.TryParse(Metadata(metric, "eval-output-tokens"), CultureInfo.InvariantCulture, out var output) ? output : 0,
+            LatencyMs = (long)time.GetElapsedTime(started).TotalMilliseconds,
+            Outcome = outcome,
+            RequestId = System.Diagnostics.Activity.Current?.TraceId.ToHexString() ?? string.Empty,
+            Utc = now,
+        }, CancellationToken.None).ConfigureAwait(false);
+    }
+
+    private static string? Metadata(NumericMetric? metric, string key) =>
+        metric?.Metadata is { } metadata && metadata.TryGetValue(key, out var value) ? value : null;
+}

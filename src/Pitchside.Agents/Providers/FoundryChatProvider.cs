@@ -58,6 +58,13 @@ public sealed class FoundryChatProvider : IChatProvider
         return new ChatResult(response.Text, ProviderName, deployment, response.Usage?.InputTokenCount ?? 0, response.Usage?.OutputTokenCount ?? 0);
     }
 
+    /// <summary>
+    /// A chat client on a Foundry deployment for other model work, such as the groundedness judge (WP-07); the
+    /// quality deployment when <paramref name="deployment"/> is empty.
+    /// </summary>
+    public IChatClient ChatClientFor(string? deployment) =>
+        CreateClient(string.IsNullOrWhiteSpace(deployment) ? Deployment(DeploymentTier.Quality) : deployment).AsIChatClient();
+
     private string Deployment(DeploymentTier tier)
     {
         var name = tier == DeploymentTier.Quality ? _options.Deployments.Quality : _options.Deployments.Fast;

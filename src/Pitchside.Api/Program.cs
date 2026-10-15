@@ -5,6 +5,7 @@ using Pitchside.Api.Broadcast;
 using Pitchside.Api.Endpoints;
 using Pitchside.Api.Hubs;
 using Pitchside.Contracts;
+using Pitchside.Evaluation;
 using Pitchside.Runtime;
 using Pitchside.Runtime.Broadcast;
 using Pitchside.ServiceDefaults;
@@ -34,6 +35,10 @@ builder.Services.AddSingleton<MatchSnapshots>();
 builder.Services.AddSingleton<Pitchside.Overlay.OverlayBook>();
 builder.Services.AddSingleton<OverlayCoordinator>();
 builder.Services.AddPitchsideRuntime(builder.Configuration);
+builder.Services.AddPitchsideEvaluation(builder.Configuration);
+builder.Services.AddFoundryEvaluationJudge(builder.Configuration);
+builder.Services.AddSingleton<GroundednessBatcher>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GroundednessBatcher>());
 
 var pitchside = builder.Configuration.GetSection(PitchsideOptions.SectionName).Get<PitchsideOptions>() ?? new PitchsideOptions();
 if (pitchside.RunAgentsInApi)
