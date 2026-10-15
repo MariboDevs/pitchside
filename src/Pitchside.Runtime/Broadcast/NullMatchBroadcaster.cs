@@ -14,4 +14,8 @@ public sealed class NullMatchBroadcaster : IMatchBroadcaster
     public Task NarrativeAsync(Narrative narrative, CancellationToken cancellationToken) => Task.CompletedTask;
 
     public Task StatusAsync(MatchStatusUpdate status, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task OverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task ApprovalModeAsync(ApprovalModeUpdate update, CancellationToken cancellationToken) => Task.CompletedTask;
 }

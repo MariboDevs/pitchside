@@ -36,4 +36,8 @@ public interface IMatchStore
     Task SaveNarrativeAsync(Narrative narrative, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<Narrative>> GetNarrativesAsync(string matchId, CancellationToken cancellationToken);
+
+    Task SaveOverlayEntryAsync(OverlayEntry entry, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<OverlayEntry>> GetOverlayEntriesAsync(string matchId, CancellationToken cancellationToken);
 }

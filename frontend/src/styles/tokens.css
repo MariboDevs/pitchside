@@ -1,0 +1,50 @@
+/*
+ * Pitchside design tokens. Primitive tokens are the raw palette and scale; semantic tokens are what components
+ * consume. The only saturated colour on screen is a club's, which arrives with the match data at run time.
+ */
+:root {
+  /* Primitive */
+  --ink-950: #07090c;
+  --ink-900: #0d1117;
+  --ink-800: #161b23;
+  --ink-700: #222934;
+  --ink-500: #4b5563;
+  --ink-300: #9aa4b2;
+  --ink-100: #e6e9ee;
+  --paper-50: #f6f7f9;
+  --signal-500: #3fd3a0;
+  --alert-500: #ff6b5b;
+  --amber-500: #f5b84b;
+
+  /* Semantic */
+  --color-canvas: var(--ink-950);
+  --color-surface: var(--ink-900);
+  --color-surface-raised: var(--ink-800);
+  --color-edge: var(--ink-700);
+  --color-text-strong: var(--paper-50);
+  --color-text: var(--ink-100);
+  --color-text-muted: var(--ink-300);
+  --color-accent: var(--signal-500);
+  --color-alert: var(--alert-500);
+  --color-warning: var(--amber-500);
+  --color-focus-ring: var(--signal-500);
+  --color-panel: color-mix(in srgb, var(--ink-950) 78%, transparent);
+  --color-panel-highlight: color-mix(in srgb, var(--paper-50) 14%, transparent);
+
+  --font-display: 'Outfit', 'Segoe UI', sans-serif;
+  --font-text: 'Source Sans 3', 'Segoe UI', sans-serif;
+
+  --radius-card: 0.75rem;
+  --radius-chip: 0.5rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-enter: 320ms;
+  --duration-exit: 200ms;
+  --duration-ribbon: 600ms;
+}

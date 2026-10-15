@@ -58,6 +58,8 @@ public sealed class ReplayServiceTests : IAsyncLifetime
         stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5));
         (await Store.GetEventsAsync("MER-7", 1, int.MaxValue, CancellationToken.None)).Select(e => e.Id).ShouldBe(Sample.Events.Select(e => e.Id));
         await WaitFor(async () => (await Store.GetMatchAsync("MER-7", CancellationToken.None))!.Status == MatchStatus.Completed);
+        await WaitFor(() => Task.FromResult(Replays.Running.Count == 0));
+        Replays.IsInstant("MER-7").ShouldBeTrue();
     }
 
     [Fact]
@@ -68,6 +70,7 @@ public sealed class ReplayServiceTests : IAsyncLifetime
 
         await Should.ThrowAsync<ReplayLimitReachedException>(() => Replays.StartAsync(103, 0.001, CancellationToken.None));
         Replays.Running.Count.ShouldBe(2);
+        Replays.IsInstant("MER-101").ShouldBeFalse();
     }
 
     [Fact]

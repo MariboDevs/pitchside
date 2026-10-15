@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Overlay</RootNamespace>
+    <Description>The overlay scheduler: places verified narratives on the broadcast timeline without collisions. Code only.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Contracts/Pitchside.Contracts.csproj" />
+    <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />
+    <ProjectReference Include="../Pitchside.Moments/Pitchside.Moments.csproj" />
+  </ItemGroup>
+</Project>

@@ -14,4 +14,8 @@ public interface IMatchClient
     Task Narrative(Narrative narrative);
 
     Task MatchStatus(MatchStatusUpdate status);
+
+    Task OverlayEntry(OverlayEntry entry);
+
+    Task ApprovalMode(ApprovalModeUpdate update);
 }

@@ -1,0 +1,23 @@
+<article
+  class="card"
+  [class.card--full]="fullWidth()"
+  [style.--accent]="club()?.primaryColour ?? 'var(--color-accent)'"
+  [attr.lang]="lang()"
+  data-testid="lower-third"
+>
+  <span class="bar" aria-hidden="true"></span>
+  @if (club(); as side) {
+    <app-monogram class="mono" [club]="side" size="lg" />
+  }
+  <div class="copy">
+    <h2 class="headline">{{ headline() }}</h2>
+    <p class="text">{{ text() }}</p>
+  </div>
+  @if (chips().length > 0) {
+    <div class="chips">
+      @for (chip of chips(); track chip.label) {
+        <app-chip [label]="chip.label" [value]="chip.value" />
+      }
+    </div>
+  }
+</article>

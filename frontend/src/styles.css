@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Source+Sans+3:wght@400;600&display=swap');
+@import 'tailwindcss';
+@import './styles/tokens.css';
+
+@theme inline {
+  --color-canvas: var(--color-canvas);
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-edge: var(--color-edge);
+  --color-strong: var(--color-text-strong);
+  --color-body: var(--color-text);
+  --color-muted: var(--color-text-muted);
+  --color-accent: var(--color-accent);
+  --color-alert: var(--color-alert);
+  --color-warning: var(--color-warning);
+  --font-display: var(--font-display);
+  --font-text: var(--font-text);
+  --radius-card: var(--radius-card);
+  --radius-chip: var(--radius-chip);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The overlay route draws graphics only, over the programme feed. */
+html.overlay-route,
+html.overlay-route body {
+  background: transparent;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--color-edge);
+  background: var(--color-surface-raised);
+  color: var(--color-text-strong);
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+}
+
+.btn--primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-canvas);
+}
+
+.btn--ghost {
+  background: transparent;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A 44px hit area on touch without inflating compact controls. */
+@media (pointer: coarse) {
+  .btn::after,
+  .touch-target::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
+.input {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--color-edge);
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+  min-width: 0;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--space-2);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--color-edge);
+  color: var(--color-text-muted);
+}
+
+.pill--ok {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
+}
+
+.pill--alert {
+  color: var(--color-alert);
+  border-color: color-mix(in srgb, var(--color-alert) 50%, transparent);
+}
+
+.pill--waiting {
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 50%, transparent);
+}

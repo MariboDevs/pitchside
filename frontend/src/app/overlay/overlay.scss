@@ -1,0 +1,111 @@
+// Broadcast graphics: sized from the viewport height so 1080p, 720p and a phone all see the same composition.
+// 1vh is 10.8 px at 1080p, so 2.6vh keeps every line at or above 28 px there.
+
+:host {
+  display: block;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-size: 2.6vh;
+  color: var(--color-text-strong);
+
+  // Club monograms' letters at the 28 px minimum, in a box that still fits three of them.
+  --monogram-letters: 0.875em;
+  --monogram-box: 2.6em;
+}
+
+.top {
+  position: absolute;
+  top: var(--safe);
+  left: var(--safe);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  font-size: 1.15em;
+}
+
+.ribbon {
+  width: 100%;
+}
+
+.race {
+  position: absolute;
+  left: var(--safe);
+  right: var(--safe);
+  bottom: calc(var(--safe) + 13vh);
+  height: 6vh;
+}
+
+.lower {
+  position: absolute;
+  left: var(--safe);
+  bottom: var(--safe);
+  width: min(70vw, calc(100vw - 2 * var(--safe)));
+  min-height: 10.4vh;
+
+  // Broadcast minimum: no text under 28 px at 1080p (2.6vh), however the shared card scales its lines.
+  --lower-third-text-size: 1em;
+  --lower-third-chips-size: 1em;
+  --chip-label-size: 1em;
+}
+
+// The full-time card spans the whole title-safe width.
+.lower--full {
+  width: calc(100vw - 2 * var(--safe));
+}
+
+.stage--vertical {
+  font-size: 2.2vh;
+
+  .top {
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+  }
+
+  .race {
+    left: auto;
+    right: var(--safe);
+    top: 18vh;
+    bottom: 30vh;
+    width: 10vw;
+    height: auto;
+  }
+
+  .lower {
+    width: calc(100vw - 2 * var(--safe));
+  }
+}
+
+.card-enter {
+  animation: enter var(--duration-enter) var(--ease-enter) both;
+}
+
+.card-leave {
+  animation: leave var(--duration-exit) ease both;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@keyframes leave {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes enter {
+    from {
+      opacity: 0;
+    }
+  }
+}

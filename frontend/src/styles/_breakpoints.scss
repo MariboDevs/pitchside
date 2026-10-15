@@ -1,0 +1,19 @@
+// The one source of truth for breakpoints, matching Tailwind's defaults so SCSS and utilities agree.
+$breakpoints: (
+  'sm': 40rem,
+  'md': 48rem,
+  'lg': 64rem,
+  'xl': 80rem,
+);
+
+@mixin from($name) {
+  @media (min-width: map-get($breakpoints, $name)) {
+    @content;
+  }
+}
+
+@mixin until($name) {
+  @media (max-width: calc(#{map-get($breakpoints, $name)} - 0.02rem)) {
+    @content;
+  }
+}

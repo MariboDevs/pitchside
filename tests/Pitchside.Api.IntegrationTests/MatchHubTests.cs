@@ -42,14 +42,16 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
         connection.On<FactSheet>("FactSheet", s => received.Enqueue(("facts", s.AsOfSeq)));
         connection.On<Moment>("Moment", m => received.Enqueue(("moment", m.TriggerSeq)));
         connection.On<Narrative>("Narrative", n => received.Enqueue(("narrative", n.FactSheetSeq)));
+        connection.On<OverlayEntry>("OverlayEntry", e => received.Enqueue(("overlay", e.InAtMs)));
 
         await connection.StartAsync();
         var snapshot = await connection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-11");
         snapshot.Match.MatchId.ShouldBe("MER-11");
         snapshot.FactSheet.ShouldNotBeNull();
+        snapshot.ApprovalMode.ShouldBe(ApprovalMode.Auto);
 
         var deadline = DateTime.UtcNow.AddSeconds(20);
-        while (DateTime.UtcNow < deadline && !(received.Any(r => r.Kind == "moment") && received.Any(r => r.Kind == "narrative") && received.Count(r => r.Kind == "facts") > 3))
+        while (DateTime.UtcNow < deadline && !(received.Any(r => r.Kind == "moment") && received.Any(r => r.Kind == "narrative") && received.Any(r => r.Kind == "overlay") && received.Count(r => r.Kind == "facts") > 3))
         {
             await Task.Delay(100);
         }
@@ -67,6 +69,7 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
         log.ShouldContain(r => r.Kind == "facts", diagnostics);
         log.ShouldContain(r => r.Kind == "moment", diagnostics);
         log.ShouldContain(r => r.Kind == "narrative", diagnostics);
+        log.ShouldContain(r => r.Kind == "overlay", diagnostics);
 
         var lastEvent = 0;
         foreach (var (kind, seq) in log)
