@@ -46,11 +46,19 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
         }
     }
 
-    public void Connected(string key)
+    /// <summary>Checks the limit and reserves a slot in one step; a refused caller holds no slot to release.</summary>
+    public bool TryConnect(string key)
     {
         lock (_lock)
         {
-            _connections[key] = _connections.GetValueOrDefault(key) + 1;
+            var open = _connections.GetValueOrDefault(key);
+            if (enabled && open >= _options.ConnectionsPerIp)
+            {
+                return false;
+            }
+
+            _connections[key] = open + 1;
+            return true;
         }
     }
 
