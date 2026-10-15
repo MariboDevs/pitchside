@@ -33,8 +33,9 @@ public sealed class UsageGuardTests
         var guard = Guard(new ManualClock(TenPast));
 
         guard.CanConnect("10.0.0.1").ShouldBeTrue();
-        guard.Connected("10.0.0.1");
+        guard.TryConnect("10.0.0.1").ShouldBeTrue();
         guard.CanConnect("10.0.0.1").ShouldBeFalse();
+        guard.TryConnect("10.0.0.1").ShouldBeFalse();
         guard.Disconnected("10.0.0.1");
         guard.CanConnect("10.0.0.1").ShouldBeTrue();
     }
@@ -43,7 +44,7 @@ public sealed class UsageGuardTests
     public void A_disabled_guard_counts_but_never_refuses()
     {
         var guard = Guard(new ManualClock(TenPast), enabled: false);
-        guard.Connected("10.0.0.1");
+        guard.TryConnect("10.0.0.1").ShouldBeTrue();
 
         for (var i = 0; i < 5; i++)
         {

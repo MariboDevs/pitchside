@@ -25,6 +25,7 @@ jobs:
 
       - name: No vulnerable packages, transitive included
         run: |
+          set -o pipefail
           dotnet list Pitchside.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable-packages.txt
           if grep -q "has the following vulnerable packages" vulnerable-packages.txt; then exit 1; fi
 

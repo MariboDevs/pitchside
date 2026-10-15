@@ -11,7 +11,7 @@ namespace Pitchside.Agents.Providers;
 /// <summary>
 /// Wraps the configured provider so every model call writes an <see cref="AuditRecord"/> (WP07-R6): the stage, the
 /// model, the prompt version and the SHA-256 of the prompt's text (never the text), tokens, latency and outcome.
-/// A failed or late call is audited and still fails. An audit write that fails is logged and never fails the call.
+/// A failed, late or cancelled call is audited and still fails. An audit write that fails is logged and never fails the call.
 /// </summary>
 public sealed partial class AuditingChatProvider(IChatProvider inner, IAuditStore store, TimeProvider time, ILogger<AuditingChatProvider>? logger = null) : IChatProvider
 {
@@ -34,8 +34,9 @@ public sealed partial class AuditingChatProvider(IChatProvider inner, IAuditStor
             await AuditAsync(request, started, AuditOutcome.Timeout, null).ConfigureAwait(false);
             throw;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception)
         {
+            // A cancelled call is audited as an error too: it ran, and the audit records every call that ran.
             await AuditAsync(request, started, AuditOutcome.Error, null).ConfigureAwait(false);
             throw;
         }
