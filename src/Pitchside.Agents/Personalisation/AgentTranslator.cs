@@ -71,6 +71,18 @@ public sealed partial class AgentTranslator(
             }
         }
 
+        // Every word surviving is not enough: "Nathan Kim and Femi Zielinski" must not come back as "Nathan Zielinski
+        // and Femi Kim", so each full name the English carries must appear in the translation as often, as a phrase.
+        foreach (var name in names.Where(n => NameWord().Count(n) > 1).Distinct(StringComparer.Ordinal))
+        {
+            var phrase = string.Join(@"\s+", NameWord().Matches(name).Select(m => Regex.Escape(m.Value)));
+            var pattern = new Regex($@"(?<!\p{{L}}){phrase}(?!\p{{L}})", RegexOptions.CultureInvariant);
+            if (pattern.Count(translated) < pattern.Count(english))
+            {
+                problems.Add($"The name '{name}' was split, swapped or dropped.");
+            }
+        }
+
         return problems;
     }
 

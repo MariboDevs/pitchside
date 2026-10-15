@@ -98,7 +98,7 @@ public sealed partial class CodeFactChecker
 
             if (namedPlayerIds is not null)
             {
-                foreach (var player in roster.Where(p => !namedPlayerIds.Contains(p.Id) && Names(stripped, p, roster)))
+                foreach (var player in MentionedPlayers(stripped, roster).Where(p => !namedPlayerIds.Contains(p.Id)).DistinctBy(p => p.Id))
                 {
                     objections.Add(new Objection(index, ObjectionKinds.ForbiddenContent, $"'{player.Name}' is not a player this text may name."));
                 }
@@ -140,33 +140,43 @@ public sealed partial class CodeFactChecker
     }
 
     /// <summary>
-    /// Whether the text names the player: the full name, or the surname when no one else in either squad shares it.
+    /// Every player a run of name words could refer to. Each full name inside the run resolves to its player; each word
+    /// of the run not part of a full name resolves to every player whose name has that word, so a given name or a
+    /// shared surname counts as a mention of each of them and is refused unless all of them may be named. Matching
+    /// inside the run, not the run as a whole, keeps a name found when the run also holds other capitalised words,
+    /// such as a translated sentence's first word ("Ante Hugo Sato").
     /// </summary>
-    private static bool Names(string text, Player player, IReadOnlyList<Player> roster)
+    private static IEnumerable<Player> MentionedPlayers(string text, IReadOnlyList<Player> roster)
     {
-        var words = Word().Matches(text).Select(w => w.Value).ToList();
-        var name = Word().Matches(player.Name).Select(w => w.Value).ToList();
-        if (Contains(words, name))
+        var names = roster.Select(p => (Player: p, Words: Word().Matches(p.Name).Select(w => w.Value).ToArray())).ToList();
+        foreach (var run in NameRuns(text))
         {
-            return true;
-        }
-
-        var surname = name[^1];
-        var unique = roster.Count(p => Word().Matches(p.Name).Select(w => w.Value).LastOrDefault() == surname) == 1;
-        return unique && words.Contains(surname, StringComparer.Ordinal);
-    }
-
-    private static bool Contains(List<string> words, List<string> phrase)
-    {
-        for (var start = 0; start + phrase.Count <= words.Count; start++)
-        {
-            if (phrase.Select((w, i) => string.Equals(w, words[start + i], StringComparison.Ordinal)).All(match => match))
+            var covered = new bool[run.Count];
+            foreach (var (player, words) in names.Where(n => n.Words.Length > 1))
             {
-                return true;
+                for (var start = 0; start + words.Length <= run.Count; start++)
+                {
+                    if (words.Select((w, i) => string.Equals(w, run[start + i], StringComparison.Ordinal)).All(match => match))
+                    {
+                        Array.Fill(covered, true, start, words.Length);
+                        yield return player;
+                    }
+                }
+            }
+
+            for (var i = 0; i < run.Count; i++)
+            {
+                if (covered[i])
+                {
+                    continue;
+                }
+
+                foreach (var (player, words) in names.Where(n => n.Words.Contains(run[i], StringComparer.Ordinal)))
+                {
+                    yield return player;
+                }
             }
         }
-
-        return false;
     }
 
     /// <summary>
@@ -185,7 +195,11 @@ public sealed partial class CodeFactChecker
     /// in the document. "Nathan Kim" and "Kim" pass; "Nathan" from one name followed by "Zielinski" from another
     /// does not, because the run is checked as one phrase.
     /// </summary>
-    private static IEnumerable<string> UnknownNames(string text, IReadOnlyList<string[]> names)
+    private static IEnumerable<string> UnknownNames(string text, IReadOnlyList<string[]> names) =>
+        NameRuns(text).Select(run => Unknown(run, names)).OfType<string>();
+
+    /// <summary>Each run of adjacent capitalised words in the text, ordinary sentence words aside, sentence by sentence.</summary>
+    private static IEnumerable<List<string>> NameRuns(string text)
     {
         foreach (Match sentence in SentenceSpan().Matches(text))
         {
@@ -200,14 +214,10 @@ public sealed partial class CodeFactChecker
                 var adjacent = previousEnd >= 0 && string.IsNullOrWhiteSpace(sentence.Value[previousEnd..word.Index]);
                 previousEnd = word.Index + word.Length;
                 var nameWord = char.IsUpper(w[0]) && !SentenceStarters.Anywhere.Contains(w) && !(opening && SentenceStarters.English.Contains(w));
-                if (!nameWord || !adjacent)
+                if ((!nameWord || !adjacent) && run.Count > 0)
                 {
-                    if (Unknown(run, names) is { } phrase)
-                    {
-                        yield return phrase;
-                    }
-
-                    run.Clear();
+                    yield return run;
+                    run = [];
                 }
 
                 if (nameWord)
@@ -216,9 +226,9 @@ public sealed partial class CodeFactChecker
                 }
             }
 
-            if (Unknown(run, names) is { } last)
+            if (run.Count > 0)
             {
-                yield return last;
+                yield return run;
             }
         }
     }

@@ -72,7 +72,7 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
     }
 
     [McpServerTool(Name = "get_fact", ReadOnly = true, Idempotent = true)]
-    [Description("Gets one fact from a match's live fact sheet with the events it was derived from, so a number can be traced to what happened. Argument key is a fact key such as home.xg, match.score.away or player.AMZ-09.shots. Returns the fact, the sheet's sequence, and at most 200 events.")]
+    [Description("Gets one fact from a match's live fact sheet with the events it was derived from (for a rolling fact, the events of the span it was computed over), so a number can be traced to what happened. Argument key is a fact key such as home.xg, match.score.away or player.AMZ-09.shots. Returns the fact, the sheet's sequence, and at most 200 events.")]
     public async Task<FactWithEvents> GetFactAsync(
         [Description("The match id, such as MER-7.")] string matchId,
         [Description("The fact key, such as home.xg or player.AMZ-09.shots.")] string key,
@@ -89,7 +89,11 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
             throw new McpException($"{matchId}'s events up to seq {sheet.AsOfSeq} are still being stored; try again.");
         }
 
-        var events = await NarrativeTraces.EventsAsync(store, matchId, fact.DerivedFrom.ToHashSet(StringComparer.Ordinal), cancellationToken).ConfigureAwait(false);
+        // A rolling fact (rhythm, control, pressing intensity) names the span it was computed over rather than its
+        // events; its evidence is that span, the latest events of it within the cap.
+        var events = fact.DerivedFrom.Count == 0 && fact.Window is { } window && window.ToSeq >= window.FromSeq
+            ? await store.GetEventsAsync(matchId, Math.Max(window.FromSeq, window.ToSeq - MaxEvents + 1), window.ToSeq, cancellationToken).ConfigureAwait(false)
+            : await NarrativeTraces.EventsAsync(store, matchId, fact.DerivedFrom.ToHashSet(StringComparer.Ordinal), cancellationToken).ConfigureAwait(false);
         return new FactWithEvents(fact, sheet.AsOfSeq, [.. events.TakeLast(MaxEvents)]);
     }
 
@@ -170,12 +174,6 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
         var moment = (await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false)).FirstOrDefault(m => m.Id == momentId)
             ?? throw new McpException($"No moment '{momentId}' in {matchId}.");
         var provider = services.GetService<IChatProvider>() ?? throw new McpException("This server does not run the agent crew.");
-        var decision = services.GetRequiredService<UsageGuard>().TryTake(UsageLimits.Narratives, UsageGuard.HostKey);
-        if (!decision.Allowed)
-        {
-            throw new McpException($"The hourly narrative limit is reached; try again in {(int)Math.Ceiling(decision.RetryAfter.TotalSeconds)} s.");
-        }
-
         var stored = await store.GetFactSheetAsync(matchId, moment.FactSheetSeq, cancellationToken).ConfigureAwait(false);
         var sheet = stored?.AsOfSeq == moment.FactSheetSeq ? stored : await RecomputedFacts.AtAsync(store, match, moment.FactSheetSeq, cancellationToken).ConfigureAwait(false);
         var workflow = new MomentWorkflow(
@@ -192,6 +190,14 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            // Counted once the slot is held, as the runner counts a moment: a call that waited across the hour counts in
+            // the hour it runs, and one cancelled while waiting is not counted at all.
+            var decision = services.GetRequiredService<UsageGuard>().TryTake(UsageLimits.Narratives, UsageGuard.HostKey);
+            if (!decision.Allowed)
+            {
+                throw new McpException($"The hourly narrative limit is reached; try again in {(int)Math.Ceiling(decision.RetryAfter.TotalSeconds)} s.");
+            }
+
             var context = await workflow.RunAsync(new MomentWorkItem(moment, sheet, match.Document), cancellationToken).ConfigureAwait(false);
             return context.BaseNarrative!;
         }

@@ -49,6 +49,12 @@ public sealed partial class FoundryEvaluationProvider(IChatClient judge, IAuditS
             outcome = AuditOutcome.Ok;
             return Normalise(metric.Value);
         }
+        catch (Exception ex) when (ex is TimeoutException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            // The judge ran out of time (its own deadline, not the caller's cancellation): audited as a timeout.
+            outcome = AuditOutcome.Timeout;
+            throw;
+        }
         finally
         {
             await AuditAsync(item, started, outcome, metric, capture.PromptHash).ConfigureAwait(false);

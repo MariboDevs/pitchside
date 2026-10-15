@@ -14,7 +14,7 @@ namespace Pitchside.Api.Broadcast;
 /// read or write that fails puts the narrative back for the next batch, keeping any score already paid for, and at
 /// start the stored verified narratives that have no score yet are queued again, so a restart loses no work; a scan
 /// that fails is tried again on the next tick. A narrative is judged at most once per process, however often it is
-/// queued.
+/// queued, and an unscored copy saved over a scored one gets its score back.
 /// </summary>
 public sealed partial class GroundednessBatcher(
     IEvaluationProvider evaluator,
@@ -26,7 +26,7 @@ public sealed partial class GroundednessBatcher(
     private readonly Channel<Narrative> _queue = Channel.CreateUnbounded<Narrative>(new UnboundedChannelOptions { SingleReader = true });
 
     // Read and written only by the batch loop.
-    private readonly HashSet<string> _judged = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (string Text, double? Score)> _judged = new(StringComparer.Ordinal);
     private bool _recovered;
 
     /// <summary>Queues a narrative for the next batch; only verified narratives are scored.</summary>
@@ -119,9 +119,19 @@ public sealed partial class GroundednessBatcher(
             {
                 if (narrative.Evaluation.Groundedness is null)
                 {
-                    // Already judged in this process (queued again by the start-up scan, or live after it): no second call.
-                    if (_judged.Contains(narrative.Id))
+                    // Already judged in this process: no second call. The same text queued again unscored (by the start-up
+                    // scan, or a publish retried after its early attempt failed, which saved the unscored copy over the
+                    // scored one) gets its score back; a judgement that failed stays unscored.
+                    if (_judged.TryGetValue(narrative.Id, out var judged) && string.Equals(judged.Text, narrative.RenderedText, StringComparison.Ordinal))
                     {
+                        if (judged.Score is null)
+                        {
+                            continue;
+                        }
+
+                        scored = narrative with { Evaluation = narrative.Evaluation with { Groundedness = judged.Score } };
+                        await store.SaveNarrativeAsync(scored, cancellationToken).ConfigureAwait(false);
+                        await broadcaster.NarrativeAsync(scored, cancellationToken).ConfigureAwait(false);
                         continue;
                     }
 
@@ -136,7 +146,7 @@ public sealed partial class GroundednessBatcher(
                     }
 
                     var score = await JudgeAsync(new EvaluationItem(narrative, moment, sheet, document), cancellationToken).ConfigureAwait(false);
-                    _judged.Add(narrative.Id);
+                    _judged[narrative.Id] = (narrative.RenderedText, score);
                     if (score is null)
                     {
                         continue;
