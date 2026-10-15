@@ -156,8 +156,17 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
         await controlConnection.StartAsync();
         await viewerConnection.InvokeAsync("SetViewer", "MER-13", viewer);
         await controlConnection.InvokeAsync("SetViewer", "MER-13", control);
-        await viewerConnection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-13");
-        await controlConnection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-13");
+        // A join is complete after its snapshot (the hub's contract): narratives published before it are in the
+        // snapshot, the rest arrive live. At speed 0 most can be published before the join, so both are counted.
+        foreach (var narrative in (await viewerConnection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-13")).Narratives)
+        {
+            toViewer.Enqueue(narrative);
+        }
+
+        foreach (var narrative in (await controlConnection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-13")).Narratives)
+        {
+            toControl.Enqueue(narrative);
+        }
 
         var deadline = DateTime.UtcNow.AddSeconds(20);
         while (DateTime.UtcNow < deadline && !(toViewer.Any(n => n.Persona == Personas.Analyst) && toControl.Any(n => n.Persona == Personas.ClubFan && n.Language == Languages.Spanish)))
