@@ -9,10 +9,16 @@ public sealed record AuditRecord
 {
     /// <summary>A ULID: sortable by time, so a match's records page in call order.</summary>
     public required string Id { get; init; }
+    /// <summary>The match the call was about; empty for a call about none, such as an MCP <c>list_matches</c>.</summary>
     public required string MatchId { get; init; }
+
+    /// <summary>The moment the call was about; empty for a call about none.</summary>
     public required string MomentId { get; init; }
 
-    /// <summary>The prompt that ran, which names the stage: <c>explainer</c>, <c>factcheck</c>, <c>persona-analyst</c>, <c>translator</c>.</summary>
+    /// <summary>
+    /// The prompt that ran, which names the stage (<c>explainer</c>, <c>factcheck</c>, <c>persona-analyst</c>,
+    /// <c>translator</c>, <c>groundedness</c>), or <c>mcp:{tool}</c> for an MCP tool call (WP-08).
+    /// </summary>
     public required string Stage { get; init; }
     public required string Provider { get; init; }
     public required string Model { get; init; }
