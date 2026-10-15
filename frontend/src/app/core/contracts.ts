@@ -152,7 +152,7 @@ export interface Narrative {
     generatedUtc: string;
     fallback: boolean;
   };
-  evaluation: { citationCoverage: number; groundedness: number | null };
+  evaluation: { citationCoverage: number; factDensity: number; groundedness: number | null };
 }
 
 export type OverlayState = 'scheduled' | 'held' | 'aired' | 'expired';
