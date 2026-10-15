@@ -50,6 +50,7 @@ app.UseStatusCodePages();
 app.MapDefaultEndpoints();
 app.MapMatchEndpoints();
 app.MapOverlayEndpoints();
+app.MapAuditEndpoints();
 if (string.Equals(pitchside.Mode, PitchsideOptions.ReplayMode, StringComparison.OrdinalIgnoreCase))
 {
     app.MapReplayEndpoints();
