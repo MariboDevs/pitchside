@@ -4,11 +4,13 @@ import { firstValueFrom } from 'rxjs';
 import { apiBase } from './api-base';
 import {
   ApprovalMode,
+  AuditPage,
   FactSheet,
   MatchEvent,
   OverlayEntry,
   ReplayStarted,
   StoredMatch,
+  UsageReport,
 } from './contracts';
 
 /** The match REST API under /api/v1. */
@@ -76,5 +78,19 @@ export class MatchApi {
     return firstValueFrom(
       this.http.post(`${apiBase()}/api/v1/matches/${matchId}/approval`, { mode }),
     );
+  }
+
+  /** A page of a match's model calls in call order, after the id `after`. */
+  audit(matchId: string, after: string | null): Promise<AuditPage> {
+    const params: Record<string, string> = { matchId, limit: '500' };
+    if (after) {
+      params['after'] = after;
+    }
+
+    return firstValueFrom(this.http.get<AuditPage>(`${apiBase()}/api/v1/audit`, { params }));
+  }
+
+  usage(): Promise<UsageReport> {
+    return firstValueFrom(this.http.get<UsageReport>(`${apiBase()}/api/v1/usage`));
   }
 }

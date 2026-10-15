@@ -1,0 +1,48 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.usage {
+  margin-bottom: var(--space-3);
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.muted {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.rows {
+  margin: var(--space-2) 0 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-edge);
+  font-size: 0.875rem;
+}
+
+.row dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+}
+
+.row dd {
+  margin: 0;
+  color: var(--color-text-strong);
+}
+
+.row--full dd {
+  color: var(--color-alert);
+  font-weight: 600;
+}
