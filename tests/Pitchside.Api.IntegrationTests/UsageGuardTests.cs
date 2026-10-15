@@ -55,6 +55,26 @@ public sealed class UsageGuardTests
         await third.StartAsync();
     }
 
+    [Fact]
+    public async Task A_trailing_slash_does_not_slip_past_either_limit()
+    {
+        await using var factory = Guarded(("UsageGuard:ReplaysPerHourPerIp", "1"), ("UsageGuard:ConnectionsPerIp", "1"));
+        var client = factory.CreateClient();
+
+        (await client.PostAsJsonAsync("/api/v1/replays", new { seed = 71, speed = 0.001 })).StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        (await client.PostAsJsonAsync("/api/v1/replays/", new { seed = 72, speed = 0.001 })).StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+
+        await using var open = new HubConnectionBuilder()
+            .WithUrl(new Uri(factory.Server.BaseAddress, "hubs/match"), options =>
+            {
+                options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
+                options.Transports = HttpTransportType.LongPolling;
+            })
+            .Build();
+        await open.StartAsync();
+        (await client.PostAsync(new Uri("/hubs/match/negotiate/?negotiateVersion=1", UriKind.Relative), null)).StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+    }
+
     [Theory]
     [InlineData(null, HttpStatusCode.TooManyRequests)]
     [InlineData("true", HttpStatusCode.Accepted)]
@@ -92,18 +112,42 @@ public sealed class UsageGuardTests
 
         // Both are negotiated while no connection is open, so the middleware lets both through.
         var tokens = new[] { await NegotiateAsync(), await NegotiateAsync() };
+        // Long polling: the first poll opens the transport, then the handshake starts the hub connection.
         foreach (var token in tokens)
         {
-            // Long polling: the first poll opens the transport, then the handshake starts the hub connection, whose
-            // reply arrives on the next poll (a refused connection's poll ends with 204 instead).
             var hub = new Uri($"/hubs/match?id={token}", UriKind.Relative);
             (await client.GetAsync(hub)).StatusCode.ShouldBe(HttpStatusCode.OK);
             var handshake = new StringContent("{\"protocol\":\"json\",\"version\":1}\u001e");
             (await client.PostAsync(hub, handshake)).StatusCode.ShouldBe(HttpStatusCode.OK);
-            using var poll = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await client.GetAsync(hub, poll.Token);
         }
 
+        // The handshake reply can arrive before the hub admits a connection, and either may be admitted first, so poll
+        // both until one is closed (a close message, or a poll ending with 204): one is refused while the other holds
+        // the only slot.
+        using var settled = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        async Task<bool> ClosesAsync(string token)
+        {
+            var hub = new Uri($"/hubs/match?id={token}", UriKind.Relative);
+            try
+            {
+                while (true)
+                {
+                    var response = await client.GetAsync(hub, settled.Token);
+                    if (response.StatusCode != HttpStatusCode.OK || (await response.Content.ReadAsStringAsync(settled.Token)).Contains("\"type\":7", StringComparison.Ordinal))
+                    {
+                        await settled.CancelAsync();
+                        return true;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
+
+        var closed = await Task.WhenAll(tokens.Select(ClosesAsync));
+        closed.Count(c => c).ShouldBe(1);
         var usage = await (await client.GetAsync("/api/v1/usage")).ReadAsync<UsageReport>();
         usage.Limits.Single(l => l.Name == UsageLimits.Connections).Used.ShouldBe(1);
     }
