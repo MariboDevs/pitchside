@@ -5,8 +5,12 @@ using Pitchside.Runtime.Broadcast;
 
 namespace Pitchside.Api.Broadcast;
 
-/// <summary>Pushes to the SignalR group of the match a message belongs to.</summary>
-public sealed class SignalRMatchBroadcaster(IHubContext<MatchHub, IMatchClient> hub) : IMatchBroadcaster
+/// <summary>
+/// Pushes to the SignalR group of the match a message belongs to. Narratives are the exception: each goes only to the
+/// connections whose viewer preferences it matches (<see cref="NarrativeAudience"/>), so a viewer receives its own
+/// persona and language and the control room receives them all.
+/// </summary>
+public sealed class SignalRMatchBroadcaster(IHubContext<MatchHub, IMatchClient> hub, ViewerRegistry viewers) : IMatchBroadcaster
 {
     public Task EventAsync(MatchEvent matchEvent, CancellationToken cancellationToken)
     {
@@ -29,7 +33,11 @@ public sealed class SignalRMatchBroadcaster(IHubContext<MatchHub, IMatchClient> 
     public Task NarrativeAsync(Narrative narrative, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(narrative);
-        return hub.Clients.Group(MatchHub.Group(narrative.MatchId)).Narrative(narrative);
+        var audience = viewers.Watching(narrative.MatchId)
+            .Where(w => NarrativeAudience.Receives(w.Viewer, narrative))
+            .Select(w => w.ConnectionId)
+            .ToList();
+        return audience.Count == 0 ? Task.CompletedTask : hub.Clients.Clients(audience).Narrative(narrative);
     }
 
     public Task StatusAsync(MatchStatusUpdate status, CancellationToken cancellationToken)

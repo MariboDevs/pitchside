@@ -81,10 +81,22 @@ public sealed class OverlayEndpointsTests : IClassFixture<PitchsideApiFactory>, 
     [Fact]
     public async Task Narratives_filter_by_persona_and_language()
     {
-        var all = await (await _client.GetAsync("/api/v1/matches/MER-7/narratives")).ReadAsync<List<Narrative>>();
-        all.Count.ShouldBe(34);
+        // Seed 7 has 34 moments; each gets every persona variant in four languages (WP-06).
+        // Variants follow the base narratives, so wait for the crew to finish them.
+        var all = new List<Narrative>();
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (DateTime.UtcNow < deadline && all.Count < 752)
+        {
+            all = await (await _client.GetAsync("/api/v1/matches/MER-7/narratives")).ReadAsync<List<Narrative>>();
+            await Task.Delay(200);
+        }
+
+        all.Count.ShouldBe(752);
         (await (await _client.GetAsync("/api/v1/matches/MER-7/narratives?persona=base&language=en")).ReadAsync<List<Narrative>>()).Count.ShouldBe(34);
-        (await (await _client.GetAsync("/api/v1/matches/MER-7/narratives?persona=analyst")).ReadAsync<List<Narrative>>()).ShouldBeEmpty();
+        (await (await _client.GetAsync("/api/v1/matches/MER-7/narratives?persona=analyst")).ReadAsync<List<Narrative>>()).Count.ShouldBe(34 * 4);
+        var clubFan = await (await _client.GetAsync("/api/v1/matches/MER-7/narratives?persona=club_fan&subject=AMZ&language=af")).ReadAsync<List<Narrative>>();
+        clubFan.Count.ShouldBe(34);
+        clubFan.ShouldAllBe(n => n.Subject == "AMZ" && n.Language == "af");
         (await _client.GetAsync("/api/v1/matches/MER-404/narratives")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 

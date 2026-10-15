@@ -27,4 +27,8 @@ export class LowerThird {
   readonly chips = input<LowerThirdChip[]>([]);
   readonly fullWidth = input(false);
   readonly lang = input('en');
+  /** The viewer's own variant is still being written: a quiet placeholder, never a spinner. */
+  readonly pending = input(false);
+  /** A short line under the text, such as "Not involved in this moment" or "Shown in English". */
+  readonly note = input<string | null>(null);
 }

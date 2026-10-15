@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Pitchside.Agents.Checking;
+using Pitchside.Agents.Personalisation;
 using Pitchside.Agents.Prompts;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Workflow;
@@ -25,8 +26,13 @@ public static class AgentsServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<PromptCatalog>();
         services.TryAddSingleton(sp => new CodeFactChecker(sp.GetRequiredService<PromptCatalog>().ForbiddenHashes));
-        services.TryAddSingleton<IPersonaWriter, BaseOnlyPersonaWriter>();
-        services.TryAddSingleton<ITranslator, EnglishOnlyTranslator>();
+        services.TryAddSingleton(sp => new NarrativeVerifier(
+            sp.GetRequiredService<CodeFactChecker>(),
+            sp.GetRequiredService<IChatProvider>(),
+            sp.GetRequiredService<PromptCatalog>(),
+            sp.GetRequiredService<IOptions<AgentsOptions>>().Value.AgentFactCheck));
+        services.TryAddSingleton<IPersonaWriter, AgentPersonaWriter>();
+        services.TryAddSingleton<ITranslator, AgentTranslator>();
         services.TryAddSingleton<INarrativePublisher, InMemoryNarrativeLog>();
         services.TryAddSingleton<IMomentSink, ChannelMomentSink>();
         services.TryAddSingleton<MomentWorkflow>();

@@ -145,7 +145,9 @@ in; `headline` is a code template. Types, priorities and rules are the table in
 
 The agent crew (`src/Pitchside.Agents`) turns a moment into text. Its contract is
 [`schemas/narrative.schema.json`](../schemas/narrative.schema.json) and `src/Pitchside.Contracts/Narrative.cs`.
-A narrative's `id` is `{momentId}:{persona}:{language}`; the base narrative is persona `base`, language `en`.
+A narrative's `id` is `{momentId}:{persona}:{language}`; the base narrative is persona `base`, language `en`. A
+club-fan or player-focus variant names its club or player in `subject`, and its id is
+`{momentId}:{persona}.{subject}:{language}`, for example `MER-7:M:0324:goal:player_focus.INY-07:af`.
 
 Each sentence is written with `[[fact.key]]` tokens in place of every number, and its `citations` are the keys
 of those tokens. `renderedText` is produced by code, substituting each token with the fact's value at its
@@ -166,11 +168,11 @@ sheets (at every moment and every minute of clock) and moments, and pushes to cl
 | --- | --- | --- |
 | client to server | `JoinMatch(matchId)` | replies with a `MatchSnapshot`: the stored match, the live fact sheet, every moment and the narratives for the connection's viewer preferences |
 | client to server | `LeaveMatch(matchId)` | |
-| client to server | `SetViewer(matchId, ViewerPreferences)` | `{ persona, language, clubId?, playerId? }`, kept per connection |
+| client to server | `SetViewer(matchId, ViewerPreferences)` | `{ persona, language, clubId?, playerId? }`, kept per connection; persona `all` is the control room |
 | server to client | `Event` | `MatchEvent`, every ingested event |
 | server to client | `FactSheet` | `FactSheet`, every 5 events or on a moment |
 | server to client | `Moment` | `Moment` |
-| server to client | `Narrative` | `Narrative` |
+| server to client | `Narrative` | `Narrative`, only to connections whose viewer preferences it matches: the base English narrative to everyone, otherwise the viewer's persona (its club or player) and the base in its language, plus the casual variant for player focus |
 | server to client | `MatchStatus` | `{ matchId, status, lastSeq, period, clockMs }`, on change and every 10 s |
 
 Messages use the contract serializer (camelCase, snake_case enums) and arrive in the order the actor produced

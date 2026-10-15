@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Pitchside.Contracts;
 using Pitchside.Runtime.MomentSink;
 
 namespace Pitchside.Agents.Workflow;
@@ -37,14 +38,37 @@ public sealed partial class MomentWorkflowRunner(
         await Task.WhenAll(running).ConfigureAwait(false);
     }
 
-    /// <summary>Runs one moment and publishes every narrative it produced.</summary>
+    /// <summary>
+    /// Runs one moment, publishing each narrative as soon as the workflow finishes it (WP06-R3), then any it ended
+    /// with that were not published yet, such as a template composed after a failed run. Each is published once.
+    /// </summary>
     public async Task<MomentContext> ProcessAsync(MomentWorkItem item, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(item);
-        var context = await workflow.RunAsync(item, cancellationToken).ConfigureAwait(false);
+        var published = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>(StringComparer.Ordinal);
+        async Task PublishOnceAsync(Narrative narrative, CancellationToken ct)
+        {
+            if (!published.TryAdd(narrative.Id, true))
+            {
+                return;
+            }
+
+            try
+            {
+                await publisher.PublishAsync(narrative, ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Not published after all: the end-of-run pass may publish it, or a template with the same id, again.
+                published.TryRemove(narrative.Id, out _);
+                throw;
+            }
+        }
+
+        var context = await workflow.RunAsync(item, PublishOnceAsync, cancellationToken).ConfigureAwait(false);
         foreach (var narrative in context.Narratives)
         {
-            await publisher.PublishAsync(narrative, cancellationToken).ConfigureAwait(false);
+            await PublishOnceAsync(narrative, cancellationToken).ConfigureAwait(false);
         }
 
         return context;

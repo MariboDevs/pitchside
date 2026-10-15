@@ -6,7 +6,7 @@
 | Depends on | WP-04, WP-05 |
 | Owner | Sipho (prompts and tests), Hlumela (persona definitions and language review) |
 | Effort | 2 days |
-| Changes contracts | none |
+| Changes contracts | adds the optional `Narrative.subject` and the subject-qualified narrative id (WP-04's contract, spec updated); adds the viewer persona `all` for the control room (WP-03's hub) |
 
 ## Goal
 
@@ -42,7 +42,9 @@ goes through `CodeFactChecker` and the agent check like the base.
 The translator receives the persona variant with its `[[key]]` tokens intact and must return the same tokens
 in the same number; a token count mismatch is a rejection and falls back to English. Club and player names are
 never translated. Numbers are rendered by code after translation, with locale formatting (`af` and `es` use a
-decimal comma; the renderer uses `CultureInfo` per language).
+decimal comma). The renderer fixes each language's separators itself rather than reading `CultureInfo`: the
+operating system's culture data differs between machines and is absent in invariant-globalization mode, and the
+same fact must render the same text everywhere.
 
 ## Behaviour
 

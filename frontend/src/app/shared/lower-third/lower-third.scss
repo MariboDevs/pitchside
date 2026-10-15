@@ -46,6 +46,17 @@
   white-space: nowrap;
 }
 
+.text.text--pending {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.note {
+  margin: 0.2em 0 0;
+  font-size: 0.7em;
+  color: var(--color-text-muted);
+}
+
 .text {
   margin: 0.15em 0 0;
   font-weight: 400;

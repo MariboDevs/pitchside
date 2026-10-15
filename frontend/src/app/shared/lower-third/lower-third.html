@@ -11,7 +11,14 @@
   }
   <div class="copy">
     <h2 class="headline">{{ headline() }}</h2>
-    <p class="text">{{ text() }}</p>
+    @if (pending()) {
+      <p class="text text--pending" data-testid="writing">Writing for you</p>
+    } @else {
+      <p class="text">{{ text() }}</p>
+    }
+    @if (note(); as line) {
+      <p class="note" data-testid="card-note">{{ line }}</p>
+    }
   </div>
   @if (chips().length > 0) {
     <div class="chips">

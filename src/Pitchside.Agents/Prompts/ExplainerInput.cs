@@ -36,6 +36,29 @@ public static class ExplainerInput
     }
 
     /// <summary>
+    /// The support check for a persona variant or a translation: both sides' facts, as the persona writer saw them,
+    /// and every fact the sentences cite, so a two-sided comparison is checked against its evidence.
+    /// </summary>
+    public static string BuildVariantCheck(MomentContext context, IReadOnlyList<NarrativeSentence> sentences)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(sentences);
+        var message = Base(context);
+        var facts = Subset(context.Moment, context.FactSheet, null).ToList();
+        var shown = facts.Select(f => f.Key).ToHashSet(StringComparer.Ordinal);
+        facts.AddRange(sentences.SelectMany(s => s.Citations).Distinct(StringComparer.Ordinal)
+            .Where(key => !shown.Contains(key)).Select(context.FactSheet.Find).OfType<Fact>());
+        message["facts"] = new JsonArray([.. facts.Select(f => (JsonNode)new JsonObject
+        {
+            ["key"] = f.Key,
+            ["value"] = f.Value.Number is { } n ? JsonValue.Create(n) : JsonValue.Create(f.Value.Text),
+            ["unit"] = f.Unit,
+        })]);
+        message["sentences"] = new JsonArray([.. sentences.Select(s => (JsonNode)JsonValue.Create(s.Text))]);
+        return message.ToJsonString(Serialization);
+    }
+
+    /// <summary>
     /// The facts the explainer may cite: the evidence keys, every <c>match.*</c> fact, the side's facts (both sides
     /// when the moment has none) and the involved players' facts, in sheet order.
     /// </summary>
@@ -49,7 +72,7 @@ public static class ExplainerInput
         return [.. sheet.Facts.Where(f => evidence.Contains(f.Key) || prefixes.Any(p => f.Key.StartsWith(p, StringComparison.Ordinal)))];
     }
 
-    private static JsonObject Base(MomentContext context)
+    internal static JsonObject Base(MomentContext context)
     {
         var variables = TemplateVariables.FromMoment(context.Moment, context.Document);
         var subset = Subset(context.Moment, context.FactSheet, variables.GetValueOrDefault("side"));
@@ -86,5 +109,5 @@ public static class ExplainerInput
         };
     }
 
-    private static readonly JsonSerializerOptions Serialization = new() { WriteIndented = false };
+    internal static readonly JsonSerializerOptions Serialization = new() { WriteIndented = false };
 }
