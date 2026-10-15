@@ -114,7 +114,9 @@
   font-size: 0.75rem;
 }
 
-.muted {
+.muted,
+.variants summary,
+.variant-status {
   color: var(--color-text-muted);
 }
 
@@ -253,10 +255,6 @@
   margin-top: var(--space-2);
   font-size: 0.85em;
 
-  summary {
-    color: var(--color-text-muted);
-  }
-
   ul {
     display: grid;
     gap: 0.35rem;
@@ -275,10 +273,6 @@
 
 .variant-label {
   font-weight: 600;
-}
-
-.variant-status {
-  color: var(--color-text-muted);
 }
 
 .variant-text {
