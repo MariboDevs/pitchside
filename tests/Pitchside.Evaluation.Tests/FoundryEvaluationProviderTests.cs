@@ -32,6 +32,17 @@ public sealed class FoundryEvaluationProviderTests
     }
 
     [Fact]
+    public async Task A_judge_that_runs_out_of_time_is_audited_as_a_timeout()
+    {
+        var audit = new InMemoryAuditStore();
+        var provider = new FoundryEvaluationProvider(new JudgeChatClient(null, new TimeoutException("The judge did not answer in time.")), audit, TimeProvider.System);
+
+        await Should.ThrowAsync<TimeoutException>(() => provider.ScoreAsync(new EvaluationItem(Items.With(), Items.Moment, Items.Sheet), CancellationToken.None));
+
+        (await audit.ListAsync("MER-7", null, 10, CancellationToken.None)).ShouldHaveSingleItem().Outcome.ShouldBe(AuditOutcome.Timeout);
+    }
+
+    [Fact]
     public async Task An_audit_store_that_fails_never_loses_the_score()
     {
         var provider = new FoundryEvaluationProvider(new JudgeChatClient("<S0>checked</S0><S1>supported</S1><S2>5</S2>"), new FailingAuditStore(), TimeProvider.System);
