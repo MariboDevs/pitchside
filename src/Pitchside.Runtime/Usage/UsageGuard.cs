@@ -57,23 +57,24 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
             var used = _windows.TryGetValue((limit, key), out var current) && current.Window == window ? current.Count : 0;
             if (enabled && used >= LimitOf(limit))
             {
-                return new UsageDecision(false, TimeSpan.FromSeconds(((window + 1) * 3600) - now));
+                return new UsageDecision(false, TimeSpan.FromSeconds(((window + 1) * 3600) - now), window);
             }
 
             _windows[(limit, key)] = (window, used + 1);
-            return new UsageDecision(true, TimeSpan.Zero);
+            return new UsageDecision(true, TimeSpan.Zero, window);
         }
     }
 
     /// <summary>
-    /// Gives back one use taken this hour, for a request that was counted but did not start what it counts (a replay
-    /// refused as invalid, conflicting or over the concurrent cap). A use from an hour already gone is not returned.
+    /// Gives back one use, for a request that was counted but did not start what it counts (a replay refused as
+    /// invalid, conflicting or over the concurrent cap). It comes off the hour the use was taken in, the decision's
+    /// <see cref="UsageDecision.Window"/>; a use from an hour already gone is not returned to the next one.
     /// </summary>
-    public void Release(string limit, string key)
+    public void Release(string limit, string key, long window)
     {
         lock (_lock)
         {
-            if (_windows.TryGetValue((limit, key), out var current) && current.Window == _currentWindow && current.Count > 0)
+            if (_windows.TryGetValue((limit, key), out var current) && current.Window == window && current.Count > 0)
             {
                 _windows[(limit, key)] = (current.Window, current.Count - 1);
             }

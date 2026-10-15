@@ -7,6 +7,9 @@ namespace Pitchside.Api.Endpoints;
 /// <summary>Start, stop, pause and resume replays. Mapped only in <c>Replay</c> mode.</summary>
 public static class ReplayEndpoints
 {
+    /// <summary>The <c>HttpContext.Items</c> key set once a replay has started, read by the usage guard.</summary>
+    public const string AdmittedItem = "pitchside.replay-admitted";
+
     public const string ConcurrentRetryAfterSeconds = "30";
 
     public static IEndpointRouteBuilder MapReplayEndpoints(this IEndpointRouteBuilder app)
@@ -47,6 +50,9 @@ public static class ReplayEndpoints
         try
         {
             var started = await replays.StartAsync(request.Seed, speed, ct).ConfigureAwait(false);
+
+            // Marked as soon as the replay runs, so its hourly use is kept even if writing this response then fails.
+            context.Items[AdmittedItem] = true;
             return TypedResults.Accepted($"/api/v1/matches/{started.MatchId}", started);
         }
         catch (ReplayLimitReachedException ex)
