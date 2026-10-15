@@ -72,6 +72,22 @@ public sealed partial class FoundryEvaluationProvider(IChatClient judge, IAuditS
             context.Append(CultureInfo.InvariantCulture, $"{fact.Key} = {value}{(fact.Unit is null ? string.Empty : " " + fact.Unit)}").Append('\n');
         }
 
+        // Who the facts are about: the clubs behind home and away, and the players the moment involves or the text
+        // names, so the judge can tell which club or player owns each figure.
+        if (item.Document is { } document)
+        {
+            context.Append(CultureInfo.InvariantCulture, $"home = {document.Home.Club.Name} ({document.Home.Club.Id})").Append('\n');
+            context.Append(CultureInfo.InvariantCulture, $"away = {document.Away.Club.Name} ({document.Away.Club.Id})").Append('\n');
+            foreach (var side in new[] { document.Home, document.Away })
+            {
+                foreach (var player in side.Starters.Concat(side.Bench)
+                    .Where(p => item.Moment.PlayerIds.Contains(p.Id) || item.Narrative.RenderedText.Contains(p.Name, StringComparison.Ordinal)))
+                {
+                    context.Append(CultureInfo.InvariantCulture, $"player {player.Id} = {player.Name}, number {player.ShirtNumber}, {side.Club.Name}").Append('\n');
+                }
+            }
+        }
+
         return context.ToString();
     }
 

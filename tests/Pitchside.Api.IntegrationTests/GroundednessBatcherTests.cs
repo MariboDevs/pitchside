@@ -42,31 +42,77 @@ public sealed class GroundednessBatcherTests
         Evaluation = new NarrativeEvaluation(1, 1, null),
     };
 
-    [Fact]
-    public async Task A_judge_that_times_out_on_one_narrative_never_stops_the_batcher()
+    private static async Task<IMatchStore> SeededAsync(IMatchStore store)
     {
-        var store = new InMemoryMatchStore();
         await store.SaveMomentAsync(Goal, CancellationToken.None);
         await store.SaveFactSheetAsync(new FactSheet("MER-7", 120, 1, 600_000,
         [
             new Fact { Key = "match.score.home", Value = FactValue.Of(1), Unit = "goals", Precision = 0, DerivedFrom = ["MER-7-00110"] },
         ]), CancellationToken.None);
-        using var batcher = new GroundednessBatcher(
-            new TimingOutJudge(), store, new NullMatchBroadcaster(), Options.Create(new EvaluationOptions { BatchSeconds = 1 }), NullLogger<GroundednessBatcher>.Instance);
+        return store;
+    }
+
+    private static GroundednessBatcher Batcher(IEvaluationProvider judge, IMatchStore store) =>
+        new(judge, store, new NullMatchBroadcaster(), Options.Create(new EvaluationOptions { BatchSeconds = 1 }), NullLogger<GroundednessBatcher>.Instance);
+
+    private static async Task<double?> ScoreOfAsync(IMatchStore store, string persona)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        double? score = null;
+        while (score is null && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(100);
+            score = (await store.GetNarrativesAsync("MER-7", CancellationToken.None)).SingleOrDefault(n => n.Persona == persona)?.Evaluation.Groundedness;
+        }
+
+        return score;
+    }
+
+    [Fact]
+    public async Task A_judge_that_times_out_on_one_narrative_never_stops_the_batcher()
+    {
+        var store = await SeededAsync(new InMemoryMatchStore());
+        using var batcher = Batcher(new TimingOutJudge(), store);
         await batcher.StartAsync(CancellationToken.None);
 
         batcher.Enqueue(For(Personas.Analyst));
         batcher.Enqueue(For(Personas.Casual));
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        double? casual = null;
-        while (casual is null && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(100);
-            casual = (await store.GetNarrativesAsync("MER-7", CancellationToken.None)).SingleOrDefault(n => n.Persona == Personas.Casual)?.Evaluation.Groundedness;
-        }
 
-        casual.ShouldBe(0.5);
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
         batcher.ExecuteTask!.IsCompleted.ShouldBeFalse();
+        await batcher.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task A_save_that_fails_is_retried_without_a_second_judgement()
+    {
+        var store = await SeededAsync(new FailOnceSaveStore(new InMemoryMatchStore()));
+        var judge = new CountingJudge();
+        using var batcher = Batcher(judge, store);
+        await batcher.StartAsync(CancellationToken.None);
+
+        batcher.Enqueue(For(Personas.Casual));
+
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+        judge.Calls.ShouldBe(1);
+        await batcher.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Verified_narratives_stored_without_a_score_are_scored_after_a_restart()
+    {
+        var store = await SeededAsync(new InMemoryMatchStore());
+        await store.SaveMatchAsync(new StoredMatch(Pitchside.Engine.MatchSimulator.Simulate(7).Document, MatchStatus.Completed, 0, DateTimeOffset.UnixEpoch), CancellationToken.None);
+        await store.SaveNarrativeAsync(For(Personas.Casual), CancellationToken.None);
+        await store.SaveNarrativeAsync(For(Personas.Analyst) with { Status = NarrativeStatus.Rejected }, CancellationToken.None);
+        var judge = new CountingJudge();
+
+        // A fresh batcher, as after a restart: nothing is queued, so only its start-up scan can find the narrative.
+        using var batcher = Batcher(judge, store);
+        await batcher.StartAsync(CancellationToken.None);
+
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+        judge.Calls.ShouldBe(1);
         await batcher.StopAsync(CancellationToken.None);
     }
 }

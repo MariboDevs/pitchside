@@ -252,7 +252,7 @@ public static class CommandLine
             foreach (var narrative in context.Narratives)
             {
                 var score = narrative.Status == NarrativeStatus.Verified
-                    ? await scorer.ScoreAsync(new EvaluationItem(narrative, moment, sheet), CancellationToken.None).ConfigureAwait(false)
+                    ? await scorer.ScoreAsync(new EvaluationItem(narrative, moment, sheet, document), CancellationToken.None).ConfigureAwait(false)
                     : null;
                 narratives.Add(narrative with { Evaluation = narrative.Evaluation with { Groundedness = score } });
             }

@@ -58,6 +58,22 @@ public sealed class FoundryEvaluationProviderTests
         (await audit.ListAsync("MER-7", null, 10, CancellationToken.None)).ShouldHaveSingleItem().Outcome.ShouldBe(AuditOutcome.Error);
     }
 
+    [Fact]
+    public void The_context_names_the_clubs_and_the_players_behind_the_facts()
+    {
+        var document = new MatchDocument("0.2", "MER-7", 7, "Meridian League", "Amanzi United Stadium", DateTimeOffset.UnixEpoch,
+            new TeamSheet(new Club("AMZ", "Amanzi United", "Amanzi", "#0A3D62", "#FFFFFF"), "4-3-3", [new Player("AMZ-02", "Yaw Greco", 2, Position.Defender, 110)], []),
+            new TeamSheet(new Club("INY", "Inyoni Wanderers", "Inyoni", "#6D214F", "#FFFFFF"), "4-4-2", [new Player("INY-07", "Nathan Kim", 7, Position.Midfielder, 105)], []));
+        var narrative = Items.With() with { RenderedText = "Nathan Kim watches Amanzi lead 1-0." };
+
+        var context = FoundryEvaluationProvider.Context(new EvaluationItem(narrative, Items.Moment, Items.Sheet, document));
+
+        context.ShouldContain("home = Amanzi United (AMZ)");
+        context.ShouldContain("away = Inyoni Wanderers (INY)");
+        context.ShouldContain("player INY-07 = Nathan Kim, number 7, Inyoni Wanderers");
+        context.ShouldNotContain("Yaw Greco");
+    }
+
     [Theory]
     [InlineData(1.0, 0.0)]
     [InlineData(3.0, 0.5)]
