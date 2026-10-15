@@ -14,7 +14,8 @@ public sealed class TranslatorExecutor(ITranslator translator) : Executor<Moment
         ArgumentNullException.ThrowIfNull(message);
         using var activity = AgentTelemetry.StartStage(message, ExecutorId);
         var english = message.Narratives
-            .Where(n => n.Language == Languages.English && n.Status is NarrativeStatus.Verified or NarrativeStatus.Fallback)
+            .Where(n => n.Language == Languages.English
+                && (n.Status is NarrativeStatus.Verified or NarrativeStatus.Fallback || (n.Status == NarrativeStatus.Rejected && n.Persona != Personas.Base)))
             .ToList();
         if (english.Count == 0)
         {

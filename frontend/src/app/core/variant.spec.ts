@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Moment, Narrative } from './contracts';
-import { resolveVariant, variantId } from './variant';
+import { resolveVariant, textLanguage, variantId } from './variant';
 
 const moment = { id: 'MER-7:M:0324:goal', playerIds: ['INY-07', 'INY-04'] } as Moment;
 
@@ -76,5 +76,21 @@ describe('resolveVariant', () => {
       resolveVariant(moment, { persona: 'analyst', language: 'es' }, map(base, spanish))
         .englishFallback,
     ).toBe(true);
+  });
+
+  it('falls back to the base when the variant was rejected in the viewer language', () => {
+    const rejected = narrative(variantId(moment.id, 'casual', 'zu'), 'rejected');
+    const view = resolveVariant(moment, { persona: 'casual', language: 'zu' }, map(base, rejected));
+    expect(view.narrative).toBe(base);
+    expect(view.state).toBe('ready');
+  });
+});
+
+describe('textLanguage', () => {
+  it('marks a fallen-back translation as English and keeps a real one', () => {
+    expect(textLanguage(narrative(variantId(moment.id, 'analyst', 'af'), 'fallback', true))).toBe(
+      'en',
+    );
+    expect(textLanguage(narrative(variantId(moment.id, 'analyst', 'af')))).toBe('af');
   });
 });

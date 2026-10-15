@@ -30,7 +30,7 @@ public sealed class NarrativeVerifier(CodeFactChecker checker, IChatProvider pro
 
         var prompt = catalog.Get(FactCheckExecutor.PromptName);
         var request = new ChatRequest(
-            FactCheckExecutor.PromptName, prompt.VersionLabel, prompt.Text, ExplainerInput.BuildFactCheck(context, sentences), DeploymentTier.Quality, context.Moment, 1);
+            FactCheckExecutor.PromptName, prompt.VersionLabel, prompt.Text, ExplainerInput.BuildVariantCheck(context, sentences), DeploymentTier.Quality, context.Moment, 1);
         try
         {
             var result = await provider.CompleteAsync(request, cancellationToken).ConfigureAwait(false);

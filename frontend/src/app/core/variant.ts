@@ -80,6 +80,14 @@ export function resolveVariant(
   return { narrative: null, state: 'writing', englishFallback: false };
 }
 
+/**
+ * The language a narrative's text is actually in, for the HTML `lang` attribute: a translation that fell back is
+ * English text delivered under its viewer's language, and screen readers must pronounce it as English.
+ */
+export function textLanguage(narrative: Narrative): string {
+  return fellBack(narrative) ? 'en' : narrative.language;
+}
+
 function fellBack(narrative: Narrative | null): boolean {
   return !!narrative && narrative.language !== 'en' && narrative.provenance.fallback;
 }

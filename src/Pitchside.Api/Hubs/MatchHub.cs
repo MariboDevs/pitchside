@@ -28,17 +28,24 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
             throw new HubException($"No match '{matchId}'.");
         }
 
+        // Join the group and the narrative audience before the snapshot is read, so a narrative stored after the
+        // snapshot's read is still pushed to this connection; anything in both is dropped by id on the client.
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(matchId), Context.ConnectionAborted).ConfigureAwait(false);
+        var joined = viewers.Join(Context.ConnectionId, matchId);
         try
         {
             var snapshot = await snapshots.BuildAsync(matchId, viewers.Get(Context.ConnectionId, matchId), Context.ConnectionAborted).ConfigureAwait(false)
                 ?? throw new HubException($"No match '{matchId}'.");
-            viewers.Join(Context.ConnectionId, matchId);
             (await supervisor.GetAsync(Context.ConnectionAborted).ConfigureAwait(false)).Tell(new Subscribe(matchId, Context.ConnectionId), ActorRefs.NoSender);
             return snapshot;
         }
         catch
         {
+            if (joined)
+            {
+                viewers.Unjoin(Context.ConnectionId, matchId);
+            }
+
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, Group(matchId), CancellationToken.None).ConfigureAwait(false);
             throw;
         }
