@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using Microsoft.Azure.Cosmos;
 using Pitchside.Contracts;
+using Pitchside.Runtime.Audit;
 
 namespace Pitchside.Runtime.Storage;
 
@@ -11,7 +12,7 @@ namespace Pitchside.Runtime.Storage;
 /// are the SDK's defaults. In Azure the database and containers are provisioned by Bicep: Entra ID data-plane roles
 /// cannot create them, so startup only checks that they exist. The key-authenticated local emulator creates them.
 /// </summary>
-public sealed class CosmosMatchStore(CosmosClient client, string databaseName) : IMatchStore
+public sealed class CosmosMatchStore(CosmosClient client, string databaseName) : IMatchStore, IAuditStore
 {
     public const string Matches = "matches";
     public const string Events = "events";
@@ -178,6 +179,22 @@ public sealed class CosmosMatchStore(CosmosClient client, string databaseName) :
         var query = new QueryDefinition("SELECT * FROM c WHERE c.matchId = @matchId").WithParameter("@matchId", matchId);
         var items = await Query<OverlayEntry>(Overlay, query, matchId, cancellationToken).ConfigureAwait(false);
         return [.. items.Select(i => i.Payload).OrderBy(e => e.Period).ThenBy(e => e.InAtMs)];
+    }
+
+    public Task SaveAsync(AuditRecord record, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return Upsert(Audit, new CosmosItem<AuditRecord>(record.Id, record.MatchId, 0, record), cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AuditRecord>> ListAsync(string matchId, string? after, int limit, CancellationToken cancellationToken)
+    {
+        var query = new QueryDefinition("SELECT * FROM c WHERE c.matchId = @matchId AND c.id > @after ORDER BY c.id OFFSET 0 LIMIT @limit")
+            .WithParameter("@matchId", matchId)
+            .WithParameter("@after", after ?? string.Empty)
+            .WithParameter("@limit", limit);
+        var items = await Query<AuditRecord>(Audit, query, matchId, cancellationToken).ConfigureAwait(false);
+        return [.. items.Select(i => i.Payload)];
     }
 
     private Container Container(string name) => client.GetContainer(databaseName, name);

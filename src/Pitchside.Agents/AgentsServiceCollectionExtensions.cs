@@ -9,6 +9,7 @@ using Pitchside.Agents.Personalisation;
 using Pitchside.Agents.Prompts;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Workflow;
+using Pitchside.Runtime.Audit;
 using Pitchside.Runtime.MomentSink;
 
 namespace Pitchside.Agents;
@@ -38,14 +39,17 @@ public static class AgentsServiceCollectionExtensions
         services.TryAddSingleton<MomentWorkflow>();
 
         var provider = configuration[$"{AgentsOptions.SectionName}:{nameof(AgentsOptions.Provider)}"] ?? AgentsOptions.ScriptedProvider;
+        // Every model call goes through the auditing wrapper (WP07-R6). The audit store is the runtime's when it is
+        // registered (the API, the agent host); otherwise, as in the CLI, an in-process one.
+        services.TryAddSingleton<IAuditStore, InMemoryAuditStore>();
         if (string.Equals(provider, AgentsOptions.FoundryProvider, StringComparison.OrdinalIgnoreCase))
         {
             services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
-            services.TryAddSingleton<IChatProvider>(sp => new FoundryChatProvider(sp.GetRequiredService<IOptions<FoundryOptions>>(), sp.GetRequiredService<TokenCredential>()));
+            services.TryAddSingleton<IChatProvider>(sp => Audited(sp, new FoundryChatProvider(sp.GetRequiredService<IOptions<FoundryOptions>>(), sp.GetRequiredService<TokenCredential>())));
         }
         else if (string.Equals(provider, AgentsOptions.ScriptedProvider, StringComparison.OrdinalIgnoreCase))
         {
-            services.TryAddSingleton<IChatProvider, ScriptedChatProvider>();
+            services.TryAddSingleton<IChatProvider>(sp => Audited(sp, new ScriptedChatProvider()));
         }
         else
         {
@@ -54,6 +58,12 @@ public static class AgentsServiceCollectionExtensions
 
         return services;
     }
+
+    private static AuditingChatProvider Audited(IServiceProvider sp, IChatProvider inner) => new(
+        inner,
+        sp.GetRequiredService<IAuditStore>(),
+        sp.GetRequiredService<TimeProvider>(),
+        sp.GetService<Microsoft.Extensions.Logging.ILogger<AuditingChatProvider>>());
 
     /// <summary>Adds the hosted service that reads the moment sink and runs the workflows.</summary>
     public static IServiceCollection AddMomentWorkflowRunner(this IServiceCollection services)
