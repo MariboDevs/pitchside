@@ -56,9 +56,11 @@ public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSuperv
         }
         catch (AskTimeoutException)
         {
+            // Read again: the store moved on while the actor did not answer, and the client loads history up to LastSeq.
+            var latest = await store.GetMatchAsync(match.MatchId, cancellationToken).ConfigureAwait(false) ?? match;
             var sheet = await store.GetFactSheetAsync(match.MatchId, int.MaxValue, cancellationToken).ConfigureAwait(false);
             var moments = await store.GetMomentsAsync(match.MatchId, cancellationToken).ConfigureAwait(false);
-            return (match, sheet, moments);
+            return (latest, sheet, moments);
         }
     }
 }
