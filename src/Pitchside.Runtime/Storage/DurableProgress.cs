@@ -13,4 +13,24 @@ public sealed class DurableProgress
     public int For(string matchId) => _durable.GetValueOrDefault(matchId);
 
     public void Advance(string matchId, int seq) => _durable.AddOrUpdate(matchId, seq, (_, current) => Math.Max(current, seq));
+
+    /// <summary>
+    /// Waits until the store holds every event of the match up to <paramref name="seq"/>, for a reader that pairs live
+    /// state (a fact sheet from the match actor) with stored events; false when the timeout passes first.
+    /// </summary>
+    public async Task<bool> WaitForAsync(string matchId, int seq, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (For(matchId) < seq)
+        {
+            if (DateTime.UtcNow >= deadline)
+            {
+                return false;
+            }
+
+            await Task.Delay(25, cancellationToken).ConfigureAwait(false);
+        }
+
+        return true;
+    }
 }
