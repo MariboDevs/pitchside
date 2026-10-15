@@ -3,6 +3,9 @@
     <li class="stage" [class.stage--retried]="stage.retried">
       <span class="name">{{ stage.name }}</span>
       <span class="detail">{{ stage.detail }}</span>
+      @if (stage.timing; as timing) {
+        <span class="detail tabular" data-testid="stage-timing">{{ timing }}</span>
+      }
     </li>
   }
 </ol>

@@ -99,6 +99,9 @@ test('the control room shows the feed, the moments and the citation chain', asyn
   await expect(fact).not.toHaveText('…');
   await fact.hover();
   await expect(page.getByText('Verdict')).toBeVisible();
+  // WP-07: each stage's model calls from the audit, and the usage guard's counts.
+  await expect(page.getByTestId('stage-timing').first()).toContainText('call');
+  await expect(page.getByTestId('usage')).toContainText('Moments narrated this hour');
   await page.screenshot({ path: `${SCREENS}/control.png`, fullPage: true });
 
   await page.keyboard.press('j');

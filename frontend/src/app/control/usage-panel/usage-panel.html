@@ -1,0 +1,20 @@
+@if (usage(); as u) {
+  <details class="usage" open data-testid="usage">
+    <summary>
+      usage
+      <span class="muted">({{ u.enforced ? 'limits enforced' : 'counted, not enforced' }})</span>
+    </summary>
+    <dl class="rows">
+      @for (count of u.limits; track count.name) {
+        <div class="row" [class.row--full]="u.enforced && full(count)">
+          <dt>{{ label(count) }}</dt>
+          <dd class="tabular">{{ count.used }} / {{ count.limit }}</dd>
+        </div>
+      }
+      <div class="row">
+        <dt>Replays running</dt>
+        <dd class="tabular">{{ u.replaysRunning }} / {{ u.maxConcurrentReplays }}</dd>
+      </div>
+    </dl>
+  </details>
+}

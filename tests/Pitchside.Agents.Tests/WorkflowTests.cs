@@ -212,6 +212,7 @@ public sealed class WorkflowTests
     }
 
     [Fact]
+    [Trait("Category", "Timing")]
     public async Task The_scripted_code_path_meets_the_latency_budget()
     {
         var workflow = Crew.Workflow();

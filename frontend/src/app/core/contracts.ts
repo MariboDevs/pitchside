@@ -152,7 +152,45 @@ export interface Narrative {
     generatedUtc: string;
     fallback: boolean;
   };
-  evaluation: { citationCoverage: number; groundedness: number | null };
+  evaluation: { citationCoverage: number; factDensity: number; groundedness: number | null };
+}
+
+/** One model call (WP-07): stage, model, tokens, latency and outcome. The prompt text is never stored. */
+export interface AuditRecord {
+  id: string;
+  matchId: string;
+  momentId: string;
+  stage: string;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  promptHash: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+  outcome: 'ok' | 'error' | 'timeout';
+  requestId: string;
+  utc: string;
+}
+
+export interface AuditPage {
+  items: AuditRecord[];
+  next: string | null;
+}
+
+/** One usage guard limit's current use (WP-07). */
+export interface UsageCount {
+  name: 'replays' | 'narratives' | 'spokenLines' | 'connections';
+  scope: string;
+  used: number;
+  limit: number;
+}
+
+export interface UsageReport {
+  enforced: boolean;
+  limits: UsageCount[];
+  replaysRunning: number;
+  maxConcurrentReplays: number;
 }
 
 export type OverlayState = 'scheduled' | 'held' | 'aired' | 'expired';
