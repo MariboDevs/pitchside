@@ -7,6 +7,8 @@ namespace Pitchside.Api.Endpoints;
 /// <summary>Start, stop, pause and resume replays. Mapped only in <c>Replay</c> mode.</summary>
 public static class ReplayEndpoints
 {
+    public const string ConcurrentRetryAfterSeconds = "30";
+
     public static IEndpointRouteBuilder MapReplayEndpoints(this IEndpointRouteBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -30,7 +32,7 @@ public static class ReplayEndpoints
     }
 
     private static async Task<Results<Accepted<ReplayStarted>, ValidationProblem, ProblemHttpResult>> StartAsync(
-        ReplayRequest request, IReplayService replays, IOptions<ReplayOptions> options, CancellationToken ct)
+        ReplayRequest request, IReplayService replays, IOptions<ReplayOptions> options, HttpContext context, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         var speed = request.Speed ?? options.Value.DefaultSpeed;
@@ -49,6 +51,8 @@ public static class ReplayEndpoints
         }
         catch (ReplayLimitReachedException ex)
         {
+            // Replays end at any time, so the caller is asked to try again shortly.
+            context.Response.Headers.RetryAfter = ConcurrentRetryAfterSeconds;
             return TypedResults.Problem(ex.Message, statusCode: StatusCodes.Status429TooManyRequests, title: "Replay limit reached");
         }
         catch (ReplayConflictException ex)

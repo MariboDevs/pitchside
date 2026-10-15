@@ -30,7 +30,7 @@ internal static class Fixture
         RenderedText = string.Join(' ', Enumerable.Repeat("word", words)),
         Status = NarrativeStatus.Verified,
         Provenance = new NarrativeProvenance("scripted", "scripted", "explainer-v1", 1, DateTimeOffset.UnixEpoch, false),
-        Evaluation = new NarrativeEvaluation(1, null),
+        Evaluation = new NarrativeEvaluation(1, 1, null),
     };
 
     private static (MatchDocument, List<(Moment, FactSheet)>) Build()

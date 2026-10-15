@@ -7,11 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Pitchside.Runtime.Actors;
+using Pitchside.Runtime.Audit;
 using Pitchside.Runtime.Broadcast;
 using Pitchside.Runtime.Bus;
 using Pitchside.Runtime.MomentSink;
 using Pitchside.Runtime.Replay;
 using Pitchside.Runtime.Storage;
+using Pitchside.Runtime.Usage;
 
 namespace Pitchside.Runtime;
 
@@ -36,6 +38,7 @@ public static class RuntimeServiceCollectionExtensions
         services.Configure<BusOptions>(configuration.GetSection(BusOptions.SectionName));
         services.Configure<ReplayOptions>(configuration.GetSection(ReplayOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
+        services.AddUsageGuard(configuration);
         services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
         services.TryAddSingleton<IMatchBroadcaster, NullMatchBroadcaster>();
         services.TryAddSingleton<IMomentSink, ChannelMomentSink>();
@@ -64,6 +67,7 @@ public static class RuntimeServiceCollectionExtensions
         if (string.Equals(provider, StorageOptions.InMemoryProvider, StringComparison.OrdinalIgnoreCase))
         {
             services.TryAddSingleton<IMatchStore, InMemoryMatchStore>();
+            services.TryAddSingleton<IAuditStore, InMemoryAuditStore>();
             return;
         }
 
@@ -91,6 +95,7 @@ public static class RuntimeServiceCollectionExtensions
         });
         services.TryAddSingleton(sp => new CosmosMatchStore(sp.GetRequiredService<CosmosClient>(), sp.GetRequiredService<IOptions<StorageOptions>>().Value.Cosmos.Database));
         services.TryAddSingleton<IMatchStore>(sp => sp.GetRequiredService<CosmosMatchStore>());
+        services.TryAddSingleton<IAuditStore>(sp => sp.GetRequiredService<CosmosMatchStore>());
         services.AddHostedService<CosmosInitializer>();
     }
 

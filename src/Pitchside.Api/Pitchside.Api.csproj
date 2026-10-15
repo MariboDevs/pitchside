@@ -8,6 +8,7 @@
     <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />
     <ProjectReference Include="../Pitchside.Runtime/Pitchside.Runtime.csproj" />
     <ProjectReference Include="../Pitchside.Agents/Pitchside.Agents.csproj" />
+    <ProjectReference Include="../Pitchside.Evaluation/Pitchside.Evaluation.csproj" />
     <ProjectReference Include="../Pitchside.Overlay/Pitchside.Overlay.csproj" />
     <ProjectReference Include="../Pitchside.ServiceDefaults/Pitchside.ServiceDefaults.csproj" />
   </ItemGroup>

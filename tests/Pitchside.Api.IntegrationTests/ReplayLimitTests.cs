@@ -16,6 +16,7 @@ public sealed class ReplayLimitTests
 
         refused.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
         refused.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        refused.Headers.RetryAfter!.Delta.ShouldBe(TimeSpan.FromSeconds(30));
     }
 
     [Fact]

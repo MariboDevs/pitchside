@@ -3,8 +3,11 @@ using Pitchside.Agents.Workflow;
 using Pitchside.Api;
 using Pitchside.Api.Broadcast;
 using Pitchside.Api.Endpoints;
+using Microsoft.AspNetCore.HttpOverrides;
 using Pitchside.Api.Hubs;
+using Pitchside.Api.Middleware;
 using Pitchside.Contracts;
+using Pitchside.Evaluation;
 using Pitchside.Runtime;
 using Pitchside.Runtime.Broadcast;
 using Pitchside.ServiceDefaults;
@@ -34,6 +37,10 @@ builder.Services.AddSingleton<MatchSnapshots>();
 builder.Services.AddSingleton<Pitchside.Overlay.OverlayBook>();
 builder.Services.AddSingleton<OverlayCoordinator>();
 builder.Services.AddPitchsideRuntime(builder.Configuration);
+builder.Services.AddPitchsideEvaluation(builder.Configuration);
+builder.Services.AddFoundryEvaluationJudge(builder.Configuration);
+builder.Services.AddSingleton<GroundednessBatcher>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GroundednessBatcher>());
 
 var pitchside = builder.Configuration.GetSection(PitchsideOptions.SectionName).Get<PitchsideOptions>() ?? new PitchsideOptions();
 if (pitchside.RunAgentsInApi)
@@ -43,13 +50,37 @@ if (pitchside.RunAgentsInApi)
     builder.Services.AddMomentWorkflowRunner();
 }
 
+// Behind the Container Apps ingress the caller's address arrives in X-Forwarded-For. The ingress appends the address
+// it saw, so only the last entry is trusted (ForwardLimit 1); the usage guard counts per-caller limits against it.
+// The header is honoured only where that ingress is the one way in: Container Apps sets CONTAINER_APP_NAME, and
+// UsageGuard:TrustForwardedFor overrides. Anywhere else a caller could write the header and pick its own address.
+var trustForwardedFor = builder.Configuration.GetValue<bool?>("UsageGuard:TrustForwardedFor")
+    ?? !string.IsNullOrEmpty(builder.Configuration["CONTAINER_APP_NAME"]);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
+if (trustForwardedFor)
+{
+    app.UseForwardedHeaders();
+}
+
 app.UseMiddleware<RequestIdMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseWebSockets();
+app.UseMiddleware<UsageGuardMiddleware>();
 app.MapDefaultEndpoints();
 app.MapMatchEndpoints();
 app.MapOverlayEndpoints();
+app.MapAuditEndpoints();
+app.MapTraceEndpoints();
+app.MapUsageEndpoints();
 if (string.Equals(pitchside.Mode, PitchsideOptions.ReplayMode, StringComparison.OrdinalIgnoreCase))
 {
     app.MapReplayEndpoints();

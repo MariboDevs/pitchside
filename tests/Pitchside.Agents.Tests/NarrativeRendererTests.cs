@@ -34,9 +34,17 @@ public sealed class NarrativeRendererTests
         NarrativeRenderer.Cite("[[home.xg]] then [[match.score.home]] then [[home.xg]]").Citations.ShouldBe(["home.xg", "match.score.home"]);
 
     [Fact]
-    public void Coverage_is_the_share_of_sentences_that_cite()
+    public void Coverage_is_the_share_of_written_tokens_that_resolve()
     {
-        NarrativeRenderer.CitationCoverage([NarrativeRenderer.Cite("[[home.xg]]"), NarrativeRenderer.Cite("No number here.")]).ShouldBe(0.5);
-        NarrativeRenderer.CitationCoverage([]).ShouldBe(0);
+        NarrativeRenderer.CitationCoverage([NarrativeRenderer.Cite("[[home.xg]] and [[home.xg]]"), NarrativeRenderer.Cite("[[away.xg]]")], Sheet).ShouldBe(2.0 / 3);
+        NarrativeRenderer.CitationCoverage([NarrativeRenderer.Cite("[[home.xg]]"), NarrativeRenderer.Cite("No number here.")], Sheet).ShouldBe(1);
+        NarrativeRenderer.CitationCoverage([NarrativeRenderer.Cite("No number here.")], Sheet).ShouldBe(1);
+    }
+
+    [Fact]
+    public void Fact_density_is_tokens_per_sentence()
+    {
+        NarrativeRenderer.FactDensity([NarrativeRenderer.Cite("[[home.xg]] and [[home.xg]]"), NarrativeRenderer.Cite("[[away.xg]]"), NarrativeRenderer.Cite("None.")]).ShouldBe(1);
+        NarrativeRenderer.FactDensity([]).ShouldBe(0);
     }
 }

@@ -90,7 +90,7 @@ public sealed partial class ReplayService(
             return false;
         }
 
-        run.Cancellation.Cancel();
+        run.Cancel();
         Tell(new SetLifecycle(matchId, MatchStatus.Stopped));
         return true;
     }
@@ -123,12 +123,13 @@ public sealed partial class ReplayService(
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        foreach (var run in _runs.Values)
+        var runs = _runs.Values.ToList();
+        foreach (var run in runs)
         {
-            await run.Cancellation.CancelAsync().ConfigureAwait(false);
+            run.Cancel();
         }
 
-        await Task.WhenAll(_runs.Values.Select(r => r.Completion)).WaitAsync(cancellationToken).ConfigureAwait(false);
+        await Task.WhenAll(runs.Select(r => r.Completion)).WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task PublishAsync(ReplayRun run, IReadOnlyList<MatchEvent> events, double speed)

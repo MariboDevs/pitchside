@@ -43,10 +43,11 @@
     },
     "evaluation": {
       "type": "object",
-      "required": ["citationCoverage", "groundedness"],
+      "required": ["citationCoverage", "factDensity", "groundedness"],
       "additionalProperties": false,
       "properties": {
-        "citationCoverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "citationCoverage": { "type": "number", "minimum": 0, "maximum": 1, "description": "Written [[key]] tokens that resolve on the fact sheet over tokens written; 1 when none are written (WP07-R1)." },
+        "factDensity": { "type": "number", "minimum": 0, "description": "Tokens written per sentence (WP07-R1)." },
         "groundedness": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
       }
     }

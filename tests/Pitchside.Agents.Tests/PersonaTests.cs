@@ -45,7 +45,7 @@ public sealed class PersonaTests
         foreach (var variant in variants)
         {
             AgentPersonaWriter.ShapeObjections(PersonaSpecs.For(variant.Persona), variant.Sentences).ShouldBeEmpty(variant.Id);
-            NarrativeRenderer.CitationCoverage(variant.Sentences).ShouldBe(1);
+            variant.Evaluation.CitationCoverage.ShouldBe(1);
         }
     }
 

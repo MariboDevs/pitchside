@@ -1,9 +1,11 @@
 using Akka.Actor;
 using Akka.Hosting;
 using Microsoft.AspNetCore.SignalR;
+using Pitchside.Api.Middleware;
 using Pitchside.Contracts;
 using Pitchside.Runtime.Actors;
 using Pitchside.Runtime.Messages;
+using Pitchside.Runtime.Usage;
 
 namespace Pitchside.Api.Hubs;
 
@@ -13,9 +15,11 @@ namespace Pitchside.Api.Hubs;
 /// connection joins the group before the snapshot is read, so nothing falls between the two: a push that arrives
 /// while the snapshot is built may also be in it, and clients drop what they already hold by id and seq.
 /// </summary>
-public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, IRequiredActor<MatchSupervisorActor> supervisor) : Hub<IMatchClient>
+public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, IRequiredActor<MatchSupervisorActor> supervisor, UsageGuard guard) : Hub<IMatchClient>
 {
     public const string Path = "/hubs/match";
+
+    private const string SlotReserved = "usage-slot";
 
     public static string Group(string matchId) => $"match:{matchId}";
 
@@ -69,8 +73,29 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Reserves one of the caller's connection slots, for every transport, and closes the connection when none is free.
+    /// <see cref="UsageGuardMiddleware"/> refuses at negotiation as well, so a browser sees a 429 rather than a drop.
+    /// </summary>
+    public override Task OnConnectedAsync()
+    {
+        if (!guard.TryConnect(ClientKey.Of(Context.GetHttpContext())))
+        {
+            Context.Abort();
+            return Task.CompletedTask;
+        }
+
+        Context.Items[SlotReserved] = true;
+        return base.OnConnectedAsync();
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        if (Context.Items.ContainsKey(SlotReserved))
+        {
+            guard.Disconnected(ClientKey.Of(Context.GetHttpContext()));
+        }
+
         var joined = viewers.RemoveConnection(Context.ConnectionId);
         if (joined.Count > 0)
         {

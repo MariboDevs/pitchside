@@ -2,7 +2,12 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Pitchside.Contracts;
+using Akka.Actor;
+using Akka.Hosting;
+using Pitchside.Runtime.Actors;
+using Pitchside.Runtime.Messages;
 using Pitchside.Runtime.Replay;
+using Pitchside.Runtime.Storage;
 
 namespace Pitchside.Api.IntegrationTests;
 
@@ -35,10 +40,25 @@ public sealed class MatchEndpointsTests : IClassFixture<PitchsideApiFactory>, IA
             await Task.Delay(100);
         }
 
-        // Say where it stopped, so a failure on a loaded runner can be told apart from a stuck actor.
+        // Say where it stopped, so a failure on a loaded runner can be told apart from a stuck actor: the store's view,
+        // the replay's, the events the store holds, and the match actor's own state.
         var replaying = _factory.Services.GetRequiredService<IReplayService>().Running;
+        var stored = await _factory.Services.GetRequiredService<IMatchStore>().GetEventsAsync("MER-7", 1, int.MaxValue, CancellationToken.None);
+        string actor;
+        try
+        {
+            var matches = await _factory.Services.GetRequiredService<IRequiredActor<MatchSupervisorActor>>().GetAsync();
+            var state = await matches.Ask<MatchStateView>(new GetState("MER-7"), TimeSpan.FromSeconds(5));
+            actor = $"status {state.Status}, last seq {state.LastSeq}, dropped {state.DroppedEvents}";
+        }
+        catch (Exception ex) when (ex is TimeoutException or AskTimeoutException)
+        {
+            actor = $"no answer ({ex.GetType().Name})";
+        }
+
         throw new TimeoutException(
-            $"MER-7 did not complete: stored status {match?.Status}, last seq {match?.LastSeq}, replaying [{string.Join(", ", replaying)}].");
+            $"MER-7 did not complete: stored status {match?.Status}, last seq {match?.LastSeq}, {stored.Count} events stored, " +
+            $"replaying [{string.Join(", ", replaying)}], actor {actor}.");
     }
 
     public Task DisposeAsync() => Task.CompletedTask;

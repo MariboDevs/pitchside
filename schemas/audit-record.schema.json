@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pitchside.maribodevs.com/schemas/audit-record.schema.json",
+  "title": "Pitchside audit record",
+  "description": "One model call: stage, provider, model, prompt version and hash, tokens, latency and outcome. The prompt text is never stored (WP07-R6).",
+  "type": "object",
+  "required": ["id", "matchId", "momentId", "stage", "provider", "model", "promptVersion", "promptHash", "inputTokens", "outputTokens", "latencyMs", "outcome", "requestId", "utc"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "A ULID, sortable by time." },
+    "matchId": { "type": "string", "pattern": "^(MER-[0-9]+)?$", "description": "Empty for a call about no one match, such as an MCP list_matches." },
+    "momentId": { "type": "string", "pattern": "^(MER-[0-9]+:M:[0-9]{4,}:[a-z_]+)?$", "description": "Empty for a call about no one moment." },
+    "stage": { "type": "string", "pattern": "^[a-z]+([-:_][a-z]+)*$", "description": "The prompt that ran, such as explainer or persona-analyst, or mcp:{tool} for an MCP tool call (WP-08)." },
+    "provider": { "type": "string", "minLength": 1 },
+    "model": { "type": "string" },
+    "promptVersion": { "type": "string", "minLength": 1 },
+    "promptHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "inputTokens": { "type": "integer", "minimum": 0 },
+    "outputTokens": { "type": "integer", "minimum": 0 },
+    "latencyMs": { "type": "integer", "minimum": 0 },
+    "outcome": { "type": "string", "enum": ["ok", "error", "timeout"] },
+    "requestId": { "type": "string" },
+    "utc": { "type": "string", "format": "date-time" }
+  }
+}

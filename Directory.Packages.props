@@ -22,6 +22,7 @@
     <!-- Agent crew: Microsoft Agent Framework, OpenAI SDK against Azure OpenAI or Foundry, keyless auth -->
     <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.24.0" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.24.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Quality" Version="10.10.0" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <!-- Live runtime: actors, bus, storage -->
     <PackageVersion Include="Akka" Version="1.5.73" />

@@ -49,11 +49,24 @@ public static class NarrativeRenderer
     public static NumberFormatInfo NumberFormat(string language) =>
         language is Languages.Afrikaans or Languages.Spanish ? DecimalComma : DecimalPoint;
 
-    /// <summary>The share of sentences citing at least one fact.</summary>
-    public static double CitationCoverage(IReadOnlyList<NarrativeSentence> sentences)
+    /// <summary>
+    /// The share of written <c>[[key]]</c> tokens that resolve on the fact sheet (WP07-R1). A narrative with no token
+    /// has nothing unresolved, so it scores 1; a verified narrative always scores 1, since the checker rejects any
+    /// token that does not resolve.
+    /// </summary>
+    public static double CitationCoverage(IReadOnlyList<NarrativeSentence> sentences, FactSheet sheet)
     {
         ArgumentNullException.ThrowIfNull(sentences);
-        return sentences.Count == 0 ? 0 : (double)sentences.Count(s => s.Citations.Count > 0) / sentences.Count;
+        ArgumentNullException.ThrowIfNull(sheet);
+        var written = sentences.SelectMany(s => NarrativeTokens.Written(s.Text)).ToList();
+        return written.Count == 0 ? 1 : (double)written.Count(key => sheet.Find(key) is not null) / written.Count;
+    }
+
+    /// <summary>Tokens written per sentence (WP07-R1); 0 for a narrative with no sentences.</summary>
+    public static double FactDensity(IReadOnlyList<NarrativeSentence> sentences)
+    {
+        ArgumentNullException.ThrowIfNull(sentences);
+        return sentences.Count == 0 ? 0 : (double)sentences.Sum(s => NarrativeTokens.Written(s.Text).Count) / sentences.Count;
     }
 
     /// <summary>A sentence with its citations taken from its tokens, which are the authority.</summary>
