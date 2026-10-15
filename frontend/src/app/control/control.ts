@@ -12,12 +12,21 @@ import {
   viewChild,
 } from '@angular/core';
 import { toApiError } from '../core/api-error';
-import { EventType, FactSheet, MatchEvent, Moment, OverlayEntry } from '../core/contracts';
+import {
+  AuditRecord,
+  EventType,
+  FactSheet,
+  MatchEvent,
+  Moment,
+  Narrative,
+  OverlayEntry,
+} from '../core/contracts';
 import { findFact, formatClock, formatFact, splitTokens } from '../core/format';
 import { MatchApi } from '../core/match-api';
 import { MatchSession } from '../core/match-session';
 import { Monogram } from '../shared/monogram/monogram';
 import { Swimlane } from '../shared/swimlane/swimlane';
+import { UsagePanel } from './usage-panel/usage-panel';
 
 const FEED_TYPES: EventType[] = [
   'shot',
@@ -40,7 +49,7 @@ const FACT_GROUPS = ['match', 'home', 'away', 'player'] as const;
  */
 @Component({
   selector: 'app-control',
-  imports: [Monogram, Swimlane],
+  imports: [Monogram, Swimlane, UsagePanel],
   templateUrl: './control.html',
   styleUrl: './control.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,6 +78,11 @@ export class Control implements OnInit {
   /** Cited events that are no longer in the live feed, fetched when a moment is inspected. */
   protected readonly evidence = signal<ReadonlyMap<string, MatchEvent>>(new Map());
   private readonly loadingSheets = new Set<number>();
+  /** Every model call of the match read so far (WP-07), grouped by moment, and where the next read starts. */
+  private readonly audit = signal<ReadonlyMap<string, AuditRecord[]>>(new Map());
+  private auditCursor: string | null = null;
+  private auditLoading = false;
+  private readonly auditTried = new Set<string>();
   /** Moments whose cited events have been gathered into the evidence cache, or are being. */
   private readonly evidenceFor = new Set<string>();
   protected readonly error = signal<string | null>(null);
@@ -198,6 +212,21 @@ export class Control implements OnInit {
       }
     });
 
+    // The trace swimlane shows each stage's model calls once the moment's narrative exists; the audit is read on from
+    // where the last read stopped, once per moment, so a moment whose calls are not yet stored is not polled.
+    effect(() => {
+      const moment = this.current();
+      if (
+        moment &&
+        this.narrativeOf(moment) &&
+        !this.audit().has(moment.id) &&
+        !this.auditTried.has(moment.id)
+      ) {
+        this.auditTried.add(moment.id);
+        untracked(() => void this.loadAudit());
+      }
+    });
+
     // Its cited events need both the sheet and the narrative, which can arrive in either order on a live match.
     effect(() => {
       const moment = this.current();
@@ -212,6 +241,14 @@ export class Control implements OnInit {
 
   protected select(index: number): void {
     this.selected.set(index);
+  }
+
+  protected callsOf(moment: Moment): AuditRecord[] {
+    return this.audit().get(moment.id) ?? [];
+  }
+
+  protected groundedness(n: Narrative): string {
+    return n.evaluation.groundedness === null ? 'pending' : n.evaluation.groundedness.toFixed(2);
   }
 
   protected highlight(ids: string[]): void {
@@ -231,6 +268,35 @@ export class Control implements OnInit {
       this.error.set(toApiError(error));
     } finally {
       this.loadingSheets.delete(moment.factSheetSeq);
+    }
+  }
+
+  /** Reads the match's audit records from the cursor on, every page, and groups them by moment. */
+  private async loadAudit(): Promise<void> {
+    if (this.auditLoading) {
+      return;
+    }
+
+    this.auditLoading = true;
+    try {
+      const read: AuditRecord[] = [];
+      let page = await this.api.audit(this.matchId(), this.auditCursor);
+      read.push(...page.items);
+      while (page.next) {
+        page = await this.api.audit(this.matchId(), page.next);
+        read.push(...page.items);
+      }
+
+      this.auditCursor = read.at(-1)?.id ?? this.auditCursor;
+      this.audit.update((all) => {
+        const next = new Map(all);
+        read.forEach((r) => next.set(r.momentId, [...(next.get(r.momentId) ?? []), r]));
+        return next;
+      });
+    } catch (error) {
+      this.error.set(toApiError(error));
+    } finally {
+      this.auditLoading = false;
     }
   }
 

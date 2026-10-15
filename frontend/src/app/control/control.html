@@ -166,10 +166,10 @@
                     </div>
                     <div>
                       <dt>Groundedness</dt>
-                      <dd>{{ n.evaluation.groundedness ?? 'pending' }}</dd>
+                      <dd class="tabular">{{ groundedness(n) }}</dd>
                     </div>
                   </dl>
-                  <app-swimlane [narrative]="n" />
+                  <app-swimlane [narrative]="n" [calls]="callsOf(moment)" />
                   @if (variantsOf(moment); as variants) {
                     @if (variants.length > 0) {
                       <details class="variants" data-testid="variants">
@@ -218,6 +218,7 @@
 
     <section class="column" aria-labelledby="state-heading">
       <h2 id="state-heading" class="column-title">State</h2>
+      <app-usage-panel />
       @for (g of groupedFacts(); track g.group) {
         <details class="facts" [open]="g.group !== 'player'">
           <summary>
