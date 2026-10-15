@@ -30,19 +30,18 @@ public sealed class UsageGuardMiddleware(RequestDelegate next, UsageGuard guard,
                 return;
             }
 
-            // The use is reserved before the replay is admitted and given back unless one actually started, so a
-            // request refused as invalid, conflicting or over the concurrent cap does not spend the hourly quota.
-            var started = false;
+            // The use is reserved before the replay is admitted and given back, to the hour it was taken in, unless the
+            // endpoint marked a replay as started; so a request refused as invalid, conflicting or over the concurrent
+            // cap spends nothing, and one whose response fails after the replay started still counts.
             try
             {
                 await next(context).ConfigureAwait(false);
-                started = context.Response.StatusCode == StatusCodes.Status202Accepted;
             }
             finally
             {
-                if (!started)
+                if (!context.Items.ContainsKey(Endpoints.ReplayEndpoints.AdmittedItem))
                 {
-                    guard.Release(UsageLimits.Replays, key);
+                    guard.Release(UsageLimits.Replays, key, decision.Window);
                 }
             }
 
