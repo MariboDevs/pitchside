@@ -32,9 +32,12 @@ public sealed class MatchSnapshotsTests
         var overlay = new OverlayCoordinator(
             new OverlayBook(), store, factory.Services.GetRequiredService<IMatchBroadcaster>(), supervisor, factory.Services.GetRequiredService<IReplayService>());
         var snapshots = new MatchSnapshots(store, supervisor, overlay);
-        await store.UpdateMatchStatusAsync(match.Document.MatchId, MatchStatus.Live, 15, CancellationToken.None);
 
-        var snapshot = await snapshots.BuildAsync(match.Document.MatchId, new ViewerPreferences(Personas.Base, Languages.English), CancellationToken.None);
+        // The build reads the match at sequence 12, synchronously from the in-memory store, before it waits on the
+        // actor; the store moves on to 15 during the wait, so only a fallback that reads the match again reports 15.
+        var building = snapshots.BuildAsync(match.Document.MatchId, new ViewerPreferences(Personas.Base, Languages.English), CancellationToken.None);
+        await store.UpdateMatchStatusAsync(match.Document.MatchId, MatchStatus.Live, 15, CancellationToken.None);
+        var snapshot = await building;
 
         snapshot.ShouldNotBeNull();
         snapshot.Match.Status.ShouldBe(MatchStatus.Live);
