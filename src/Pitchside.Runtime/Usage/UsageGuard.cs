@@ -65,6 +65,21 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
         }
     }
 
+    /// <summary>
+    /// Gives back one use taken this hour, for a request that was counted but did not start what it counts (a replay
+    /// refused as invalid, conflicting or over the concurrent cap). A use from an hour already gone is not returned.
+    /// </summary>
+    public void Release(string limit, string key)
+    {
+        lock (_lock)
+        {
+            if (_windows.TryGetValue((limit, key), out var current) && current.Window == _currentWindow && current.Count > 0)
+            {
+                _windows[(limit, key)] = (current.Window, current.Count - 1);
+            }
+        }
+    }
+
     /// <summary>Whether a caller may open another hub connection.</summary>
     public bool CanConnect(string key)
     {
