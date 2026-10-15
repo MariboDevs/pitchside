@@ -24,7 +24,7 @@ The stdio host reads `PITCHSIDE_MCP_URL` (default `http://localhost:5180/mcp`) a
 | `get_fact_sheet` | `matchId`, `atSeq?` | the live fact sheet, or the sheet recomputed as of `atSeq` |
 | `get_fact` | `matchId`, `key` | one fact and the events it was derived from (at most 200) |
 | `list_moments` | `matchId`, `type?` | the detected moments, optionally of one type |
-| `get_narrative` | `matchId`, `momentId`, `persona?`, `language?` | the narrative and its trace from each sentence to facts and events |
+| `get_narrative` | `matchId`, `momentId`, `persona?`, `language?`, `subject?` | the narrative and its trace from each sentence to facts and events; `subject` (a club or player id) picks one of the club-fan or player-focus narratives, and is required when there are several |
 | `get_overlay_timeline` | `matchId`, `fromMs?` | the broadcast overlay entries |
 | `get_events` | `matchId`, `fromSeq`, `toSeq` | at most 200 events in sequence order |
 | `explain_moment` | `matchId`, `momentId` | a fresh base narrative from the agent crew, checked against the moment's facts; not stored |

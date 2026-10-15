@@ -78,7 +78,7 @@ public static partial class McpServerSetup
         var time = services.GetService<TimeProvider>() ?? TimeProvider.System;
         var now = time.GetUtcNow();
         var stage = $"mcp:{call.Name}";
-        await audit.SaveAsync(new AuditRecord
+        var record = new AuditRecord
         {
             Id = Ulid.New(now),
             MatchId = Argument(call, "matchId", MatchId()),
@@ -94,7 +94,20 @@ public static partial class McpServerSetup
             Outcome = result is { IsError: not true } ? AuditOutcome.Ok : AuditOutcome.Error,
             RequestId = services.GetService<IHttpContextAccessor>()?.HttpContext?.TraceIdentifier ?? string.Empty,
             Utc = now,
-        }, CancellationToken.None).ConfigureAwait(false);
+        };
+
+        try
+        {
+            await audit.SaveAsync(record, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // The tool's own result stands: a failed audit write is logged, never turned into a failed call.
+            if (services.GetService<ILoggerFactory>()?.CreateLogger(typeof(McpServerSetup)) is { } logger)
+            {
+                LogAuditFailed(logger, ex, record.Stage);
+            }
+        }
     }
 
     /// <summary>A string argument when it is well formed for the audit record; empty otherwise.</summary>
@@ -112,4 +125,7 @@ public static partial class McpServerSetup
 
     [GeneratedRegex(@"^[a-z]+(_[a-z]+)*\z", RegexOptions.CultureInvariant)]
     private static partial Regex ToolName();
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "The audit record for {Stage} could not be written; the tool's result stands")]
+    private static partial void LogAuditFailed(ILogger logger, Exception exception, string stage);
 }

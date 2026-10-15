@@ -98,18 +98,27 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
     }
 
     [McpServerTool(Name = "get_narrative", ReadOnly = true, Idempotent = true)]
-    [Description("Gets the narrative written about one moment for a persona and language, with its trace: every sentence, each cited fact's value and the events behind it. Persona is base, analyst, casual, club_fan or player_focus (default base); language is en, af, zu or es (default en). Returns the narrative and its trace.")]
+    [Description("Gets the narrative written about one moment for a persona and language, with its trace: every sentence, each cited fact's value and the events behind it. Persona is base, analyst, casual, club_fan or player_focus (default base); language is en, af, zu or es (default en). club_fan and player_focus have one narrative per club or player, chosen by subject (a club id such as AMZ, or a player id such as INY-07). Returns the narrative and its trace.")]
     public async Task<NarrativeWithTrace> GetNarrativeAsync(
         [Description("The match id, such as MER-7.")] string matchId,
         [Description("The moment id, such as MER-7:M:0324:goal.")] string momentId,
         [Description("Optional persona: base, analyst, casual, club_fan or player_focus.")] string? persona = null,
         [Description("Optional language: en, af, zu or es.")] string? language = null,
+        [Description("For club_fan or player_focus: the club id (such as AMZ) or player id (such as INY-07) the narrative is written for.")] string? subject = null,
         CancellationToken cancellationToken = default)
     {
         var match = await MatchAsync(matchId, cancellationToken).ConfigureAwait(false);
-        var narratives = await store.GetNarrativesAsync(matchId, cancellationToken).ConfigureAwait(false);
-        var narrative = narratives.FirstOrDefault(n => n.MomentId == momentId && n.Persona == (persona ?? Personas.Base) && n.Language == (language ?? Languages.English))
-            ?? throw new McpException($"No {persona ?? Personas.Base} narrative in '{language ?? Languages.English}' for '{momentId}'.");
+        var wanted = persona ?? Personas.Base;
+        var lang = language ?? Languages.English;
+        var narratives = (await store.GetNarrativesAsync(matchId, cancellationToken).ConfigureAwait(false))
+            .Where(n => n.MomentId == momentId && n.Persona == wanted && n.Language == lang && (subject is null || n.Subject == subject))
+            .ToList();
+        var narrative = narratives.Count switch
+        {
+            0 => throw new McpException($"No {wanted} narrative in '{lang}' for '{momentId}'{(subject is null ? string.Empty : $" about '{subject}'")}."),
+            1 => narratives[0],
+            _ => throw new McpException($"{momentId} has a {wanted} narrative for each of {string.Join(", ", narratives.Select(n => n.Subject))}; pass subject to choose one."),
+        };
         return new NarrativeWithTrace(narrative, await NarrativeTraces.BuildAsync(store, match, narrative, cancellationToken).ConfigureAwait(false));
     }
 
@@ -143,7 +152,7 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
     }
 
     [McpServerTool(Name = "explain_moment", ReadOnly = false, Idempotent = false, OpenWorld = true)]
-    [Description("Runs the agent crew's explainer and fact-checker on one moment now and returns a fresh base narrative in English, checked against the moment's fact sheet; numbers appear as [[fact.key]] tokens in sentences and rendered in renderedText. It is a model call: it counts against the server's hourly narrative limit and may need the X-Pitchside-Key header. The result is not stored.")]
+    [Description("Runs the agent crew's explainer and fact-checker on one moment now and returns a fresh base narrative in English, checked against the moment's fact sheet; numbers appear as [[fact.key]] tokens in sentences and rendered in renderedText. It is a model call: it counts against the server's hourly narrative limit, waits its turn under the server's cap on workflows running at once, and may need the X-Pitchside-Key header. The result is not stored.")]
     public async Task<Narrative> ExplainMomentAsync(
         [Description("The match id, such as MER-7.")] string matchId,
         [Description("The moment id, such as MER-7:M:0324:goal.")] string momentId,
@@ -170,8 +179,18 @@ public sealed class PitchsideTools(IMatchStore store, OverlayCoordinator overlay
             services.GetRequiredService<IOptions<AgentsOptions>>(),
             services.GetRequiredService<TimeProvider>(),
             NullLogger<MomentWorkflow>.Instance);
-        var context = await workflow.RunAsync(new MomentWorkItem(moment, sheet, match.Document), cancellationToken).ConfigureAwait(false);
-        return context.BaseNarrative!;
+        // The same per-host cap as the live runner: an explain_moment call waits for a slot like any moment.
+        var gate = services.GetRequiredService<WorkflowGate>();
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var context = await workflow.RunAsync(new MomentWorkItem(moment, sheet, match.Document), cancellationToken).ConfigureAwait(false);
+            return context.BaseNarrative!;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     private async Task<StoredMatch> MatchAsync(string matchId, CancellationToken cancellationToken) =>
