@@ -60,10 +60,13 @@ public sealed class FoundryChatProvider : IChatProvider
 
     /// <summary>
     /// A chat client on a Foundry deployment for other model work, such as the groundedness judge (WP-07); the
-    /// quality deployment when <paramref name="deployment"/> is empty.
+    /// quality deployment when <paramref name="deployment"/> is empty. Each call has the same deadline as the crew's.
     /// </summary>
-    public IChatClient ChatClientFor(string? deployment) =>
-        CreateClient(string.IsNullOrWhiteSpace(deployment) ? Deployment(DeploymentTier.Quality) : deployment).AsIChatClient();
+    public IChatClient ChatClientFor(string? deployment)
+    {
+        var name = string.IsNullOrWhiteSpace(deployment) ? Deployment(DeploymentTier.Quality) : deployment;
+        return new DeadlineChatClient(CreateClient(name).AsIChatClient(), TimeSpan.FromSeconds(_options.TimeoutSeconds), name);
+    }
 
     private string Deployment(DeploymentTier tier)
     {

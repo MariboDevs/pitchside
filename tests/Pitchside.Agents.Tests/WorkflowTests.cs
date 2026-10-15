@@ -203,6 +203,24 @@ public sealed class WorkflowTests
     }
 
     [Theory]
+    [InlineData(Personas.Casual, Languages.English)]
+    [InlineData(Personas.Analyst, Languages.Afrikaans)]
+    public async Task A_variant_whose_first_publish_fails_is_still_published_and_nothing_after_it_is_lost(string persona, string language)
+    {
+        var expected = await new MomentWorkflowRunner(new ChannelMomentSink(), Crew.FullWorkflow(), new InMemoryNarrativeLog(), Options.Create(new AgentsOptions()), NullLogger<MomentWorkflowRunner>.Instance)
+            .ProcessAsync(Goal.WorkItem, CancellationToken.None);
+        var publisher = new FailFirstMatchingPublisher(n => n.Persona == persona && n.Language == language);
+        var runner = new MomentWorkflowRunner(new ChannelMomentSink(), Crew.FullWorkflow(), publisher, Options.Create(new AgentsOptions()), NullLogger<MomentWorkflowRunner>.Instance);
+
+        var context = await runner.ProcessAsync(Goal.WorkItem, CancellationToken.None);
+
+        // Every narrative of a run with no failures is written and published, translations of the failed variant too.
+        context.Narratives.Select(n => n.Id).ShouldBe(expected.Narratives.Select(n => n.Id), ignoreOrder: true);
+        publisher.Narratives.Select(n => n.Id).ShouldBe(expected.Narratives.Select(n => n.Id), ignoreOrder: true);
+        context.Narratives.ShouldContain(n => n.Persona == persona && n.Language == Languages.Spanish);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(4)]
     public void An_answer_outside_one_to_three_sentences_is_invalid(int count)

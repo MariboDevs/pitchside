@@ -29,6 +29,23 @@ public sealed class UsageGuardMiddleware(RequestDelegate next, UsageGuard guard,
                 await RefuseAsync(context, decision.RetryAfter, "Replay rate limit reached", "This address has started its replays for this hour.").ConfigureAwait(false);
                 return;
             }
+
+            // The use is reserved before the replay is admitted and given back, to the hour it was taken in, unless the
+            // endpoint marked a replay as started; so a request refused as invalid, conflicting or over the concurrent
+            // cap spends nothing, and one whose response fails after the replay started still counts.
+            try
+            {
+                await next(context).ConfigureAwait(false);
+            }
+            finally
+            {
+                if (!context.Items.ContainsKey(Endpoints.ReplayEndpoints.AdmittedItem))
+                {
+                    guard.Release(UsageLimits.Replays, key, decision.Window);
+                }
+            }
+
+            return;
         }
         else if (IsNewHubConnection(request, path) && !guard.CanConnect(key))
         {

@@ -33,6 +33,46 @@ public sealed class CodeFactCheckerTests
         verdict.Passed.ShouldBe(expected.Length == 0);
     }
 
+    [Theory]
+    [InlineData("Nathan Kim scores in minute [[match.clock.minute]].", null)]
+    [InlineData("Kim scores in minute [[match.clock.minute]].", null)]
+    [InlineData("Nathan scores in minute [[match.clock.minute]].", null)]
+    [InlineData("Hugo watches in minute [[match.clock.minute]].", "Hugo Sato")]
+    [InlineData("Nathan Kim beats Hugo in minute [[match.clock.minute]].", "Hugo Sato")]
+    [InlineData("Sandberg presses in minute [[match.clock.minute]].", "Sandberg")]
+    public void Player_focus_resolves_given_names_and_shared_surnames_against_the_allowed_players(string text, string? forbidden)
+    {
+        var verdict = Crew.Checker.Check(
+            [NarrativeRenderer.Cite(text)], Goal.Sheet, Goal.Moment, Goal.Document, Languages.English, new HashSet<string>(["INY-07"], StringComparer.Ordinal));
+        var named = verdict.Objections.Where(o => o.Kind == ObjectionKinds.ForbiddenContent).ToList();
+        if (forbidden is null)
+        {
+            named.ShouldBeEmpty(text);
+        }
+        else
+        {
+            named.ShouldContain(o => o.Detail.Contains(forbidden, StringComparison.Ordinal), text);
+        }
+    }
+
+    [Theory]
+    [InlineData("Ante Hugo Sato, Nathan Kim marca en el minuto [[match.clock.minute]].", "Hugo Sato")]
+    [InlineData("Nathan Kim marca en el minuto [[match.clock.minute]].", null)]
+    public void Player_focus_finds_a_name_inside_a_translated_run_of_capitalised_words(string text, string? forbidden)
+    {
+        var verdict = Crew.Checker.Check(
+            [NarrativeRenderer.Cite(text)], Goal.Sheet, Goal.Moment, Goal.Document, Languages.Spanish, new HashSet<string>(["INY-07"], StringComparer.Ordinal));
+        var named = verdict.Objections.Where(o => o.Kind == ObjectionKinds.ForbiddenContent).ToList();
+        if (forbidden is null)
+        {
+            named.ShouldBeEmpty(text);
+        }
+        else
+        {
+            named.ShouldContain(o => o.Detail.Contains(forbidden, StringComparison.Ordinal), text);
+        }
+    }
+
     [Fact]
     public void The_corpus_has_at_least_thirty_sentences() => Corpus().Count.ShouldBeGreaterThanOrEqualTo(30);
 

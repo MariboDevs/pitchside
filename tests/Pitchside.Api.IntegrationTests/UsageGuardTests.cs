@@ -47,6 +47,20 @@ public sealed class UsageGuardTests
     }
 
     [Fact]
+    public async Task A_replay_that_does_not_start_does_not_spend_the_hourly_quota()
+    {
+        await using var factory = Guarded(("UsageGuard:ReplaysPerHourPerIp", "1"));
+        var client = factory.CreateClient();
+
+        (await client.PostAsJsonAsync("/api/v1/replays", new { seed = 0, speed = 0.001 })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await client.PostAsJsonAsync("/api/v1/replays", new { seed = 81, speed = 0.001 })).StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        (await client.PostAsJsonAsync("/api/v1/replays", new { seed = 82, speed = 0.001 })).StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+
+        var usage = await (await client.GetAsync("/api/v1/usage")).ReadAsync<UsageReport>();
+        usage.Limits.Single(l => l.Name == UsageLimits.Replays).Used.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Hub_connections_past_the_limit_are_refused()
     {
         await using var factory = Guarded(("UsageGuard:ConnectionsPerIp", "1"));
