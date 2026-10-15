@@ -33,7 +33,12 @@ jobs:
         run: dotnet build Pitchside.slnx --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test Pitchside.slnx --no-build --configuration Release --logger "trx;LogFileName=results.trx"
+        run: dotnet test Pitchside.slnx --no-build --configuration Release --filter "Category!=Timing" --logger "trx;LogFileName=results.trx"
+
+      # Wall-clock budgets run on their own, after the rest, so the load of other test assemblies running in parallel
+      # on a two-core runner never counts against them.
+      - name: Timing budgets
+        run: dotnet test Pitchside.slnx --no-build --configuration Release --filter "Category=Timing" --logger "trx;LogFileName=timing.trx"
 
       - name: Calibration report (fails when the engine drifts from the real-league targets)
         run: dotnet run --project src/Pitchside.Cli --no-build --configuration Release -- calibrate --matches 2000 --report artifacts/calibration-report.md
