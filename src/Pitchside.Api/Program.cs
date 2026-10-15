@@ -56,6 +56,7 @@ app.MapDefaultEndpoints();
 app.MapMatchEndpoints();
 app.MapOverlayEndpoints();
 app.MapAuditEndpoints();
+app.MapTraceEndpoints();
 if (string.Equals(pitchside.Mode, PitchsideOptions.ReplayMode, StringComparison.OrdinalIgnoreCase))
 {
     app.MapReplayEndpoints();

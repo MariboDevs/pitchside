@@ -99,13 +99,6 @@ public static class MatchEndpoints
             return TypedResults.Ok(await matches.Ask<FactSheet>(new GetFactSheet(matchId), Hubs.MatchSnapshots.AskTimeout, ct).ConfigureAwait(false));
         }
 
-        var engine = new MatchStatsEngine();
-        var state = engine.Start(match.Document);
-        foreach (var e in await store.GetEventsAsync(matchId, 1, atSeq.Value, ct).ConfigureAwait(false))
-        {
-            state = engine.Apply(state, e).State;
-        }
-
-        return TypedResults.Ok(engine.Snapshot(state));
+        return TypedResults.Ok(await RecomputedFacts.AtAsync(store, match, atSeq.Value, ct).ConfigureAwait(false));
     }
 }
