@@ -84,6 +84,18 @@ public sealed class TranslatorTests
     }
 
     [Fact]
+    public void A_full_name_appears_as_often_as_in_the_english_no_more_and_no_less()
+    {
+        IReadOnlyList<NarrativeSentence> source = [Rendering.NarrativeRenderer.Cite("Nathan Kim scores in minute [[match.clock.minute]].")];
+        string[] names = ["Nathan Kim", "Femi Zielinski"];
+
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Nathan Kim, Nathan Kim marca en el minuto [[match.clock.minute]].")], names)
+            .ShouldContain(m => m.Contains("'Nathan Kim'", StringComparison.Ordinal));
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Nathan Kim y Femi Zielinski marcan en el minuto [[match.clock.minute]].")], names)
+            .ShouldContain(m => m.Contains("'Femi Zielinski'", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task A_translation_keeps_its_personas_shape_or_falls_back()
     {
         var context = await BaseAsync();
