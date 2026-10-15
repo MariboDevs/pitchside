@@ -26,7 +26,8 @@ public static class EvaluationServiceCollectionExtensions
         if (string.Equals(provider, EvaluationOptions.FoundryProvider, StringComparison.OrdinalIgnoreCase))
         {
             services.TryAddSingleton<IEvaluationProvider>(sp => new FoundryEvaluationProvider(
-                sp.GetRequiredKeyedService<IChatClient>(JudgeKey), sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<TimeProvider>()));
+                sp.GetRequiredKeyedService<IChatClient>(JudgeKey), sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<TimeProvider>(),
+                sp.GetService<Microsoft.Extensions.Logging.ILogger<FoundryEvaluationProvider>>()));
         }
         else if (string.Equals(provider, EvaluationOptions.LocalProvider, StringComparison.OrdinalIgnoreCase))
         {

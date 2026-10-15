@@ -51,7 +51,23 @@ public sealed partial class GroundednessBatcher(
 
     private async Task ScoreAsync(string matchId, IReadOnlyList<Narrative> narratives, CancellationToken cancellationToken)
     {
-        var moments = (await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false)).ToDictionary(m => m.Id, StringComparer.Ordinal);
+        Dictionary<string, Moment> moments;
+        try
+        {
+            moments = (await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false)).ToDictionary(m => m.Id, StringComparer.Ordinal);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // No judgement has started, so the whole batch waits for the next tick rather than stopping the host.
+            LogMomentsFailed(ex, matchId, narratives.Count);
+            foreach (var narrative in narratives)
+            {
+                _queue.Writer.TryWrite(narrative);
+            }
+
+            return;
+        }
+
         var sheets = new Dictionary<int, FactSheet?>();
         foreach (var narrative in narratives)
         {
@@ -83,6 +99,9 @@ public sealed partial class GroundednessBatcher(
             }
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Match {MatchId}: the moments could not be read, so {Count} narratives wait for the next batch")]
+    private partial void LogMomentsFailed(Exception exception, string matchId, int count);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Narrative {NarrativeId} could not be scored for groundedness")]
     private partial void LogScoreFailed(Exception exception, string narrativeId);

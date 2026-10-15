@@ -24,6 +24,27 @@ public sealed class FoundryEvaluationProviderTests
         prompt.ShouldNotContain("away.shots");
         var record = (await audit.ListAsync("MER-7", null, 10, CancellationToken.None)).ShouldHaveSingleItem();
         (record.Stage, record.Provider, record.Outcome, record.MomentId).ShouldBe(("groundedness", "foundry", AuditOutcome.Ok, Items.Moment.Id));
+
+        // The hash is of the system prompt the evaluator actually sent, and its text is never stored.
+        var system = string.Join('\n', judge.Seen.Where(m => m.Role == ChatRole.System).Select(m => m.Text));
+        system.ShouldNotBeEmpty();
+        record.PromptHash.ShouldBe(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(system))));
+    }
+
+    [Fact]
+    public async Task An_audit_store_that_fails_never_loses_the_score()
+    {
+        var provider = new FoundryEvaluationProvider(new JudgeChatClient("<S0>checked</S0><S1>supported</S1><S2>5</S2>"), new FailingAuditStore(), TimeProvider.System);
+
+        (await provider.ScoreAsync(new EvaluationItem(Items.With(), Items.Moment, Items.Sheet), CancellationToken.None)).ShouldBe(1.0);
+    }
+
+    [Fact]
+    public async Task An_audit_store_that_fails_never_hides_the_judges_failure()
+    {
+        var provider = new FoundryEvaluationProvider(new JudgeChatClient(null), new FailingAuditStore(), TimeProvider.System);
+
+        await Should.ThrowAsync<InvalidOperationException>(() => provider.ScoreAsync(new EvaluationItem(Items.With(), Items.Moment, Items.Sheet), CancellationToken.None));
     }
 
     [Fact]

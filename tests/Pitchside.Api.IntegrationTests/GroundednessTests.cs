@@ -27,8 +27,9 @@ public sealed class GroundednessTests
             await Task.Delay(250);
         }
 
-        scored.ShouldNotBeEmpty();
-        scored.Count.ShouldBe(scored.Count(n => n.Status == NarrativeStatus.Verified));
+        // The scripted crew verifies every seed-7 base narrative, so every one of the 34 must end up scored.
+        scored.Count.ShouldBe(34);
+        scored.ShouldAllBe(n => n.Status == NarrativeStatus.Verified);
         scored.ShouldAllBe(n => n.Evaluation.Groundedness >= 0 && n.Evaluation.Groundedness <= 1 && n.Evaluation.CitationCoverage == 1);
     }
 }

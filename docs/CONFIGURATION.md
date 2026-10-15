@@ -34,6 +34,7 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `UsageGuard:NarrativesPerHour` | `400` | moment workflows (a base narrative and its variants) one host runs per clock hour; later moments are skipped | WP-07 |
 | `UsageGuard:SpokenLinesPerHour` | `60` | spoken commentary lines per host per clock hour, enforced by the speech service | WP-07, WP-10 |
 | `UsageGuard:ConnectionsPerIp` | `20` | hub connections one address may hold open; the next gets 429 | WP-07 |
+| `UsageGuard:TrustForwardedFor` | | unset means on in Container Apps (where `CONTAINER_APP_NAME` is set) and off elsewhere; when on, the caller's address is the last `X-Forwarded-For` entry, which the ingress appends | WP-07 |
 | `Pricing:InputPerMillion` | `0` | price of a million input tokens, for the evaluation report's cost estimate | WP-07 |
 | `Pricing:OutputPerMillion` | `0` | price of a million output tokens, for the evaluation report's cost estimate | WP-07 |
 | `Speech:Provider` | `None` | `None`, `Azure` | WP-10 |

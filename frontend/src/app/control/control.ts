@@ -11,6 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { rewindCursor } from '../core/audit-cursor';
 import { toApiError } from '../core/api-error';
 import {
   AuditRecord,
@@ -83,7 +84,10 @@ export class Control implements OnInit {
   private readonly audit = signal<ReadonlyMap<string, AuditRecord[]>>(new Map());
   private auditCursor: string | null = null;
   private auditLoading = false;
-  private readonly auditTried = new Set<string>();
+  private auditAgain = false;
+  private readonly auditIds = new Set<string>();
+  /** How many of each moment's narratives had arrived when its calls were last read. */
+  private readonly auditReadAt = new Map<string, number>();
   /** Moments whose cited events have been gathered into the evidence cache, or are being. */
   private readonly evidenceFor = new Set<string>();
   protected readonly error = signal<string | null>(null);
@@ -218,17 +222,13 @@ export class Control implements OnInit {
       }
     });
 
-    // The trace swimlane shows each stage's model calls once the moment's narrative exists; the audit is read on from
-    // where the last read stopped, once per moment, so a moment whose calls are not yet stored is not polled.
+    // The trace swimlane shows each stage's model calls once the moment's narrative exists. The base narrative is
+    // published before its variants are written, so the audit is read again as each variant arrives, until the last.
     effect(() => {
       const moment = this.current();
-      if (
-        moment &&
-        this.narrativeOf(moment) &&
-        !this.audit().has(moment.id) &&
-        !this.auditTried.has(moment.id)
-      ) {
-        this.auditTried.add(moment.id);
+      const arrived = moment && this.narrativeOf(moment) ? 1 + this.variantsOf(moment).length : 0;
+      if (moment && arrived > 0 && this.auditReadAt.get(moment.id) !== arrived) {
+        this.auditReadAt.set(moment.id, arrived);
         untracked(() => void this.loadAudit());
       }
     });
@@ -277,32 +277,50 @@ export class Control implements OnInit {
     }
   }
 
-  /** Reads the match's audit records from the cursor on, every page, and groups them by moment. */
+  /**
+   * Reads the match's audit records from a little before the cursor, every page, and groups the new ones by moment.
+   * Calls run in parallel, so a record can be stored after a later one; the overlap catches it and ids drop repeats.
+   * A read asked for while one runs follows it, and a failed read is tried again when the next narrative arrives.
+   */
   private async loadAudit(): Promise<void> {
     if (this.auditLoading) {
+      this.auditAgain = true;
       return;
     }
 
     this.auditLoading = true;
     try {
       const read: AuditRecord[] = [];
-      let page = await this.api.audit(this.matchId(), this.auditCursor);
+      let page = await this.api.audit(
+        this.matchId(),
+        this.auditCursor ? rewindCursor(this.auditCursor) : null,
+      );
       read.push(...page.items);
       while (page.next) {
         page = await this.api.audit(this.matchId(), page.next);
         read.push(...page.items);
       }
 
-      this.auditCursor = read.at(-1)?.id ?? this.auditCursor;
+      const fresh = read.filter((r) => !this.auditIds.has(r.id));
+      fresh.forEach((r) => this.auditIds.add(r.id));
+      this.auditCursor = read.reduce<string | null>(
+        (last, r) => (last === null || r.id > last ? r.id : last),
+        this.auditCursor,
+      );
       this.audit.update((all) => {
         const next = new Map(all);
-        read.forEach((r) => next.set(r.momentId, [...(next.get(r.momentId) ?? []), r]));
+        fresh.forEach((r) => next.set(r.momentId, [...(next.get(r.momentId) ?? []), r]));
         return next;
       });
     } catch (error) {
+      this.auditReadAt.clear();
       this.error.set(toApiError(error));
     } finally {
       this.auditLoading = false;
+      if (this.auditAgain) {
+        this.auditAgain = false;
+        void this.loadAudit();
+      }
     }
   }
 

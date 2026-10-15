@@ -55,6 +55,59 @@ public sealed class UsageGuardTests
         await third.StartAsync();
     }
 
+    [Theory]
+    [InlineData(null, HttpStatusCode.TooManyRequests)]
+    [InlineData("true", HttpStatusCode.Accepted)]
+    public async Task A_forwarded_address_counts_only_where_the_ingress_is_trusted(string? trust, HttpStatusCode second)
+    {
+        await using var factory = trust is null
+            ? Guarded(("UsageGuard:ReplaysPerHourPerIp", "1"))
+            : Guarded(("UsageGuard:ReplaysPerHourPerIp", "1"), ("UsageGuard:TrustForwardedFor", trust));
+        var client = factory.CreateClient();
+
+        async Task<HttpStatusCode> ReplayFromAsync(string address, int seed)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/replays") { Content = JsonContent.Create(new { seed, speed = 0.001 }) };
+            request.Headers.Add("X-Forwarded-For", address);
+            return (await client.SendAsync(request)).StatusCode;
+        }
+
+        (await ReplayFromAsync("203.0.113.1", 61)).ShouldBe(HttpStatusCode.Accepted);
+        (await ReplayFromAsync("203.0.113.2", 62)).ShouldBe(second);
+    }
+
+    [Fact]
+    public async Task Connections_negotiated_before_any_opens_still_hold_one_slot_each()
+    {
+        await using var factory = Guarded(("UsageGuard:ConnectionsPerIp", "1"));
+        var client = factory.CreateClient();
+
+        async Task<string> NegotiateAsync()
+        {
+            var negotiated = await client.PostAsync(new Uri("/hubs/match/negotiate?negotiateVersion=1", UriKind.Relative), null);
+            negotiated.StatusCode.ShouldBe(HttpStatusCode.OK);
+            using var body = System.Text.Json.JsonDocument.Parse(await negotiated.Content.ReadAsStringAsync());
+            return body.RootElement.GetProperty("connectionToken").GetString()!;
+        }
+
+        // Both are negotiated while no connection is open, so the middleware lets both through.
+        var tokens = new[] { await NegotiateAsync(), await NegotiateAsync() };
+        foreach (var token in tokens)
+        {
+            // Long polling: the first poll opens the transport, then the handshake starts the hub connection, whose
+            // reply arrives on the next poll (a refused connection's poll ends with 204 instead).
+            var hub = new Uri($"/hubs/match?id={token}", UriKind.Relative);
+            (await client.GetAsync(hub)).StatusCode.ShouldBe(HttpStatusCode.OK);
+            var handshake = new StringContent("{\"protocol\":\"json\",\"version\":1}\u001e");
+            (await client.PostAsync(hub, handshake)).StatusCode.ShouldBe(HttpStatusCode.OK);
+            using var poll = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await client.GetAsync(hub, poll.Token);
+        }
+
+        var usage = await (await client.GetAsync("/api/v1/usage")).ReadAsync<UsageReport>();
+        usage.Limits.Single(l => l.Name == UsageLimits.Connections).Used.ShouldBe(1);
+    }
+
     [Fact]
     public async Task Moments_past_the_hourly_narrative_limit_are_skipped()
     {

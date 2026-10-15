@@ -52,6 +52,10 @@ if (pitchside.RunAgentsInApi)
 
 // Behind the Container Apps ingress the caller's address arrives in X-Forwarded-For. The ingress appends the address
 // it saw, so only the last entry is trusted (ForwardLimit 1); the usage guard counts per-caller limits against it.
+// The header is honoured only where that ingress is the one way in: Container Apps sets CONTAINER_APP_NAME, and
+// UsageGuard:TrustForwardedFor overrides. Anywhere else a caller could write the header and pick its own address.
+var trustForwardedFor = builder.Configuration.GetValue<bool?>("UsageGuard:TrustForwardedFor")
+    ?? !string.IsNullOrEmpty(builder.Configuration["CONTAINER_APP_NAME"]);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
@@ -61,7 +65,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 var app = builder.Build();
-app.UseForwardedHeaders();
+if (trustForwardedFor)
+{
+    app.UseForwardedHeaders();
+}
+
 app.UseMiddleware<RequestIdMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
