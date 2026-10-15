@@ -17,7 +17,15 @@ public sealed class ViewerRegistry
 
     public void Set(string connectionId, string matchId, ViewerPreferences preferences) => _viewers[(connectionId, matchId)] = preferences;
 
-    public void Join(string connectionId, string matchId) => _joined[(connectionId, matchId)] = true;
+    /// <summary>Marks the connection as watching the match; false when it already was.</summary>
+    public bool Join(string connectionId, string matchId) => _joined.TryAdd((connectionId, matchId), true);
+
+    /// <summary>Undoes a join that did not complete, keeping the viewer's preferences.</summary>
+    public void Unjoin(string connectionId, string matchId) => _joined.TryRemove((connectionId, matchId), out _);
+
+    /// <summary>Every connection that has joined the match, with its viewer preferences for it.</summary>
+    public IReadOnlyList<(string ConnectionId, ViewerPreferences Viewer)> Watching(string matchId) =>
+        [.. _joined.Keys.Where(k => k.MatchId == matchId).Select(k => (k.ConnectionId, Get(k.ConnectionId, matchId)))];
 
     /// <summary>Forgets the join and the preferences; false when the connection had not joined the match.</summary>
     public bool Leave(string connectionId, string matchId)

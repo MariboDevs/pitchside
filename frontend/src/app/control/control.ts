@@ -12,9 +12,17 @@ import {
   viewChild,
 } from '@angular/core';
 import { toApiError } from '../core/api-error';
-import { EventType, FactSheet, MatchEvent, Moment, OverlayEntry } from '../core/contracts';
+import {
+  EventType,
+  FactSheet,
+  MatchEvent,
+  Moment,
+  Narrative,
+  OverlayEntry,
+} from '../core/contracts';
 import { findFact, formatClock, formatFact, splitTokens } from '../core/format';
 import { MatchApi } from '../core/match-api';
+import { textLanguage } from '../core/variant';
 import { MatchSession } from '../core/match-session';
 import { Monogram } from '../shared/monogram/monogram';
 import { Swimlane } from '../shared/swimlane/swimlane';
@@ -110,7 +118,8 @@ export class Control implements OnInit {
   });
 
   ngOnInit(): void {
-    void this.session.connect(this.matchId());
+    // The control room is the one viewer that receives every persona variant in every language (WP06-R2).
+    void this.session.connect(this.matchId(), { persona: 'all', language: 'en' });
   }
 
   protected clockOf(period: number, clockMs: number): string {
@@ -150,6 +159,19 @@ export class Control implements OnInit {
 
   protected entryFor(moment: Moment): OverlayEntry | undefined {
     return this.session.overlay().get(`${moment.id}:lower_third`);
+  }
+
+  protected variantsOf(moment: Moment) {
+    return this.session.variantsOf(moment.id).filter((n) => n.id !== `${moment.id}:base:en`);
+  }
+
+  /** The language the variant's text is in: English when its translation fell back. */
+  protected langOf(n: Narrative): string {
+    return textLanguage(n);
+  }
+
+  protected variantLabel(n: { persona: string; subject: string | null; language: string }): string {
+    return `${n.persona.replace('_', ' ')}${n.subject ? ` (${n.subject})` : ''} · ${n.language}`;
   }
 
   protected narrativeOf(moment: Moment) {

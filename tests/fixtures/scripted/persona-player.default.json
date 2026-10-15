@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "{{subjectName}} is right in the middle of it in minute [[match.clock.minute]]." },
+  { "text": "{{subjectName}} has covered [[player.{{subject}}.distanceKm]] km so far." }
+] }

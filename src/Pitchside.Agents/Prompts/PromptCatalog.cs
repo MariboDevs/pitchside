@@ -68,6 +68,6 @@ public sealed partial class PromptCatalog
         return reader.ReadToEnd();
     }
 
-    [GeneratedRegex(@"^(?<name>[a-z]+)-v(?<version>[0-9]+)\.md$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(?<name>[a-z]+(?:-[a-z]+)*)-v(?<version>[0-9]+)\.md$", RegexOptions.CultureInvariant)]
     private static partial Regex VersionedFile();
 }

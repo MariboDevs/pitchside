@@ -15,4 +15,10 @@ public sealed class AgentsOptions
 
     /// <summary>Whether the second, model-based fact-check pass runs.</summary>
     public bool AgentFactCheck { get; set; } = true;
+
+    /// <summary>The viewer personas written for every moment (WP-06). An empty list writes the base narrative only.</summary>
+    public string[] Personas { get; set; } = [.. Contracts.Personas.Viewer];
+
+    /// <summary>The languages every narrative is written in; English is always written, others are translated.</summary>
+    public string[] Languages { get; set; } = [.. Contracts.Languages.All];
 }

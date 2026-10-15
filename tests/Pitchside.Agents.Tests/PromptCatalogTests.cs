@@ -19,7 +19,7 @@ public sealed class PromptCatalogTests
         System.Text.RegularExpressions.Regex.Count(Crew.Catalog.Get("explainer").Text, @"\[\[[a-zA-Z0-9.\-]+\]\]").ShouldBeGreaterThanOrEqualTo(3);
 
     [Fact]
-    public void An_unknown_prompt_throws() => Should.Throw<KeyNotFoundException>(() => Crew.Catalog.Get("translator"));
+    public void An_unknown_prompt_throws() => Should.Throw<KeyNotFoundException>(() => Crew.Catalog.Get("commentator"));
 
     [Fact]
     public void The_forbidden_list_is_hashes_only()

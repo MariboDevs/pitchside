@@ -151,12 +151,56 @@ export class MatchSession implements OnDestroy {
     await this.start();
   }
 
-  /** Sends the viewer's persona and language; the next cards arrive in the new mode. */
+  /**
+   * Sends the viewer's persona and language; the next cards arrive in the new mode, and cards already shown
+   * re-render from the stored variants for the new mode.
+   */
   async setViewer(viewer: ViewerPreferences): Promise<void> {
     this.viewer = viewer;
     if (this.hub?.state === HubConnectionState.Connected) {
       await this.hub.invoke('SetViewer', this.matchId, viewer);
     }
+
+    await this.loadVariants(viewer);
+  }
+
+  /** Fetches the stored narratives a viewer reads: its persona, the base, and for player focus the casual card. */
+  private async loadVariants(viewer: ViewerPreferences): Promise<void> {
+    if (!this.matchId || viewer.persona === 'all') {
+      return;
+    }
+
+    const personas =
+      viewer.persona === 'player_focus'
+        ? ['player_focus', 'casual', 'base']
+        : [viewer.persona, 'base'];
+    try {
+      const lists = await Promise.all(
+        personas.map((persona) =>
+          firstValueFrom(
+            this.http.get<Narrative[]>(`${apiBase()}/api/v1/matches/${this.matchId}/narratives`, {
+              params: { persona, language: viewer.language },
+            }),
+          ),
+        ),
+      );
+      this.narratives.update((all) => {
+        const next = new Map(all);
+        lists.flat().forEach((n) => next.set(n.id, n));
+        return next;
+      });
+    } catch (error) {
+      this.error.set(
+        error instanceof Error ? error.message : 'Could not load the cards for this view.',
+      );
+    }
+  }
+
+  /** Every narrative written for a moment, in id order: the control room's view of all variants. */
+  variantsOf(momentId: string): Narrative[] {
+    return [...this.narratives().values()]
+      .filter((n) => n.momentId === momentId)
+      .sort((a, b) => a.id.localeCompare(b.id));
   }
 
   /** The narrative for a moment in a persona and language, falling back to the base English narrative. */

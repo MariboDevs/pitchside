@@ -1,0 +1,4 @@
+{ "sentences": [
+  { "text": "In minute [[match.clock.minute]], expected goals read [[home.xg]] for {{homeName}} against [[away.xg]] for {{awayName}}." },
+  { "text": "Shots stand at [[home.shots]] to [[away.shots]], with possession split [[home.possessionShare]] to [[away.possessionShare]]." }
+] }

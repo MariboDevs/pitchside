@@ -9,6 +9,10 @@ public static partial class NarrativeTokens
     public static IReadOnlyList<string> Keys(string text) =>
         [.. Token().Matches(text).Select(m => m.Groups[1].Value.Trim()).Distinct(StringComparer.Ordinal)];
 
+    /// <summary>Every key written in a sentence, once per token, repeats included.</summary>
+    public static IReadOnlyList<string> Written(string text) =>
+        [.. Token().Matches(text).Select(m => m.Groups[1].Value.Trim())];
+
     /// <summary>The text with every token removed, for checks that must ignore cited numbers.</summary>
     public static string Strip(string text) => Token().Replace(text, " ");
 

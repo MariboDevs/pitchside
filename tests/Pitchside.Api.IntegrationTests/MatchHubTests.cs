@@ -143,6 +143,65 @@ public sealed class MatchHubTests : IClassFixture<PitchsideApiFactory>
     }
 
     [Fact]
+    public async Task Each_connection_receives_only_the_narratives_its_viewer_preferences_match()
+    {
+        (await _factory.CreateClient().PostAsJsonAsync("/api/v1/replays", new { seed = 13, speed = 0 })).EnsureSuccessStatusCode();
+        var viewer = new ViewerPreferences(Personas.Analyst, Languages.Afrikaans);
+        var control = new ViewerPreferences(Personas.All, Languages.English);
+        var toViewer = new ConcurrentQueue<Narrative>();
+        var toControl = new ConcurrentQueue<Narrative>();
+        await using var viewerConnection = Connect(toViewer);
+        await using var controlConnection = Connect(toControl);
+        await viewerConnection.StartAsync();
+        await controlConnection.StartAsync();
+        await viewerConnection.InvokeAsync("SetViewer", "MER-13", viewer);
+        await controlConnection.InvokeAsync("SetViewer", "MER-13", control);
+        // A join is complete after its snapshot (the hub's contract): narratives published before it are in the
+        // snapshot, the rest arrive live. At speed 0 most can be published before the join, so both are counted.
+        foreach (var narrative in (await viewerConnection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-13")).Narratives)
+        {
+            toViewer.Enqueue(narrative);
+        }
+
+        foreach (var narrative in (await controlConnection.InvokeAsync<MatchSnapshot>("JoinMatch", "MER-13")).Narratives)
+        {
+            toControl.Enqueue(narrative);
+        }
+
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (DateTime.UtcNow < deadline && !(toViewer.Any(n => n.Persona == Personas.Analyst) && toControl.Any(n => n.Persona == Personas.ClubFan && n.Language == Languages.Spanish)))
+        {
+            await Task.Delay(100);
+        }
+
+        toViewer.ShouldContain(n => n.Persona == Personas.Analyst && n.Language == Languages.Afrikaans);
+        toViewer.ShouldAllBe(n => (n.Persona == Personas.Analyst && n.Language == Languages.Afrikaans)
+            || (n.Persona == Personas.Base && (n.Language == Languages.Afrikaans || n.Language == Languages.English)));
+        toControl.Select(n => n.Persona).Distinct().Count().ShouldBeGreaterThan(3);
+        toControl.Select(n => n.Language).Distinct().Count().ShouldBe(4);
+    }
+
+    private HubConnection Connect(ConcurrentQueue<Narrative> received)
+    {
+        var connection = new HubConnectionBuilder()
+            .WithUrl(new Uri(_factory.Server.BaseAddress, "hubs/match"), options =>
+            {
+                options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+                options.Transports = HttpTransportType.LongPolling;
+            })
+            .AddJsonProtocol(options =>
+            {
+                foreach (var converter in ContractJson.Options.Converters)
+                {
+                    options.PayloadSerializerOptions.Converters.Add(converter);
+                }
+            })
+            .Build();
+        connection.On<Narrative>("Narrative", received.Enqueue);
+        return connection;
+    }
+
+    [Fact]
     public async Task Viewer_preferences_are_kept_per_connection()
     {
         var viewers = _factory.Services.GetRequiredService<Hubs.ViewerRegistry>();

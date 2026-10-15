@@ -31,7 +31,17 @@ public sealed partial class CodeFactChecker
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(word.ToLowerInvariant())));
     }
 
-    public Verdict Check(IReadOnlyList<NarrativeSentence> sentences, FactSheet sheet, Moment moment, MatchDocument document, string language = Languages.English)
+    /// <param name="namedPlayerIds">
+    /// When set, the only players the text may name; naming any other player of either squad is forbidden content.
+    /// The player-focus persona uses it to stay on the followed player and those directly involved.
+    /// </param>
+    public Verdict Check(
+        IReadOnlyList<NarrativeSentence> sentences,
+        FactSheet sheet,
+        Moment moment,
+        MatchDocument document,
+        string language = Languages.English,
+        IReadOnlySet<string>? namedPlayerIds = null)
     {
         ArgumentNullException.ThrowIfNull(sentences);
         ArgumentNullException.ThrowIfNull(sheet);
@@ -86,6 +96,14 @@ public sealed partial class CodeFactChecker
                 }
             }
 
+            if (namedPlayerIds is not null)
+            {
+                foreach (var player in roster.Where(p => !namedPlayerIds.Contains(p.Id) && Names(stripped, p, roster)))
+                {
+                    objections.Add(new Objection(index, ObjectionKinds.ForbiddenContent, $"'{player.Name}' is not a player this text may name."));
+                }
+            }
+
             foreach (Match word in Word().Matches(stripped))
             {
                 if (_forbidden.Contains(Hash(word.Value)))
@@ -119,6 +137,36 @@ public sealed partial class CodeFactChecker
 
         var playerId = string.Join('.', parts[1..^1]);
         return players.Contains(playerId) ? null : $"[[{key}]] is about {playerId}, who is not part of this moment.";
+    }
+
+    /// <summary>
+    /// Whether the text names the player: the full name, or the surname when no one else in either squad shares it.
+    /// </summary>
+    private static bool Names(string text, Player player, IReadOnlyList<Player> roster)
+    {
+        var words = Word().Matches(text).Select(w => w.Value).ToList();
+        var name = Word().Matches(player.Name).Select(w => w.Value).ToList();
+        if (Contains(words, name))
+        {
+            return true;
+        }
+
+        var surname = name[^1];
+        var unique = roster.Count(p => Word().Matches(p.Name).Select(w => w.Value).LastOrDefault() == surname) == 1;
+        return unique && words.Contains(surname, StringComparer.Ordinal);
+    }
+
+    private static bool Contains(List<string> words, List<string> phrase)
+    {
+        for (var start = 0; start + phrase.Count <= words.Count; start++)
+        {
+            if (phrase.Select((w, i) => string.Equals(w, words[start + i], StringComparison.Ordinal)).All(match => match))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
