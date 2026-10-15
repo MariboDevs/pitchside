@@ -82,4 +82,35 @@ public sealed class AuditingChatProviderTests
         earlier.Length.ShouldBe(26);
         earlier.ShouldAllBe(c => "0123456789ABCDEFGHJKMNPQRSTVWXYZ".Contains(c));
     }
+
+    [Fact]
+    public void Ulids_created_in_one_millisecond_sort_in_creation_order()
+    {
+        var instant = new DateTimeOffset(2026, 10, 25, 12, 0, 0, TimeSpan.Zero);
+        var ids = Enumerable.Range(0, 1_000).Select(_ => Ulid.New(instant)).ToList();
+
+        ids.ShouldBe(ids.Order(StringComparer.Ordinal));
+        ids.Distinct().Count().ShouldBe(ids.Count);
+        string.CompareOrdinal(Ulid.New(instant.AddSeconds(-1)), ids[^1]).ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void Ulids_created_at_once_on_many_threads_are_all_distinct()
+    {
+        var instant = new DateTimeOffset(2026, 10, 25, 12, 0, 0, TimeSpan.Zero);
+        var ids = new System.Collections.Concurrent.ConcurrentBag<string>();
+        Parallel.For(0, 2_000, _ => ids.Add(Ulid.New(instant)));
+        ids.Distinct().Count().ShouldBe(2_000);
+    }
+
+    [Fact]
+    public async Task A_cancelled_call_is_audited_as_an_error_and_still_cancels()
+    {
+        var store = new InMemoryAuditStore();
+        var cancelled = new AuditingChatProvider(new FakeChatProvider((_, _) => throw new OperationCanceledException()), store, TimeProvider.System);
+
+        await Should.ThrowAsync<OperationCanceledException>(() => cancelled.CompleteAsync(Request(), CancellationToken.None));
+
+        (await store.ListAsync("MER-7", null, 10, CancellationToken.None)).ShouldHaveSingleItem().Outcome.ShouldBe(AuditOutcome.Error);
+    }
 }

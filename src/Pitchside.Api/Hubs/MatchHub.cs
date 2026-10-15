@@ -19,6 +19,8 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
 {
     public const string Path = "/hubs/match";
 
+    private const string SlotReserved = "usage-slot";
+
     public static string Group(string matchId) => $"match:{matchId}";
 
     public async Task<MatchSnapshot> JoinMatch(string matchId)
@@ -71,16 +73,29 @@ public sealed class MatchHub(MatchSnapshots snapshots, ViewerRegistry viewers, I
         return Task.CompletedTask;
     }
 
-    /// <summary>Counts the caller's open connections for the usage guard; <see cref="UsageGuardMiddleware"/> refuses past the limit.</summary>
+    /// <summary>
+    /// Reserves one of the caller's connection slots, for every transport, and closes the connection when none is free.
+    /// <see cref="UsageGuardMiddleware"/> refuses at negotiation as well, so a browser sees a 429 rather than a drop.
+    /// </summary>
     public override Task OnConnectedAsync()
     {
-        guard.Connected(ClientKey.Of(Context.GetHttpContext()));
+        if (!guard.TryConnect(ClientKey.Of(Context.GetHttpContext())))
+        {
+            Context.Abort();
+            return Task.CompletedTask;
+        }
+
+        Context.Items[SlotReserved] = true;
         return base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        guard.Disconnected(ClientKey.Of(Context.GetHttpContext()));
+        if (Context.Items.ContainsKey(SlotReserved))
+        {
+            guard.Disconnected(ClientKey.Of(Context.GetHttpContext()));
+        }
+
         var joined = viewers.RemoveConnection(Context.ConnectionId);
         if (joined.Count > 0)
         {
