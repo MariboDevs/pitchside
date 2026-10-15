@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Pitchside.Evaluation</RootNamespace>
+    <Description>Scores verified narratives for groundedness (WP-07): a deterministic local proxy, or a judge model on Foundry.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pitchside.Contracts/Pitchside.Contracts.csproj" />
+    <ProjectReference Include="../Pitchside.Runtime/Pitchside.Runtime.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Quality" />
+  </ItemGroup>
+</Project>
