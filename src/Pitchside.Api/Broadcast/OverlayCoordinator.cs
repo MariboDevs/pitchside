@@ -166,10 +166,24 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         }
     }
 
+    /// <summary>
+    /// The match's status and clock from its actor. An actor deep in an instant replay's queue may not answer in time;
+    /// the stored status and the latest stored fact sheet's period and clock, a little behind, stand in rather than
+    /// failing the card, the hold, the air or the timeline read.
+    /// </summary>
     private async Task<MatchStateView> StateAsync(string matchId, CancellationToken cancellationToken)
     {
-        var matches = await supervisor.GetAsync(cancellationToken).ConfigureAwait(false);
-        return await matches.Ask<MatchStateView>(new GetState(matchId), Hubs.MatchSnapshots.AskTimeout, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var matches = await supervisor.GetAsync(cancellationToken).ConfigureAwait(false);
+            return await matches.Ask<MatchStateView>(new GetState(matchId), Hubs.MatchSnapshots.AskTimeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (AskTimeoutException)
+        {
+            var match = await store.GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false);
+            var sheet = await store.GetFactSheetAsync(matchId, int.MaxValue, cancellationToken).ConfigureAwait(false);
+            return new MatchStateView(matchId, match?.Status ?? MatchStatus.Scheduled, match?.LastSeq ?? 0, sheet?.Period ?? 0, sheet?.ClockMs ?? 0, 0, 0);
+        }
     }
 
     /// <summary>
