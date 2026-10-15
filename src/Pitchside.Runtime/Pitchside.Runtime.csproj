@@ -4,6 +4,9 @@
     <Description>The live runtime: match actors, event bus, storage, replay, broadcasting and the moment sink the agent crew reads.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Pitchside.Runtime.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../Pitchside.Contracts/Pitchside.Contracts.csproj" />
     <ProjectReference Include="../Pitchside.Engine/Pitchside.Engine.csproj" />
     <ProjectReference Include="../Pitchside.Stats/Pitchside.Stats.csproj" />

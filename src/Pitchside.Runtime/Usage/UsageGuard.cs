@@ -16,8 +16,21 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
     private readonly Dictionary<(string Limit, string Key), (long Window, int Count)> _windows = [];
     private readonly Dictionary<string, int> _connections = new(StringComparer.Ordinal);
     private readonly Lock _lock = new();
+    private long _currentWindow = -1;
 
     public bool Enabled => enabled;
+
+    /// <summary>How many hourly counts are held, for tests that check expired ones are dropped.</summary>
+    internal int TrackedCounts
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _windows.Count;
+            }
+        }
+    }
 
     /// <summary>Counts one use of an hourly limit, refusing it when the limit is reached and the guard is enabled.</summary>
     public UsageDecision TryTake(string limit, string key)
@@ -26,6 +39,18 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
         var window = now / 3600;
         lock (_lock)
         {
+            // Once per hour, when a new window starts, every count from an earlier one is dropped, so the table holds
+            // only the callers of the current hour rather than every address the host has ever seen.
+            if (window != _currentWindow)
+            {
+                foreach (var stale in _windows.Where(w => w.Value.Window < window).Select(w => w.Key).ToList())
+                {
+                    _windows.Remove(stale);
+                }
+
+                _currentWindow = window;
+            }
+
             var used = _windows.TryGetValue((limit, key), out var current) && current.Window == window ? current.Count : 0;
             if (enabled && used >= LimitOf(limit))
             {
