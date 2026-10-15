@@ -363,7 +363,7 @@ public sealed class MatchActor : ReceiveActor, IWithUnboundedStash, IWithTimers
         return [];
     }
 
-    private MatchStateView View() => new(_matchId, _status, _lastSeq, _period, _clockMs, _subscribers.Count, _dropped);
+    private MatchStateView View() => new(_matchId, _status, _lastSeq, _period, _clockMs, _subscribers.Count, _dropped, _pending.Count);
 
     /// <summary>Writes to the store off the actor thread, in order, retried until they land.</summary>
     private void Persist(string what, Func<CancellationToken, Task> write) => _outbox.Write(what, write);
