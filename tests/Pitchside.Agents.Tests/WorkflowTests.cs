@@ -191,6 +191,17 @@ public sealed class WorkflowTests
         publisher.Narratives.Select(n => n.MomentId).Distinct().Order(StringComparer.Ordinal).ShouldBe(goals.Skip(1).Select(g => g.Moment.Id));
     }
 
+    [Fact]
+    public async Task A_base_narrative_whose_first_publish_fails_is_still_published()
+    {
+        var publisher = new FailOncePublisher();
+        var runner = new MomentWorkflowRunner(new ChannelMomentSink(), Crew.Workflow(), publisher, Options.Create(new AgentsOptions()), NullLogger<MomentWorkflowRunner>.Instance);
+
+        var context = await runner.ProcessAsync(Goal.WorkItem, CancellationToken.None);
+
+        publisher.Narratives.ShouldContain(n => n.Id == context.BaseNarrative!.Id);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(4)]
