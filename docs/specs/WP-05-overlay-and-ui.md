@@ -136,7 +136,7 @@ renderer replaying the match can place entries identically.
 | Route | Purpose |
 | --- | --- |
 | `GET /api/v1/matches/{id}/overlay?fromMs=` | entries |
-| `POST /api/v1/matches/{id}/overlay/{entryId}/hold`, `/air` | producer controls |
+| `POST /api/v1/matches/{id}/overlay/{entryId}/hold`, `/air` | producer controls; 503 while the match actor is too busy to give its live clock |
 | `POST /api/v1/matches/{id}/approval` `{ mode: "auto" \| "approve" }` | approval mode |
 | `GET /api/v1/matches/{id}/narratives?persona=&language=` | |
 

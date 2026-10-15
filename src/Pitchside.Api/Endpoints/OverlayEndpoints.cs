@@ -1,3 +1,4 @@
+using Akka.Actor;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Pitchside.Api.Broadcast;
 using Pitchside.Contracts;
@@ -25,14 +26,12 @@ public static class OverlayEndpoints
             return TypedResults.Ok<IReadOnlyList<OverlayEntry>>([.. entries.Where(e => fromMs is null || e.OutAtMs >= fromMs)]);
         }).WithName("GetOverlay");
 
-        group.MapPost("/overlay/{entryId}/hold", async Task<Results<Ok<OverlayEntry>, NotFound>> (
-            string matchId, string entryId, OverlayCoordinator overlay, CancellationToken ct) =>
-            await overlay.HoldAsync(matchId, entryId, ct).ConfigureAwait(false) is { } entry ? TypedResults.Ok(entry) : TypedResults.NotFound())
+        group.MapPost("/overlay/{entryId}/hold", (string matchId, string entryId, OverlayCoordinator overlay, CancellationToken ct) =>
+            ControlAsync(() => overlay.HoldAsync(matchId, entryId, ct)))
             .WithName("HoldOverlayEntry");
 
-        group.MapPost("/overlay/{entryId}/air", async Task<Results<Ok<OverlayEntry>, NotFound>> (
-            string matchId, string entryId, OverlayCoordinator overlay, CancellationToken ct) =>
-            await overlay.AirAsync(matchId, entryId, ct).ConfigureAwait(false) is { } entry ? TypedResults.Ok(entry) : TypedResults.NotFound())
+        group.MapPost("/overlay/{entryId}/air", (string matchId, string entryId, OverlayCoordinator overlay, CancellationToken ct) =>
+            ControlAsync(() => overlay.AirAsync(matchId, entryId, ct)))
             .WithName("AirOverlayEntry");
 
         group.MapPost("/approval", async Task<Results<Ok<ApprovalModeUpdate>, NotFound>> (
@@ -63,6 +62,23 @@ public static class OverlayEndpoints
         group.MapGet("/facts/series", GetSeriesAsync).WithName("GetFactSeries");
 
         return app;
+    }
+
+    /// <summary>
+    /// Runs a hold or an air. Both are timed against the match actor's live clock, so while the actor is too busy to
+    /// answer (deep in an instant replay) the control is refused with 503 and nothing changes, rather than a card being
+    /// timed against a clock that is behind.
+    /// </summary>
+    private static async Task<Results<Ok<OverlayEntry>, NotFound, ProblemHttpResult>> ControlAsync(Func<Task<OverlayEntry?>> control)
+    {
+        try
+        {
+            return await control().ConfigureAwait(false) is { } entry ? TypedResults.Ok(entry) : TypedResults.NotFound();
+        }
+        catch (AskTimeoutException)
+        {
+            return TypedResults.Problem("The match is busy; try the control again.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
     }
 
     /// <summary>
