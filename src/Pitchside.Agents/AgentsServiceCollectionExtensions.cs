@@ -47,6 +47,7 @@ public static class AgentsServiceCollectionExtensions
         services.TryAddSingleton<INarrativePublisher, InMemoryNarrativeLog>();
         services.TryAddSingleton<IMomentSink, ChannelMomentSink>();
         services.TryAddSingleton<MomentWorkflow>();
+        services.TryAddSingleton<WorkflowGate>();
 
         var provider = configuration[$"{AgentsOptions.SectionName}:{nameof(AgentsOptions.Provider)}"] ?? AgentsOptions.ScriptedProvider;
         // Every model call goes through the auditing wrapper (WP07-R6). The audit store is the runtime's when it is

@@ -37,4 +37,5 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `UsageGuard:TrustForwardedFor` | | unset means on in Container Apps (where `CONTAINER_APP_NAME` is set) and off elsewhere; when on, the caller's address is the last `X-Forwarded-For` entry, which the ingress appends | WP-07 |
 | `Pricing:InputPerMillion` | `0` | price of a million input tokens, for the evaluation report's cost estimate | WP-07 |
 | `Pricing:OutputPerMillion` | `0` | price of a million output tokens, for the evaluation report's cost estimate | WP-07 |
+| `Mcp:ApiKey` | | when set, the MCP tool `explain_moment` needs it in the `X-Pitchside-Key` header; user-secrets locally, a Key Vault reference in Azure, never in a file | WP-08 |
 | `Speech:Provider` | `None` | `None`, `Azure` | WP-10 |

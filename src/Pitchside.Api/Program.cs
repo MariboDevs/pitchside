@@ -5,6 +5,7 @@ using Pitchside.Api.Broadcast;
 using Pitchside.Api.Endpoints;
 using Microsoft.AspNetCore.HttpOverrides;
 using Pitchside.Api.Hubs;
+using Pitchside.Api.Mcp;
 using Pitchside.Api.Middleware;
 using Pitchside.Contracts;
 using Pitchside.Evaluation;
@@ -39,6 +40,7 @@ builder.Services.AddSingleton<OverlayCoordinator>();
 builder.Services.AddPitchsideRuntime(builder.Configuration);
 builder.Services.AddPitchsideEvaluation(builder.Configuration);
 builder.Services.AddFoundryEvaluationJudge(builder.Configuration);
+builder.Services.AddPitchsideMcp(builder.Configuration);
 builder.Services.AddSingleton<GroundednessBatcher>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GroundednessBatcher>());
 
@@ -81,6 +83,7 @@ app.MapOverlayEndpoints();
 app.MapAuditEndpoints();
 app.MapTraceEndpoints();
 app.MapUsageEndpoints();
+app.MapMcp(McpServerSetup.Path);
 if (string.Equals(pitchside.Mode, PitchsideOptions.ReplayMode, StringComparison.OrdinalIgnoreCase))
 {
     app.MapReplayEndpoints();
