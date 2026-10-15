@@ -6,6 +6,8 @@
   <ItemGroup>
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.1" />
+    <!-- Raised above what Aspire.Hosting resolves, 2.5.302, which GHSA-qhrr-8q5h-9q3h flags; drop when Aspire moves past it. -->
+    <PackageVersion Include="MessagePack" Version="2.5.307" />
     <!-- Service defaults: OpenTelemetry, health checks, resilience -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
