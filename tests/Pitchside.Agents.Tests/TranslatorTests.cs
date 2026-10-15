@@ -54,7 +54,51 @@ public sealed class TranslatorTests
 
         translations.ShouldAllBe(t => t.Status == NarrativeStatus.Fallback);
         AgentTranslator.Mismatches(english.Sentences, [.. renamed.Select(r => Rendering.NarrativeRenderer.Cite(r.text))], ["Nathan Kim"])
-            .ShouldContain(m => m.Contains("Nathan Kim", StringComparison.Ordinal));
+            .ShouldContain(m => m.Contains("'Nathan'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_short_name_counts_as_a_name_and_repeated_tokens_must_repeat()
+    {
+        IReadOnlyList<NarrativeSentence> source = [Rendering.NarrativeRenderer.Cite("Kim and the Wanderers have [[home.shots]] then [[home.shots]] again.")];
+        string[] names = ["Nathan Kim", "Inyoni Wanderers"];
+
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Kim en die Wanderers het [[home.shots]] en weer [[home.shots]].")], names).ShouldBeEmpty();
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Kimi en die Wanderers het [[home.shots]] en weer [[home.shots]].")], names)
+            .ShouldContain(m => m.Contains("'Kim'", StringComparison.Ordinal));
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Kim en die Swerwers het [[home.shots]] en weer [[home.shots]].")], names)
+            .ShouldContain(m => m.Contains("'Wanderers'", StringComparison.Ordinal));
+        AgentTranslator.Mismatches(source, [Rendering.NarrativeRenderer.Cite("Kim en die Wanderers het [[home.shots]].")], names)
+            .ShouldContain(m => m.StartsWith("The tokens changed", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_translation_keeps_its_personas_shape_or_falls_back()
+    {
+        var context = await BaseAsync();
+        var casual = NarrativeFactory.Create(context, Personas.Casual, Languages.English, [Rendering.NarrativeRenderer.Cite("Kim scores for Inyoni Wanderers.")], NarrativeStatus.Verified,
+            new NarrativeProvenance("fake", "fake", "persona-casual-v1", 1, DateTimeOffset.UnixEpoch, false));
+        const string TwoSentences = """{ "sentences": [ { "text": "Kim score vir Inyoni Wanderers." }, { "text": "Wat 'n doel." } ] }""";
+        var provider = new FakeChatProvider((request, _) => request.PromptName == AgentTranslator.PromptName ? TwoSentences : NoObjections);
+
+        var translations = await Crew.Translator(provider).TranslateAsync(context, [casual], CancellationToken.None);
+
+        translations.ShouldAllBe(t => t.Status == NarrativeStatus.Fallback && t.Provenance.Fallback);
+    }
+
+    [Fact]
+    public async Task A_rejected_variant_reaches_every_language_as_rejected_without_a_model_call()
+    {
+        var context = await BaseAsync();
+        var rejected = NarrativeFactory.Create(context, Personas.Analyst, Languages.English, [Rendering.NarrativeRenderer.Cite("Too long.")], NarrativeStatus.Rejected,
+            new NarrativeProvenance("fake", "fake", "persona-analyst-v1", 2, DateTimeOffset.UnixEpoch, false));
+        var provider = new FakeChatProvider((_, _) => throw new InvalidOperationException("No call expected."));
+
+        var translations = await Crew.Translator(provider).TranslateAsync(context, [rejected], CancellationToken.None);
+
+        translations.Select(t => t.Language).ShouldBe([Languages.Afrikaans, Languages.IsiZulu, Languages.Spanish], ignoreOrder: true);
+        translations.ShouldAllBe(t => t.Status == NarrativeStatus.Rejected && t.Persona == Personas.Analyst);
+        provider.Requests.ShouldBeEmpty();
     }
 
     [Fact]
@@ -69,6 +113,34 @@ public sealed class TranslatorTests
 
         translations.Count.ShouldBe(3);
         translations.ShouldAllBe(t => t.Status == NarrativeStatus.Fallback);
+    }
+
+    [Fact]
+    public async Task The_crew_publishes_each_narrative_once_as_it_completes_the_base_first()
+    {
+        var published = new System.Collections.Concurrent.ConcurrentQueue<Narrative>();
+
+        var context = await Crew.FullWorkflow().RunAsync(Goal.WorkItem, (n, _) =>
+        {
+            published.Enqueue(n);
+            return Task.CompletedTask;
+        }, CancellationToken.None);
+
+        published.First().Id.ShouldBe(context.BaseNarrative!.Id);
+        published.Select(n => n.Id).Order(StringComparer.Ordinal).ShouldBe(context.Narratives.Select(n => n.Id).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_variants_support_check_sees_both_sides_and_every_cited_fact()
+    {
+        var context = await BaseAsync();
+        var cited = context.FactSheet.Facts.First(f => f.Key.StartsWith("player.", StringComparison.Ordinal) && !Goal.Moment.PlayerIds.Any(id => f.Key.Contains(id, StringComparison.Ordinal)));
+
+        var input = Prompts.ExplainerInput.BuildVariantCheck(context, [Rendering.NarrativeRenderer.Cite($"Compare [[{cited.Key}]] with [[home.shots]] and [[away.shots]].")]);
+
+        input.ShouldContain("\"home.shots\"");
+        input.ShouldContain("\"away.shots\"");
+        input.ShouldContain($"\"{cited.Key}\"");
     }
 
     [Fact]

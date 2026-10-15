@@ -136,6 +136,11 @@ public sealed class PersonaTests
         variants.ShouldAllBe(v => v.FactSheetSeq == context.FactSheet.AsOfSeq);
     }
 
+    [Fact]
+    public void The_casual_number_limit_counts_a_repeated_number_twice() =>
+        AgentPersonaWriter.ShapeObjections(PersonaSpecs.Casual, [NarrativeRenderer.Cite("Shots [[home.shots]] and still [[home.shots]].")])
+            .ShouldContain(o => o.Detail.Contains("2 numbers", StringComparison.Ordinal));
+
     private static async Task<Narrative> OnlyAsync(FakeChatProvider provider, MomentContext context, string persona)
     {
         var variants = await Crew.Personas(provider).WriteAsync(context, context.BaseNarrative!, CancellationToken.None);

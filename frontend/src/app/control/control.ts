@@ -23,6 +23,7 @@ import {
 } from '../core/contracts';
 import { findFact, formatClock, formatFact, splitTokens } from '../core/format';
 import { MatchApi } from '../core/match-api';
+import { textLanguage } from '../core/variant';
 import { MatchSession } from '../core/match-session';
 import { Monogram } from '../shared/monogram/monogram';
 import { Swimlane } from '../shared/swimlane/swimlane';
@@ -169,6 +170,11 @@ export class Control implements OnInit {
 
   protected variantsOf(moment: Moment) {
     return this.session.variantsOf(moment.id).filter((n) => n.id !== `${moment.id}:base:en`);
+  }
+
+  /** The language the variant's text is in: English when its translation fell back. */
+  protected langOf(n: Narrative): string {
+    return textLanguage(n);
   }
 
   protected variantLabel(n: { persona: string; subject: string | null; language: string }): string {

@@ -176,7 +176,7 @@
                         <summary>{{ variants.length }} persona and language variants</summary>
                         <ul>
                           @for (v of variants; track v.id) {
-                            <li [attr.lang]="v.language">
+                            <li [attr.lang]="langOf(v)">
                               <span class="variant-label">{{ variantLabel(v) }}</span>
                               <span class="variant-status">{{ v.status }}</span>
                               <span class="variant-text">{{ v.renderedText }}</span>

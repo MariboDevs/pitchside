@@ -13,7 +13,8 @@ namespace Pitchside.Agents.Personalisation;
 /// Writes every persona variant of a verified base narrative in parallel (WP06-R1). Each goes through its shape rules
 /// (sentence count, and for the casual fan the word and number limits), then the same checks as the base, and is
 /// retried once with the objections. A variant that still fails is kept as <see cref="NarrativeStatus.Rejected"/>
-/// for the control room; viewers of that persona see the base narrative instead.
+/// for the control room; viewers of that persona see the base narrative instead. Each variant is published as it
+/// completes (WP06-R3).
 /// </summary>
 public sealed partial class AgentPersonaWriter(
     IChatProvider provider,
@@ -29,7 +30,12 @@ public sealed partial class AgentPersonaWriter(
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(baseNarrative);
         var subjects = PersonaSubjects.For(context, options.Value.Personas);
-        return await Task.WhenAll(subjects.Select(s => WriteAsync(context, baseNarrative, s, cancellationToken))).ConfigureAwait(false);
+        return await Task.WhenAll(subjects.Select(async s =>
+        {
+            var variant = await WriteAsync(context, baseNarrative, s, cancellationToken).ConfigureAwait(false);
+            await context.PublishAsync(variant, cancellationToken).ConfigureAwait(false);
+            return variant;
+        })).ConfigureAwait(false);
     }
 
     /// <summary>The objections a draft earns from its persona's shape alone, before any fact is checked.</summary>
@@ -54,7 +60,7 @@ public sealed partial class AgentPersonaWriter(
             }
         }
 
-        var numbers = sentences.Sum(s => NarrativeTokens.Keys(s.Text).Count);
+        var numbers = sentences.Sum(s => NarrativeTokens.Written(s.Text).Count);
         if (spec.MaxNumbers is { } maxNumbers && numbers > maxNumbers)
         {
             objections.Add(new Objection(ObjectionKinds.WholeDraft, ObjectionKinds.InvalidOutput,
