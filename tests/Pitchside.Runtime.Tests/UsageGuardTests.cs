@@ -72,4 +72,20 @@ public sealed class UsageGuardTests
             (UsageLimits.Connections, 0, 1),
         ]);
     }
+
+    [Fact]
+    public void Counts_from_an_earlier_hour_are_dropped_when_the_next_hour_starts()
+    {
+        var clock = new ManualClock(TenPast);
+        var guard = Guard(clock);
+        for (var i = 0; i < 50; i++)
+        {
+            guard.TryTake(UsageLimits.Replays, $"10.0.0.{i}");
+        }
+
+        guard.TrackedCounts.ShouldBe(50);
+        clock.Now = TenPast.AddHours(1);
+        guard.TryTake(UsageLimits.Replays, "10.0.1.1").Allowed.ShouldBeTrue();
+        guard.TrackedCounts.ShouldBe(1);
+    }
 }

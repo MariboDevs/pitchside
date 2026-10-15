@@ -10,7 +10,9 @@ namespace Pitchside.Api.Broadcast;
 /// <summary>
 /// Scores verified narratives for groundedness (WP07-R2) in batches every <c>Evaluation:BatchSeconds</c>, to keep the
 /// judge's cost down: each scored narrative is stored again with <c>evaluation.groundedness</c> set and pushed to its
-/// watchers, so the control room shows the score. A narrative that cannot be scored keeps a null score.
+/// watchers, so the control room shows the score. A narrative the judge cannot score keeps a null score. A storage
+/// read or write that fails puts the narrative back for the next batch, keeping any score already paid for, and at
+/// start the stored verified narratives that have no score yet are queued again, so a restart loses no work.
 /// </summary>
 public sealed partial class GroundednessBatcher(
     IEvaluationProvider evaluator,
@@ -33,6 +35,7 @@ public sealed partial class GroundednessBatcher(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await RecoverAsync(stoppingToken).ConfigureAwait(false);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Math.Max(1, options.Value.BatchSeconds)));
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
@@ -42,66 +45,125 @@ public sealed partial class GroundednessBatcher(
                 batch.Add(narrative);
             }
 
-            foreach (var match in batch.GroupBy(n => n.MatchId, StringComparer.Ordinal))
+            // A narrative queued twice (at start and again live, or retried) is scored once, keeping a score already paid for.
+            var distinct = batch
+                .GroupBy(n => n.Id, StringComparer.Ordinal)
+                .Select(g => g.FirstOrDefault(n => n.Evaluation.Groundedness is not null) ?? g.First());
+            foreach (var match in distinct.GroupBy(n => n.MatchId, StringComparer.Ordinal))
             {
                 await ScoreAsync(match.Key, [.. match], stoppingToken).ConfigureAwait(false);
             }
         }
     }
 
+    /// <summary>Queues every stored verified narrative that has no score yet: the work a restart would otherwise drop.</summary>
+    private async Task RecoverAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            foreach (var match in await store.ListMatchesAsync(cancellationToken).ConfigureAwait(false))
+            {
+                foreach (var narrative in await store.GetNarrativesAsync(match.MatchId, cancellationToken).ConfigureAwait(false))
+                {
+                    if (narrative.Evaluation.Groundedness is null)
+                    {
+                        Enqueue(narrative);
+                    }
+                }
+            }
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            LogRecoveryFailed(ex);
+        }
+    }
+
     private async Task ScoreAsync(string matchId, IReadOnlyList<Narrative> narratives, CancellationToken cancellationToken)
     {
         Dictionary<string, Moment> moments;
+        MatchDocument? document;
         try
         {
             moments = (await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false)).ToDictionary(m => m.Id, StringComparer.Ordinal);
+            document = (await store.GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false))?.Document;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             // No judgement has started, so the whole batch waits for the next tick rather than stopping the host.
             LogMomentsFailed(ex, matchId, narratives.Count);
-            foreach (var narrative in narratives)
-            {
-                _queue.Writer.TryWrite(narrative);
-            }
-
+            Requeue(narratives);
             return;
         }
 
         var sheets = new Dictionary<int, FactSheet?>();
         foreach (var narrative in narratives)
         {
+            var scored = narrative;
             try
             {
-                if (!sheets.TryGetValue(narrative.FactSheetSeq, out var sheet))
+                if (narrative.Evaluation.Groundedness is null)
                 {
-                    sheet = sheets[narrative.FactSheetSeq] = await store.GetFactSheetAsync(matchId, narrative.FactSheetSeq, cancellationToken).ConfigureAwait(false);
+                    if (!sheets.TryGetValue(narrative.FactSheetSeq, out var sheet))
+                    {
+                        sheet = sheets[narrative.FactSheetSeq] = await store.GetFactSheetAsync(matchId, narrative.FactSheetSeq, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    if (sheet is null || !moments.TryGetValue(narrative.MomentId, out var moment))
+                    {
+                        continue;
+                    }
+
+                    var score = await JudgeAsync(new EvaluationItem(narrative, moment, sheet, document), cancellationToken).ConfigureAwait(false);
+                    if (score is null)
+                    {
+                        continue;
+                    }
+
+                    scored = narrative with { Evaluation = narrative.Evaluation with { Groundedness = score } };
                 }
 
-                if (sheet is null || !moments.TryGetValue(narrative.MomentId, out var moment))
-                {
-                    continue;
-                }
-
-                var score = await evaluator.ScoreAsync(new EvaluationItem(narrative, moment, sheet), cancellationToken).ConfigureAwait(false);
-                if (score is null)
-                {
-                    continue;
-                }
-
-                var scored = narrative with { Evaluation = narrative.Evaluation with { Groundedness = score } };
                 await store.SaveNarrativeAsync(scored, cancellationToken).ConfigureAwait(false);
                 await broadcaster.NarrativeAsync(scored, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
-                LogScoreFailed(ex, narrative.Id);
+                // Storage failed: try again next batch, carrying the score if the judge already gave one.
+                LogStorageFailed(ex, narrative.Id);
+                Requeue([scored]);
             }
         }
     }
 
+    /// <summary>The judge's score, or null when it fails: a failed judgement is logged and not retried.</summary>
+    private async Task<double?> JudgeAsync(EvaluationItem item, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await evaluator.ScoreAsync(item, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            LogScoreFailed(ex, item.Narrative.Id);
+            return null;
+        }
+    }
+
+    private void Requeue(IEnumerable<Narrative> narratives)
+    {
+        foreach (var narrative in narratives)
+        {
+            _queue.Writer.TryWrite(narrative);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The stored narratives could not be read at start, so none were queued for scoring")]
+    private partial void LogRecoveryFailed(Exception exception);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Match {MatchId}: the moments could not be read, so {Count} narratives wait for the next batch")]
     private partial void LogMomentsFailed(Exception exception, string matchId, int count);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Narrative {NarrativeId}: storage failed, so it waits for the next batch")]
+    private partial void LogStorageFailed(Exception exception, string narrativeId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Narrative {NarrativeId} could not be scored for groundedness")]
     private partial void LogScoreFailed(Exception exception, string narrativeId);

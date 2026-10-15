@@ -7,9 +7,14 @@ namespace Pitchside.Api.IntegrationTests;
 
 public sealed class AuditTests : IClassFixture<PitchsideApiFactory>, IAsyncLifetime
 {
+    private readonly PitchsideApiFactory _factory;
     private readonly HttpClient _client;
 
-    public AuditTests(PitchsideApiFactory factory) => _client = factory.CreateClient();
+    public AuditTests(PitchsideApiFactory factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient();
+    }
 
     public async Task InitializeAsync()
     {
@@ -27,7 +32,7 @@ public sealed class AuditTests : IClassFixture<PitchsideApiFactory>, IAsyncLifet
             await Task.Delay(200);
         }
 
-        throw new TimeoutException("The crew did not narrate MER-7.");
+        throw new TimeoutException($"The crew did not narrate MER-7. {await MatchProgress.DescribeAsync(_factory.Services, "MER-7")}");
     }
 
     public Task DisposeAsync() => Task.CompletedTask;

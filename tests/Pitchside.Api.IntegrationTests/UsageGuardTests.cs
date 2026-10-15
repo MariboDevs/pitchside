@@ -10,6 +10,20 @@ namespace Pitchside.Api.IntegrationTests;
 
 public sealed class UsageGuardTests
 {
+    /// <summary>
+    /// Waits until the guard counts exactly this many open connections: the handshake can complete before the hub takes
+    /// a slot, and StopAsync can return before it gives one back, so a check made straight after either could race.
+    /// </summary>
+    private static async Task CountedAsync(HttpClient client, int connections)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (DateTime.UtcNow < deadline
+            && (await (await client.GetAsync("/api/v1/usage")).ReadAsync<UsageReport>()).Limits.Single(l => l.Name == UsageLimits.Connections).Used != connections)
+        {
+            await Task.Delay(50);
+        }
+    }
+
     private static ConfiguredApiFactory Guarded(params (string Key, string Value)[] limits) =>
         new(new Dictionary<string, string?>(limits.Select(l => KeyValuePair.Create(l.Key, (string?)l.Value))) { ["UsageGuard:Enabled"] = "true" });
 
@@ -46,11 +60,13 @@ public sealed class UsageGuardTests
 
         await using var first = Connect();
         await first.StartAsync();
+        await CountedAsync(factory.CreateClient(), 1);
         await using var second = Connect();
         var refused = await Should.ThrowAsync<HttpRequestException>(() => second.StartAsync());
         refused.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
 
         await first.StopAsync();
+        await CountedAsync(factory.CreateClient(), 0);
         await using var third = Connect();
         await third.StartAsync();
     }
@@ -72,6 +88,8 @@ public sealed class UsageGuardTests
             })
             .Build();
         await open.StartAsync();
+        await CountedAsync(client, 1);
+
         (await client.PostAsync(new Uri("/hubs/match/negotiate/?negotiateVersion=1", UriKind.Relative), null)).StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
     }
 
