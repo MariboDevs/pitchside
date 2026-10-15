@@ -36,4 +36,5 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `UsageGuard:ConnectionsPerIp` | `20` | hub connections one address may hold open; the next gets 429 | WP-07 |
 | `Pricing:InputPerMillion` | `0` | price of a million input tokens, for the evaluation report's cost estimate | WP-07 |
 | `Pricing:OutputPerMillion` | `0` | price of a million output tokens, for the evaluation report's cost estimate | WP-07 |
+| `Mcp:ApiKey` | | when set, the MCP tool `explain_moment` needs it in the `X-Pitchside-Key` header; user-secrets locally, a Key Vault reference in Azure, never in a file | WP-08 |
 | `Speech:Provider` | `None` | `None`, `Azure` | WP-10 |
