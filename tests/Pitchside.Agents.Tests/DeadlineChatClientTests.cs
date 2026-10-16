@@ -23,4 +23,20 @@ public sealed class DeadlineChatClientTests
 
         await Should.ThrowAsync<OperationCanceledException>(() => client.GetResponseAsync([new ChatMessage(ChatRole.User, "score")], cancellationToken: cancel.Token));
     }
+
+    [Fact]
+    public async Task Work_before_the_deadline_does_not_count_against_it()
+    {
+        var prepared = false;
+        using var client = new DeadlineChatClient(new ReadyChatClient(), TimeSpan.FromMilliseconds(150), "judge", async ct =>
+        {
+            await Task.Delay(400, ct);
+            prepared = true;
+        });
+
+        var response = await client.GetResponseAsync([new ChatMessage(ChatRole.User, "score")]);
+
+        prepared.ShouldBeTrue();
+        response.Text.ShouldBe("ready");
+    }
 }
