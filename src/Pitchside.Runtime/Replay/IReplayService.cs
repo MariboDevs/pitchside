@@ -12,6 +12,12 @@ public interface IReplayService
 
     bool Resume(string matchId);
 
+    /// <summary>
+    /// Runs a replay ahead to ten seconds of match time before its next moment, then on at its own speed (WP-11). False
+    /// when the match is not replaying; <paramref name="jump"/> is null when no moment is left ahead.
+    /// </summary>
+    bool TryJump(string matchId, out ReplayJump? jump);
+
     IReadOnlyCollection<string> Running { get; }
 
     /// <summary>
