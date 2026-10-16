@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Pitchside.Agents.Checking;
 using Pitchside.Agents.Personalisation;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Speech;
 using Pitchside.Agents.Workflow;

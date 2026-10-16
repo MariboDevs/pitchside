@@ -1,5 +1,5 @@
 using Pitchside.Agents.Checking;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 using Pitchside.Agents.Rendering;
 using Pitchside.Contracts;
 
