@@ -44,4 +44,3 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Speech:Voices:en`, `:af`, `:zu`, `:es` | `en-ZA-LeahNeural`, `af-ZA-AdriNeural`, `zu-ZA-ThandoNeural`, `es-ES-ElviraNeural` | the neural voice per language; check each is offered in the region; a language without one gets the English audio and the viewer says so | WP-10 |
 | `Speech:BlobServiceUri` | | the blob service the recap audio is kept in, such as `https://<account>.blob.core.windows.net`; unset keeps it in process | WP-10 |
 | `Speech:BlobContainer` | `recaps` | the container for `{matchId}/{language}.mp3` and its `{matchId}/{language}.json` recap | WP-10 |
-| `Speech:Provider` | `None` | `None`, `Azure` | WP-10 |
