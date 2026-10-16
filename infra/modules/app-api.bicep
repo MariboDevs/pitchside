@@ -77,6 +77,9 @@ var baseSettings = [
   { name: 'Bus__EventHubs__CheckpointBlobUri', value: checkpointBlobUri }
   { name: 'Pitchside__RunAgentsInApi', value: string(runAgentsInApi) }
   { name: 'Agents__Provider', value: useFoundry ? 'Foundry' : 'Scripted' }
+  // The app is public and calls paid services (Cosmos DB, Event Hubs) even with the scripted crew, so the usage
+  // limits always apply here rather than following the crew's provider.
+  { name: 'UsageGuard__Enabled', value: 'true' }
 ]
 
 var foundrySettings = useFoundry

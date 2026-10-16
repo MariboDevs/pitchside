@@ -59,8 +59,8 @@ The keys are documented in [docs/CONFIGURATION.md](../docs/CONFIGURATION.md).
 
 | App | Settings |
 | --- | --- |
-| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
-| agents | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, the `Bus__*` settings, `Agents__Provider`, and the `Foundry__*` settings when an endpoint is given |
+| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `UsageGuard__Enabled=true`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
+| agents | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, the `Bus__*` settings, `UsageGuard__Enabled=true`, `Agents__Provider`, and the `Foundry__*` settings when an endpoint is given |
 | web | `API_HOST`, the API's FQDN, which nginx proxies to over HTTPS |
 
 The environment's OpenTelemetry agent sets `OTEL_EXPORTER_OTLP_ENDPOINT` on every app, which is what turns on the
@@ -154,13 +154,19 @@ bicep build-params infra/main.demo.bicepparam --stdout > /dev/null
 ## Continuous deployment
 
 `.github/workflows/deploy.yml` deploys `dev` on every push to `main` and either environment on a manual run. It skips
-itself until the repository variable `AZURE_CLIENT_ID` exists. One-time setup:
+itself until the chosen environment's client id exists. One-time setup:
 
-1. An Entra ID app registration (or user-assigned identity) for GitHub, with Contributor on both resource groups and
-   AcrPush on both registries, and federated credentials for the subjects
-   `repo:MariboDevs/pitchside:environment:dev` and `repo:MariboDevs/pitchside:environment:demo`.
-2. Repository variables (not secrets; none of them is one): `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
-   `AZURE_SUBSCRIPTION_ID`, `AZURE_LOCATION`.
+1. Two Entra ID app registrations (or user-assigned identities) for GitHub, one per environment, so a job signed in
+   for `dev` cannot write to `demo` and the demo approval is a real boundary:
+   - `github-pitchside-dev`: Contributor on `rg-pitchside-dev`, AcrPush on the dev registry, and one federated
+     credential for the subject `repo:MariboDevs/pitchside:environment:dev`.
+   - `github-pitchside-demo`: Contributor on `rg-pitchside-demo`, AcrPush on the demo registry, and one federated
+     credential for the subject `repo:MariboDevs/pitchside:environment:demo`.
+   - Both also need Reader on the subscription: `main.bicep` deploys at subscription scope, and `azd env refresh`
+     reads that deployment's outputs, which a role on the resource group alone does not allow.
+2. Repository variables (not secrets; none of them is one): `AZURE_CLIENT_ID_DEV`, `AZURE_CLIENT_ID_DEMO`,
+   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_LOCATION`. They are repository variables because a job's `if`
+   cannot see variables scoped to an environment.
 3. GitHub environments `dev` and `demo`; `demo` with Sipho as required reviewer.
 
 The workflow builds the three images, tags them with the commit SHA, pushes them to the environment's registry,
