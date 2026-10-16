@@ -1,0 +1,113 @@
+name: Deploy
+
+# Builds the three images tagged with the commit SHA, deploys them with azd to an environment that `azd provision`
+# already created, then smoke-tests it: /health, the web root, and a replay reaching a verified narrative within 60 s.
+# Push to main deploys dev; a manual run picks dev or demo, and demo waits for approval in the `demo` GitHub
+# environment. Sign-in is OIDC federation: the repository variables below hold identifiers, not secrets, and the
+# workflow skips every job until AZURE_CLIENT_ID is set, so it never fails on main before Azure is configured.
+#
+# Repository variables: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_LOCATION.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        type: choice
+        options:
+          - dev
+          - demo
+        default: dev
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy and smoke test
+    if: vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
+    env:
+      AZURE_ENV_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install azd
+        uses: Azure/setup-azd@v2
+
+      - name: Load the provisioned environment
+        run: |
+          azd config set auth.useAzCliAuth true
+          azd env new "$AZURE_ENV_NAME" --location "$AZURE_LOCATION" --subscription "$AZURE_SUBSCRIPTION_ID" --no-prompt
+          azd env refresh --environment "$AZURE_ENV_NAME" --no-prompt
+          registry="$(azd env get-value AZURE_CONTAINER_REGISTRY_ENDPOINT)"
+          echo "REGISTRY=$registry" >> "$GITHUB_ENV"
+          echo "REGISTRY_NAME=$(azd env get-value AZURE_CONTAINER_REGISTRY_NAME)" >> "$GITHUB_ENV"
+          echo "API_URL=$(azd env get-value API_URL)" >> "$GITHUB_ENV"
+          echo "WEB_URL=$(azd env get-value WEB_URL)" >> "$GITHUB_ENV"
+
+      - name: Build and push images tagged with the commit SHA
+        run: |
+          az acr login --name "$REGISTRY_NAME"
+          docker build --file src/Pitchside.Api/Dockerfile --tag "$REGISTRY/pitchside/api:$IMAGE_TAG" .
+          docker build --file src/Pitchside.Agents.Host/Dockerfile --tag "$REGISTRY/pitchside/agents:$IMAGE_TAG" .
+          docker build --tag "$REGISTRY/pitchside/web:$IMAGE_TAG" frontend
+          docker push "$REGISTRY/pitchside/api:$IMAGE_TAG"
+          docker push "$REGISTRY/pitchside/agents:$IMAGE_TAG"
+          docker push "$REGISTRY/pitchside/web:$IMAGE_TAG"
+
+      - name: Deploy with azd
+        run: |
+          azd deploy api --from-package "$REGISTRY/pitchside/api:$IMAGE_TAG" --environment "$AZURE_ENV_NAME" --no-prompt
+          azd deploy agents --from-package "$REGISTRY/pitchside/agents:$IMAGE_TAG" --environment "$AZURE_ENV_NAME" --no-prompt
+          azd deploy web --from-package "$REGISTRY/pitchside/web:$IMAGE_TAG" --environment "$AZURE_ENV_NAME" --no-prompt
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 12 --retry-delay 10 --retry-all-errors "$API_URL/health"
+          echo
+          curl -fsS --retry 12 --retry-delay 10 --retry-all-errors --output /dev/null "$WEB_URL/"
+
+          # A match id is replayed once per store, so every run uses a seed of its own.
+          seed=$(( (GITHUB_RUN_ID % 100000000) * 10 + GITHUB_RUN_ATTEMPT ))
+          match_id="$(curl -fsS -X POST "$WEB_URL/api/v1/replays" \
+            -H 'Content-Type: application/json' \
+            -d "{\"seed\":$seed,\"speed\":0}" | jq -r '.matchId')"
+          echo "Replay $match_id started through the web proxy"
+
+          deadline=$((SECONDS + 60))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            verified="$(curl -fsS "$WEB_URL/api/v1/matches/$match_id/narratives" 2>/dev/null \
+              | jq '[.[] | select(.status == "verified")] | length' || echo 0)"
+            if [ "${verified:-0}" -gt 0 ]; then
+              echo "$verified verified narratives for $match_id"
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "No verified narrative for $match_id within 60 s" >&2
+          exit 1
