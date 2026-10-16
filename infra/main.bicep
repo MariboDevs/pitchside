@@ -245,6 +245,8 @@ module api 'modules/app-api.bicep' = {
     eventHubsNamespace: eventHubs.outputs.fullyQualifiedNamespace
     eventHubName: eventHubs.outputs.hubName
     checkpointBlobUri: eventHubs.outputs.checkpointBlobUri
+    speechResourceId: speech.outputs.id
+    recapBlobServiceUri: eventHubs.outputs.blobServiceUri
     foundryEndpoint: foundryEndpoint
     foundryFastDeployment: foundryFastDeployment
     foundryQualityDeployment: foundryQualityDeployment
@@ -256,10 +258,10 @@ module api 'modules/app-api.bicep' = {
 
 module agents 'modules/app-agents.bicep' = {
   scope: rg
-  // The data-plane and Speech role assignments must exist before the host first runs; nothing else orders them.
+  // The Cosmos data-plane role assignment must exist before the host first runs; nothing else orders it.
+  // The Speech module, with its role assignment, is ordered by speechResourceId below.
   dependsOn: [
     cosmos
-    speech
   ]
   params: {
     location: location
@@ -278,6 +280,8 @@ module agents 'modules/app-agents.bicep' = {
     checkpointStorageAccountName: eventHubs.outputs.storageAccountName
     checkpointContainerName: eventHubs.outputs.checkpointContainerName
     checkpointBlobUri: eventHubs.outputs.checkpointBlobUri
+    speechResourceId: speech.outputs.id
+    recapBlobServiceUri: eventHubs.outputs.blobServiceUri
     foundryEndpoint: foundryEndpoint
     foundryFastDeployment: foundryFastDeployment
     foundryQualityDeployment: foundryQualityDeployment

@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.recap {
+  margin-top: var(--space-2);
+  font-size: 0.85em;
+
+  summary {
+    color: var(--color-text-muted);
+  }
+
+  ul {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0.4rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    min-width: 0;
+  }
+}
+
+.label {
+  color: var(--color-text-strong);
+}
+
+.ssml {
+  flex-basis: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-2);
+  overflow-x: auto;
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--color-text-strong) 7%, transparent);
+  font-size: 0.8em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -149,3 +149,5 @@ output hubName string = hub.name
 output storageAccountName string = storage.name
 output checkpointContainerName string = checkpoints.name
 output checkpointBlobUri string = '${storage.properties.primaryEndpoints.blob}${checkpoints.name}'
+// The spoken recaps (WP-10) are kept in the same account, in their own container, which the apps create.
+output blobServiceUri string = storage.properties.primaryEndpoints.blob

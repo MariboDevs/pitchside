@@ -1,6 +1,7 @@
 using Akka.Hosting;
 using Azure.Core;
 using Azure.Identity;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,7 @@ using Pitchside.Runtime.Audit;
 using Pitchside.Runtime.Broadcast;
 using Pitchside.Runtime.Bus;
 using Pitchside.Runtime.MomentSink;
+using Pitchside.Runtime.Recaps;
 using Pitchside.Runtime.Replay;
 using Pitchside.Runtime.Storage;
 using Pitchside.Runtime.Usage;
@@ -46,6 +48,7 @@ public static class RuntimeServiceCollectionExtensions
 
         AddStorage(services, configuration);
         AddBus(services, configuration);
+        AddRecaps(services, configuration);
 
         services.TryAddSingleton<ReplayService>();
         services.TryAddSingleton<IReplayService>(sp => sp.GetRequiredService<ReplayService>());
@@ -59,6 +62,22 @@ public static class RuntimeServiceCollectionExtensions
         }));
 
         return services;
+    }
+
+    /// <summary>
+    /// The spoken recap store (WP-10), shared by the agent crew that writes recaps and the API that serves them: Blob
+    /// Storage when <c>Speech:BlobServiceUri</c> is set, otherwise in process.
+    /// </summary>
+    private static void AddRecaps(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<SpeechOptions>(configuration.GetSection(SpeechOptions.SectionName));
+        services.TryAddSingleton<IRecapStore>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<SpeechOptions>>().Value;
+            return options.BlobServiceUri is null
+                ? new InMemoryRecapStore()
+                : new BlobRecapStore(new BlobServiceClient(options.BlobServiceUri, sp.GetRequiredService<TokenCredential>()).GetBlobContainerClient(options.BlobContainer));
+        });
     }
 
     private static void AddStorage(IServiceCollection services, IConfiguration configuration)
