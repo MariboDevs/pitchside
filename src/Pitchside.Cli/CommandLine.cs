@@ -69,6 +69,8 @@ public static class CommandLine
           facts     --seed <n> [--at-seq <n>]          print the fact sheet as JSON, at full time or as of an event
           moments   --seed <n>                         print every detected moment as JSON lines
           narrate   --seed <n> [--provider scripted]   run the agent crew over every moment and print each narrative
+                    [--personas all|<list>] [--languages <list>]
+                    [--recap [--speech scripted|azure] [--out <dir>]]  speak the full-time recap into <dir>/recap/
           evaluate  --match MER-<n> [--provider local]   narrate every persona and language, score groundedness and
                     [--agents scripted] [--report <file>] write docs/evaluation/report-<match>.md
         """;
@@ -139,20 +141,25 @@ public static class CommandLine
     {
         var seed = long.Parse(options.GetValueOrDefault("seed", "7"), culture);
         var provider = options.GetValueOrDefault("provider", "scripted");
+        // --recap speaks the full-time recap (WP-10) with --speech (scripted unless given) into <out>/recap/.
+        var recap = options.ContainsKey("recap");
+        var speech = recap ? options.GetValueOrDefault("speech", "scripted") : "None";
+        var directory = options.GetValueOrDefault("out", Path.Combine("out", $"seed-{seed}"));
         var configuration = new ConfigurationBuilder()
             .AddEnvironmentVariables()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Agents:Provider"] = provider })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Agents:Provider"] = provider, ["Speech:Provider"] = speech })
             .Build();
-        // Without --personas and --languages the command writes the base English narrative only, as in WP-04.
+        // Without --personas and --languages the command writes the base English narrative only, as in WP-04. The
+        // recap reads the analyst variant in every language, so --recap writes those unless told otherwise.
         string[] personas = options.GetValueOrDefault("personas") switch
         {
-            null => [],
+            null => recap ? [Personas.Analyst] : [],
             "all" => [.. Personas.Viewer],
             var list => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
         };
         string[] languages = options.TryGetValue("languages", out var languageList)
             ? languageList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            : [Languages.English];
+            : recap ? [.. Languages.All] : [Languages.English];
         var everyVariant = options.ContainsKey("personas") || options.ContainsKey("languages");
         await using var services = new ServiceCollection()
             .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning))
@@ -183,6 +190,17 @@ public static class CommandLine
                 var context = await workflow.RunAsync(new MomentWorkItem(moment, sheet, match.Document), CancellationToken.None).ConfigureAwait(false);
                 var narrative = context.BaseNarrative!;
                 unresolved += narrative.Status == NarrativeStatus.Rejected ? 1 : 0;
+                foreach (var spoken in context.Recaps)
+                {
+                    var path = Path.Combine(directory, "recap", $"{spoken.Recap.Language}.mp3");
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    await File.WriteAllBytesAsync(path, spoken.Audio).ConfigureAwait(false);
+                    await output.WriteLineAsync(string.Format(
+                        culture,
+                        "recap {0} voice={1}{2} -> {3}",
+                        spoken.Recap.Language, spoken.Recap.Voice, spoken.Recap.EnglishFallback ? " (English stands in)" : string.Empty, path)).ConfigureAwait(false);
+                }
+
                 if (!everyVariant)
                 {
                     await output.WriteLineAsync(string.Format(

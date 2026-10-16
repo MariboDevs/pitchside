@@ -60,6 +60,12 @@ param keyVaultUri string
 @description('Read Mcp:ApiKey from the Key Vault secret mcp-api-key; the secret must exist before this is turned on.')
 param mcpApiKeyFromKeyVault bool
 
+@description('The Speech resource id the spoken recap (WP-10) names in its Entra ID token.')
+param speechResourceId string
+
+@description('The blob service the spoken recaps are kept in.')
+param recapBlobServiceUri string
+
 var appName = 'pitchside-api'
 var port = 8080
 var usePlaceholder = empty(image)
@@ -80,6 +86,11 @@ var baseSettings = [
   // The app is public and calls paid services (Cosmos DB, Event Hubs) even with the scripted crew, so the usage
   // limits always apply here rather than following the crew's provider.
   { name: 'UsageGuard__Enabled', value: 'true' }
+  // WP-10: the full-time recap is spoken by Azure AI Speech, keyless, and kept in Blob Storage.
+  { name: 'Speech__Provider', value: 'Azure' }
+  { name: 'Speech__Region', value: location }
+  { name: 'Speech__ResourceId', value: speechResourceId }
+  { name: 'Speech__BlobServiceUri', value: recapBlobServiceUri }
 ]
 
 var foundrySettings = useFoundry

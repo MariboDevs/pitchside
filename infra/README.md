@@ -20,7 +20,7 @@ The apps authenticate with `DefaultAzureCredential` and their user-assigned iden
 | `modules/environment.bicep` | Container Apps environment (Consumption profile); logs to Log Analytics by diagnostic setting, OpenTelemetry traces and logs to Application Insights through the managed agent |
 | `modules/registry.bicep` | Container Registry Basic, admin user off; AcrPull for the three identities |
 | `modules/cosmos.bicep` | Cosmos DB serverless, continuous backup 7 days, database `pitchside` and its seven containers, data-plane Data Contributor for the API and agents identities |
-| `modules/eventhubs.bicep` | Event Hubs namespace, hub `match-events` (4 partitions), checkpoint storage account and `checkpoints` container; Data Sender, Data Receiver and Storage Blob Data Contributor |
+| `modules/eventhubs.bicep` | Event Hubs namespace, hub `match-events` (4 partitions), checkpoint storage account and `checkpoints` container (the apps also create `recaps` there for the spoken recap); Data Sender, Data Receiver and Storage Blob Data Contributor |
 | `modules/keyvault.bicep` | Key Vault, RBAC mode; Secrets User for the API identity. Holds only the optional MCP key |
 | `modules/speech.bicep` | Azure AI Speech with a custom subdomain (needed for Entra ID); Speech User for the API and agents identities |
 | `modules/ai.bicep` | Foundry: role assignment only (Cognitive Services OpenAI User) on an account created outside this template |
@@ -45,7 +45,7 @@ only checks they exist.
 | api, agents, web | AcrPull | registry |
 | api, agents | Cosmos DB Built-in Data Contributor (`00000000-0000-0000-0000-000000000002`, data plane) | Cosmos DB account |
 | api, agents | Azure Event Hubs Data Sender, Azure Event Hubs Data Receiver | Event Hubs namespace |
-| api, agents | Storage Blob Data Contributor | checkpoint storage account |
+| api, agents | Storage Blob Data Contributor | checkpoint storage account (checkpoints and recaps) |
 | api, agents | Cognitive Services Speech User | Speech account |
 | api, agents | Cognitive Services OpenAI User | Foundry account (only when `FOUNDRY_RESOURCE_ID` is set) |
 | api | Key Vault Secrets User | Key Vault |
@@ -59,8 +59,8 @@ The keys are documented in [docs/CONFIGURATION.md](../docs/CONFIGURATION.md).
 
 | App | Settings |
 | --- | --- |
-| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `UsageGuard__Enabled=true`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
-| agents | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, the `Bus__*` settings, `UsageGuard__Enabled=true`, `Agents__Provider`, and the `Foundry__*` settings when an endpoint is given |
+| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `UsageGuard__Enabled=true`, `Speech__Provider=Azure`, `Speech__Region`, `Speech__ResourceId`, `Speech__BlobServiceUri`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
+| agents | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, the `Bus__*` settings, `UsageGuard__Enabled=true`, the `Speech__*` settings, `Agents__Provider`, and the `Foundry__*` settings when an endpoint is given |
 | web | `API_HOST`, the API's FQDN, which nginx proxies to over HTTPS |
 
 The environment's OpenTelemetry agent sets `OTEL_EXPORTER_OTLP_ENDPOINT` on every app, which is what turns on the

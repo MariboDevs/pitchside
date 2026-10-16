@@ -4,7 +4,10 @@ using Pitchside.Agents.Checking;
 using Pitchside.Agents.Personalisation;
 using Pitchside.Agents.Prompts;
 using Pitchside.Agents.Providers;
+using Pitchside.Agents.Speech;
 using Pitchside.Agents.Workflow;
+using Pitchside.Runtime.Recaps;
+using Pitchside.Runtime.Usage;
 
 namespace Pitchside.Agents.Tests;
 
@@ -41,7 +44,7 @@ internal static class Crew
     }
 
     /// <summary>The whole crew with every persona and language, as the host registers it.</summary>
-    public static MomentWorkflow FullWorkflow(IChatProvider? provider = null, TimeProvider? time = null)
+    public static MomentWorkflow FullWorkflow(IChatProvider? provider = null, TimeProvider? time = null, RecapWriter? recaps = null)
     {
         var chat = provider ?? new ScriptedChatProvider();
         return new(
@@ -52,6 +55,18 @@ internal static class Crew
             Translator(chat, time),
             Options.Create(new AgentsOptions()),
             time ?? TimeProvider.System,
-            NullLogger<MomentWorkflow>.Instance);
+            NullLogger<MomentWorkflow>.Instance,
+            recaps);
     }
+
+    /// <summary>The recap writer with the scripted voice unless another is given, speech on, and the default voices.</summary>
+    public static RecapWriter Recaps(
+        IRecapStore? store = null, ISpeechProvider? speech = null, SpeechOptions? options = null, UsageGuard? guard = null) => new(
+        Catalog,
+        store ?? new InMemoryRecapStore(),
+        Options.Create(options ?? new SpeechOptions { Provider = SpeechOptions.ScriptedProvider }),
+        TimeProvider.System,
+        NullLogger<RecapWriter>.Instance,
+        speech ?? new ScriptedSpeechProvider(),
+        guard);
 }

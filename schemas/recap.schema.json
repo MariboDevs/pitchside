@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pitchside.maribodevs.com/schemas/recap.schema.json",
+  "title": "Pitchside spoken recap",
+  "description": "The spoken full-time recap in one viewer language: the SSML that was synthesised, the voice and the narrative it was assembled from (WP-10). The audio is served separately.",
+  "type": "object",
+  "required": ["matchId", "momentId", "narrativeId", "language", "spokenLanguage", "voice", "englishFallback", "ssml", "createdUtc"],
+  "additionalProperties": false,
+  "properties": {
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
+    "momentId": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:full_time$" },
+    "narrativeId": { "type": "string", "minLength": 1 },
+    "language": { "type": "string", "enum": ["en", "af", "zu", "es"] },
+    "spokenLanguage": { "type": "string", "enum": ["en", "af", "zu", "es"] },
+    "voice": { "type": "string", "minLength": 1 },
+    "englishFallback": { "type": "boolean" },
+    "ssml": { "type": "string", "pattern": "^<speak " },
+    "createdUtc": { "type": "string", "format": "date-time" }
+  }
+}
