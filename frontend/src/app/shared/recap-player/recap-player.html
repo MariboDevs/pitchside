@@ -1,0 +1,15 @@
+<figure class="recap" data-testid="recap-player">
+  <figcaption class="recap-title">Full-time recap</figcaption>
+  <audio
+    class="recap-audio"
+    controls
+    preload="none"
+    [src]="src()"
+    [attr.lang]="recap().spokenLanguage"
+  >
+    The spoken recap needs a browser that plays audio.
+  </audio>
+  @if (recap().englishFallback) {
+    <p class="recap-note">Spoken in English</p>
+  }
+</figure>
