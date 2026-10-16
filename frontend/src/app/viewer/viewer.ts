@@ -9,7 +9,7 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { Club, LANGUAGES, PERSONAS, Player, Recap } from '../core/contracts';
+import { Club, LANGUAGES, PERSONAS, Player, RECAP_POLL_MS, Recap } from '../core/contracts';
 import { toApiError } from '../core/api-error';
 import { MatchApi } from '../core/match-api';
 import { findFact, formatFact } from '../core/format';
@@ -187,6 +187,10 @@ export class Viewer implements OnInit {
     void this.session.connect(this.matchId(), prefs);
   }
 
+  /**
+   * Reads the recap until it is ready, on the RECAP_POLL_MS schedule: the recap is spoken after the full-time
+   * narratives, and a real voice per language can take a while. Speech that is off stops the reads at once.
+   */
   private async loadRecap(
     matchId: string,
     language: string,
@@ -194,31 +198,36 @@ export class Viewer implements OnInit {
   ): Promise<void> {
     this.recapError.set(null);
     let failure: unknown = null;
-    for (let attempt = 0; attempt < 10 && !cancelled(); attempt++) {
+    for (const wait of [0, ...RECAP_POLL_MS]) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      if (cancelled()) {
+        return;
+      }
+
       try {
-        const recap = await this.api.recap(matchId, language);
+        const result = await this.api.recap(matchId, language);
         if (cancelled()) {
           return;
         }
 
-        if (recap) {
-          this.recap.set({ recap, src: this.api.recapAudioUrl(matchId, language) });
+        failure = null;
+        if (result.state === 'ready') {
+          this.recap.set({ recap: result.recap, src: this.api.recapAudioUrl(matchId, language) });
           return;
         }
 
-        failure = null;
+        if (result.state === 'off') {
+          this.recap.set(null);
+          return;
+        }
       } catch (error) {
-        // A failed read is tried again like a missing recap; only the last failure is shown.
+        // A failed read is tried again like a recap still being spoken; only the last failure is shown.
         failure = error;
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
     }
 
-    if (!cancelled()) {
-      this.recap.set(null);
-      this.recapError.set(failure ? toApiError(failure) : null);
-    }
+    this.recap.set(null);
+    this.recapError.set(failure ? toApiError(failure) : null);
   }
 
   protected setPersona(persona: string): void {
