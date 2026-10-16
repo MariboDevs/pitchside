@@ -1,0 +1,81 @@
+# Rendered at container start by the nginx image's envsubst step; only defined environment variables (API_HOST)
+# are substituted, so the nginx variables below stay as written.
+#
+# API_HOST is the API's host name, such as pitchside-api.<environment domain>. nginx calls it over HTTPS with SNI
+# and sends that host, which is how the Container Apps ingress routes the request.
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 8080;
+    server_name _;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    proxy_http_version 1.1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name ${API_HOST};
+    # SNI alone does not check who answers: the API's certificate is verified against the image's CA bundle and must
+    # name API_HOST, so nothing between the two apps can read or change the traffic, the MCP key header included.
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 3;
+    proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+    proxy_set_header Host ${API_HOST};
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-Id $http_x_request_id;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location /api/ {
+        proxy_pass https://${API_HOST};
+    }
+
+    # SignalR: WebSocket upgrade, with server-sent events and long polling as its fallbacks, so no buffering and a
+    # read timeout well above the hub's keep-alive.
+    location /hubs/ {
+        proxy_pass https://${API_HOST};
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+    }
+
+    # MCP streamable HTTP: responses may stream, so they are passed through as they arrive.
+    location /mcp {
+        proxy_pass https://${API_HOST};
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 5m;
+    }
+
+    # Hashed build output never changes under its name.
+    location ~* \.(?:js|css|woff2?)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri =404;
+    }
+
+    # Angular routes (/overlay, /control, /viewer) fall back to the app shell, which is never cached.
+    location / {
+        add_header Cache-Control "no-cache" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -155,6 +155,17 @@ precision. `status` is `verified` (passed the fact-checker), `fallback` (the mom
 two failed explainer attempts), `rejected` or `draft`. Run the whole crew offline with
 `dotnet run --project src/Pitchside.Cli -- narrate --seed 7 --provider scripted`.
 
+## Spoken recap
+
+At full time the crew speaks a recap in every viewer language (WP-10). Its contract is
+[`schemas/recap.schema.json`](../schemas/recap.schema.json) and `src/Pitchside.Contracts/Recap.cs`: the match and
+`full_time` moment, the narrative that was read (the analyst variant in that language, else the base), the voice,
+the SSML, and `englishFallback` when the language has no voice or its translation fell back to English, in which
+case `spokenLanguage` is `en` and the English audio stands in. The SSML is built by code from the rendered
+sentences, so every number in the audio is a number the fact sheet holds. Try it offline with
+`dotnet run --project src/Pitchside.Cli -- narrate --seed 7 --provider scripted --recap --speech scripted`, which
+writes `out/seed-7/recap/{en,af,zu,es}.mp3`.
+
 ## Live runtime
 
 A match goes live through the runtime (`src/Pitchside.Runtime`): a producer publishes `EventEnvelope`s
@@ -186,5 +197,7 @@ them.
 429 at the cap), `DELETE /replays/{matchId}`, `POST /replays/{matchId}/pause` and `/resume`, and `POST /replays/{matchId}/jump`, which
 runs the replay ahead to ten seconds of match time before its next moment and answers with that moment (404 when
 the match is not replaying, 409 when no moment is left). A seeded match
-without replaying it: `GET /simulations/{seed}` and `/simulations/{seed}/events`. Errors are RFC 7807 problem
+without replaying it: `GET /simulations/{seed}` and `/simulations/{seed}/events`. The spoken recap:
+`GET /matches/{matchId}/recap?language=` (the `Recap`) and `/recap/audio?language=` (its MP3); both are 404 with a
+problem detail titled "Speech is off" when `Speech:Provider` is `None`, and "No recap yet" before full time. Errors are RFC 7807 problem
 details and every response carries `X-Request-ID`.

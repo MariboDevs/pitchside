@@ -96,6 +96,12 @@
         </section>
       }
 
+      @if (recap(); as spoken) {
+        <app-recap-player [recap]="spoken.recap" [src]="spoken.src" />
+      } @else if (recapError(); as problem) {
+        <p class="muted" role="status">The spoken recap is unavailable: {{ problem }}</p>
+      }
+
       <section class="cards" aria-label="Latest moments" aria-live="polite">
         @for (card of cards(); track card.id) {
           <app-lower-third

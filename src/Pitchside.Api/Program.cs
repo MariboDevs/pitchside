@@ -83,6 +83,7 @@ app.MapOverlayEndpoints();
 app.MapAuditEndpoints();
 app.MapTraceEndpoints();
 app.MapUsageEndpoints();
+app.MapRecapEndpoints();
 app.MapMcp(McpServerSetup.Path);
 if (string.Equals(pitchside.Mode, PitchsideOptions.ReplayMode, StringComparison.OrdinalIgnoreCase))
 {

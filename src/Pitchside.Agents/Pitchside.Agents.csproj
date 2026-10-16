@@ -18,7 +18,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="prompts/*.md;prompts/*.sha256" LogicalName="Pitchside.Agents.prompts.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="prompts/*.md;prompts/*.sha256;prompts/*.json" LogicalName="Pitchside.Agents.prompts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="prompts/templates/*.md" LogicalName="Pitchside.Agents.prompts.templates.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../tests/fixtures/scripted/*.json" LogicalName="Pitchside.Agents.scripted.%(Filename)%(Extension)" />
   </ItemGroup>
