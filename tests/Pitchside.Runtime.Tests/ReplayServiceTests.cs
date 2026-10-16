@@ -168,6 +168,22 @@ public sealed class ReplayServiceTests : IAsyncLifetime
         Replays.TryJump("MER-404", out _).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task A_jump_resumes_a_paused_replay_and_plays_on_from_where_it_lands()
+    {
+        var started = await Replays.StartAsync(111, 1, CancellationToken.None);
+        await WaitFor(async () => (await Store.GetEventsAsync(started.MatchId, 1, 1, CancellationToken.None)).Count == 1);
+        Replays.Pause(started.MatchId).ShouldBeTrue();
+        await WaitFor(async () => await ActorStatusAsync(started.MatchId) == MatchStatus.Paused);
+
+        Replays.TryJump(started.MatchId, out var jump).ShouldBeTrue();
+
+        jump.ShouldNotBeNull();
+        await WaitFor(async () => (await Store.GetEventsAsync(started.MatchId, jump.ToSeq, jump.ToSeq, CancellationToken.None)).Count == 1);
+        await WaitFor(async () => await ActorStatusAsync(started.MatchId) == MatchStatus.Live);
+        Replays.Stop(started.MatchId);
+    }
+
     private static async Task WaitFor(Func<Task<bool>> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

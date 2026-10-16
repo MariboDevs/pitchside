@@ -153,6 +153,14 @@ public sealed partial class ReplayService(
         }
 
         run.FastForward(target);
+
+        // A jump plays on from where it lands, so a paused replay is resumed rather than left waiting at its gate.
+        if (run.Gate.IsPaused)
+        {
+            run.Gate.Resume();
+            Tell(new SetLifecycle(matchId, MatchStatus.Live));
+        }
+
         jump = new ReplayJump(matchId, next.Id, next.Type, next.Headline, events[target].Seq);
         LogJumped(matchId, next.Id, events[target].Seq);
         return true;
