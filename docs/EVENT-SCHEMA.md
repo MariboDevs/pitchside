@@ -183,6 +183,8 @@ them.
 `GET /matches`, `GET /matches/{matchId}`, `GET /matches/{matchId}/events?fromSeq=&toSeq=`,
 `GET /matches/{matchId}/facts?atSeq=` (recomputed exactly from the stored events when `atSeq` is given),
 `GET /matches/{matchId}/moments`, `POST /replays { seed, speed }` (202; 409 when the match is already stored;
-429 at the cap), `DELETE /replays/{matchId}`, `POST /replays/{matchId}/pause` and `/resume`. A seeded match
+429 at the cap), `DELETE /replays/{matchId}`, `POST /replays/{matchId}/pause` and `/resume`, and `POST /replays/{matchId}/jump`, which
+runs the replay ahead to ten seconds of match time before its next moment and answers with that moment (404 when
+the match is not replaying, 409 when no moment is left). A seeded match
 without replaying it: `GET /simulations/{seed}` and `/simulations/{seed}/events`. Errors are RFC 7807 problem
 details and every response carries `X-Request-ID`.
