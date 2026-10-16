@@ -55,7 +55,9 @@ public static class AgentsServiceCollectionExtensions
         services.TryAddSingleton<IAuditStore, InMemoryAuditStore>();
         if (string.Equals(provider, AgentsOptions.FoundryProvider, StringComparison.OrdinalIgnoreCase))
         {
-            services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+            // The default chain, narrowed by AZURE_TOKEN_CREDENTIALS where the host sets it (Aspire sets the managed
+            // identity in Container Apps; a developer shell sets `dev`), with its tokens cached across calls.
+            services.TryAddSingleton<TokenCredential>(_ => new CachingTokenCredential(new DefaultAzureCredential()));
             services.TryAddSingleton<IChatProvider>(sp => Audited(sp, new FoundryChatProvider(sp.GetRequiredService<IOptions<FoundryOptions>>(), sp.GetRequiredService<TokenCredential>())));
         }
         else if (string.Equals(provider, AgentsOptions.ScriptedProvider, StringComparison.OrdinalIgnoreCase))

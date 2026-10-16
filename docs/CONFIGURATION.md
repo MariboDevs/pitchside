@@ -29,6 +29,7 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Foundry:QualityTimeoutSeconds` | `12` | deadline for one model call on the quality tier (half-time and full-time narratives, the agent fact-check, the groundedness judge); quality models reason before they answer | WP-04 |
 | `Foundry:ReasoningEffort:Fast` | `none` | reasoning effort sent on the fast tier; `none` answers inside the latency budget and is the only effort that accepts temperature 0, which the provider then sends; empty sends nothing | WP-04 |
 | `Foundry:ReasoningEffort:Quality` | `low` | reasoning effort sent on the quality tier; GPT-6 quality models accept `low` and above and reject a fixed temperature, so none is sent; empty sends nothing | WP-04 |
+| `AZURE_TOKEN_CREDENTIALS` (environment) | | narrows `DefaultAzureCredential` to one part of its chain. Set `dev` in a developer shell so the managed identity probe is skipped (on WSL it hangs long enough to time the call out); in Container Apps, Aspire sets it to `ManagedIdentityCredential`. Tokens are cached across calls | WP-04 |
 | `Evaluation:Provider` | `Local` | `Local` (deterministic proxy: the share of sentences citing only the moment's evidence keys), `Foundry` (a judge model scores groundedness) | WP-07 |
 | `Evaluation:BatchSeconds` | `30` | verified narratives are scored in batches this many seconds apart | WP-07 |
 | `Evaluation:Deployment` | | the Foundry deployment that judges groundedness; empty uses `Foundry:Deployments:Quality` | WP-07 |
