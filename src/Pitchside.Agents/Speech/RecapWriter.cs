@@ -107,33 +107,9 @@ public sealed partial class RecapWriter(
         context.Narratives.FirstOrDefault(n => n.Persona == Personas.Analyst && n.Subject is null && n.Language == language
             && n.Status == NarrativeStatus.Verified && !n.Provenance.Fallback);
 
-    /// <summary>Counts one spoken line per sentence; when the hour's limit is reached, gives back what this recap took.</summary>
-    private bool TakeLines(int lines)
-    {
-        if (guard is null)
-        {
-            return true;
-        }
-
-        var taken = new List<long>();
-        for (var i = 0; i < lines; i++)
-        {
-            var decision = guard.TryTake(UsageLimits.SpokenLines, UsageGuard.HostKey);
-            if (!decision.Allowed)
-            {
-                foreach (var window in taken)
-                {
-                    guard.Release(UsageLimits.SpokenLines, UsageGuard.HostKey, window);
-                }
-
-                return false;
-            }
-
-            taken.Add(decision.Window);
-        }
-
-        return true;
-    }
+    /// <summary>Counts one spoken line per sentence, all of a recap's lines at once or none of them.</summary>
+    private bool TakeLines(int lines) =>
+        guard is null || guard.TryTake(UsageLimits.SpokenLines, UsageGuard.HostKey, lines).Allowed;
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Moment {MomentId}: no English voice is configured (Speech:Voices:en), so no recap is spoken")]
     private partial void LogNoEnglishVoice(string momentId);

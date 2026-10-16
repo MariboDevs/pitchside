@@ -33,8 +33,15 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
     }
 
     /// <summary>Counts one use of an hourly limit, refusing it when the limit is reached and the guard is enabled.</summary>
-    public UsageDecision TryTake(string limit, string key)
+    public UsageDecision TryTake(string limit, string key) => TryTake(limit, key, 1);
+
+    /// <summary>
+    /// Counts <paramref name="count"/> uses of an hourly limit at once, all or none: refused when they would not all fit
+    /// and the guard is enabled, so two callers can never each take part of what only one of them needs.
+    /// </summary>
+    public UsageDecision TryTake(string limit, string key, int count)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
         lock (_lock)
         {
             // The clock is read under the lock, so two callers at the turn of the hour can never apply their counts out
@@ -55,12 +62,12 @@ public sealed class UsageGuard(IOptions<UsageGuardOptions> options, TimeProvider
             }
 
             var used = _windows.TryGetValue((limit, key), out var current) && current.Window == window ? current.Count : 0;
-            if (enabled && used >= LimitOf(limit))
+            if (enabled && used + count > LimitOf(limit))
             {
                 return new UsageDecision(false, TimeSpan.FromSeconds(((window + 1) * 3600) - now), window);
             }
 
-            _windows[(limit, key)] = (window, used + 1);
+            _windows[(limit, key)] = (window, used + count);
             return new UsageDecision(true, TimeSpan.Zero, window);
         }
     }
