@@ -5,7 +5,8 @@ namespace Pitchside.Agents.Providers;
 
 /// <summary>
 /// The per-call options the Foundry provider sends: the output cap, JSON output, the tier's reasoning effort, and
-/// temperature 0 only when the effort is <c>none</c>, because a reasoning call rejects any fixed temperature.
+/// temperature 0 only when the effort is <c>none</c>, because a reasoning call rejects any fixed temperature. An empty
+/// effort sends no effort and no temperature: the model reasons at its default and would reject a fixed temperature.
 /// </summary>
 public static class FoundryChatOptionsBuilder
 {
@@ -26,12 +27,11 @@ public static class FoundryChatOptionsBuilder
     {
         ArgumentNullException.ThrowIfNull(chat);
         var effort = reasoningEffort?.Trim();
+        chat.Temperature = string.Equals(effort, FoundryReasoningEffort.None, StringComparison.OrdinalIgnoreCase) ? 0 : null;
         if (string.IsNullOrEmpty(effort))
         {
             return;
         }
-
-        chat.Temperature = string.Equals(effort, FoundryReasoningEffort.None, StringComparison.OrdinalIgnoreCase) ? 0 : null;
 
         // Reasoning effort is still marked for evaluation in the OpenAI SDK (OPENAI001), as the keyless token policy is.
 #pragma warning disable OPENAI001

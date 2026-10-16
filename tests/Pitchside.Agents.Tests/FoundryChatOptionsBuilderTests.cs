@@ -39,6 +39,29 @@ public sealed class FoundryChatOptionsBuilderTests
     }
 
     [Fact]
+    public void An_empty_effort_clears_a_callers_temperature()
+    {
+        var chat = new ChatOptions { Temperature = 0, MaxOutputTokens = 50 };
+
+        FoundryChatOptionsBuilder.Apply(chat, string.Empty);
+
+        chat.Temperature.ShouldBeNull();
+        chat.MaxOutputTokens.ShouldBe(50);
+        chat.RawRepresentationFactory.ShouldBeNull();
+    }
+
+    [Fact]
+    public void A_reasoning_effort_clears_a_callers_temperature()
+    {
+        var chat = new ChatOptions { Temperature = 0 };
+
+        FoundryChatOptionsBuilder.Apply(chat, "low");
+
+        chat.Temperature.ShouldBeNull();
+        Raw(chat).ReasoningEffortLevel.ShouldBe(new ChatReasoningEffortLevel("low"));
+    }
+
+    [Fact]
     public void A_configured_effort_is_sent_as_given()
     {
         var options = new FoundryOptions { ReasoningEffort = new FoundryReasoningEffort { Quality = "medium" } };
