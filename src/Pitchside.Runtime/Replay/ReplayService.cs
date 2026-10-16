@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Pitchside.Contracts;
 using Pitchside.Engine;
+using Pitchside.Moments;
 using Pitchside.Runtime.Actors;
 using Pitchside.Runtime.Bus;
 using Pitchside.Runtime.Messages;
@@ -29,6 +30,9 @@ public sealed partial class ReplayService(
 {
     private readonly ConcurrentDictionary<string, ReplayRun> _runs = new(StringComparer.Ordinal);
     private readonly Lock _startLock = new();
+
+    /// <summary>How far ahead of the next moment a jump lands, in match time.</summary>
+    public static readonly TimeSpan JumpLead = TimeSpan.FromSeconds(10);
 
     // Kept after a run ends: an instant replay publishes far faster than its match actor consumes, so the match is
     // still being played from the bus after its run is gone. One entry per replay, and a match id replays once.
@@ -70,6 +74,8 @@ public sealed partial class ReplayService(
                 throw new ReplayConflictException($"{matchId} is already stored; a match id is replayed once per store.");
             }
 
+            // The run learns its events and moments before it publishes, so a jump can find the next moment.
+            run.Load(match.Events, MatchMoments.Detect(match.Document, match.Events));
             _instant[matchId] = speed == 0;
             run.Completion = Task.Run(() => PublishAsync(run, match.Events, speed), CancellationToken.None);
             LogStarted(matchId, seed, speed);
@@ -119,6 +125,39 @@ public sealed partial class ReplayService(
         return true;
     }
 
+    public bool TryJump(string matchId, out ReplayJump? jump)
+    {
+        jump = null;
+        if (!_runs.TryGetValue(matchId, out var run) || run.Events is not { Count: > 0 } events)
+        {
+            return false;
+        }
+
+        var published = run.Published;
+        var lastSeq = published > 0 ? events[published - 1].Seq : 0;
+        var next = run.Moments.FirstOrDefault(m => m.TriggerSeq > lastSeq);
+        if (next is null)
+        {
+            return true;
+        }
+
+        // The last event at least ten seconds of match time before the moment's trigger, and never behind what is out.
+        var trigger = events.First(e => e.Seq == next.TriggerSeq);
+        var target = Math.Max(published - 1, 0);
+        for (var i = target; i < events.Count && events[i].Seq < next.TriggerSeq; i++)
+        {
+            if (events[i].WallTimeUtc <= trigger.WallTimeUtc - JumpLead)
+            {
+                target = i;
+            }
+        }
+
+        run.FastForward(target);
+        jump = new ReplayJump(matchId, next.Id, next.Type, next.Headline, events[target].Seq);
+        LogJumped(matchId, next.Id, events[target].Seq);
+        return true;
+    }
+
     Task IHostedService.StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -143,12 +182,13 @@ public sealed partial class ReplayService(
                 next = i;
                 await run.Gate.WaitAsync(token).ConfigureAwait(false);
                 await bus.PublishAsync(EnvelopeFactory.Wrap(events[i], time.GetUtcNow()), token).ConfigureAwait(false);
-                if (speed > 0 && i + 1 < events.Count)
+                run.MarkPublished(i + 1);
+                if (speed > 0 && i + 1 < events.Count && !run.Skips(i + 1))
                 {
                     var gap = (events[i + 1].WallTimeUtc - events[i].WallTimeUtc) / speed;
                     if (gap > TimeSpan.Zero)
                     {
-                        await Task.Delay(gap, time, token).ConfigureAwait(false);
+                        await run.DelayAsync(i + 1, gap, time, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -193,6 +233,9 @@ public sealed partial class ReplayService(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Replay {MatchId} could not publish seq {Seq} and was stopped")]
     private partial void LogPublishFailed(Exception exception, string matchId, int seq);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Replay {MatchId} jumps to seq {Seq}, ahead of moment {MomentId}")]
+    private partial void LogJumped(string matchId, string momentId, int seq);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Replay {MatchId} started from seed {Seed} at speed {Speed}")]
     private partial void LogStarted(string matchId, long seed, double speed);

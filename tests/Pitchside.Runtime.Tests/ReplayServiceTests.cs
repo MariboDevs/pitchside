@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Pitchside.Contracts;
+using Pitchside.Engine;
+using Pitchside.Moments;
 using Pitchside.Runtime.Actors;
 using Pitchside.Runtime.Messages;
 using Pitchside.Runtime.Replay;
@@ -127,6 +129,36 @@ public sealed class ReplayServiceTests : IAsyncLifetime
         Replays.Running.ShouldBe([first.MatchId, second.MatchId], ignoreOrder: true);
         Replays.Stop(first.MatchId);
         Replays.Stop(second.MatchId);
+    }
+
+    [Fact]
+    public async Task A_jump_runs_ahead_to_ten_seconds_before_the_next_moment_then_plays_on_in_real_time()
+    {
+        // Seed 110 has a momentum swing a second after kick-off and its next moment at 2:37, so once seq 3 is out there
+        // is more than ten seconds to run ahead.
+        var started = await Replays.StartAsync(110, 1, CancellationToken.None);
+        await WaitFor(async () => (await Store.GetEventsAsync(started.MatchId, 3, 3, CancellationToken.None)).Count == 1);
+
+        Replays.TryJump(started.MatchId, out var jump).ShouldBeTrue();
+
+        jump.ShouldNotBeNull();
+        jump.MomentId.ShouldBe("MER-110:M:0036:momentum_swing");
+        var match = MatchSimulator.Simulate(110);
+        var moment = MatchMoments.Detect(match.Document, match.Events).Single(m => m.Id == jump.MomentId);
+        var trigger = match.Events.Single(e => e.Seq == moment.TriggerSeq);
+        var landed = match.Events.Single(e => e.Seq == jump.ToSeq);
+        var after = match.Events.Single(e => e.Seq == jump.ToSeq + 1);
+        (trigger.WallTimeUtc - landed.WallTimeUtc).ShouldBeGreaterThanOrEqualTo(ReplayService.JumpLead);
+        if (after.Seq < trigger.Seq)
+        {
+            (trigger.WallTimeUtc - after.WallTimeUtc).ShouldBeLessThan(ReplayService.JumpLead);
+        }
+
+        // The run reaches the landing event at once, then waits out the last ten seconds in real time.
+        await WaitFor(async () => (await Store.GetEventsAsync(started.MatchId, jump.ToSeq, jump.ToSeq, CancellationToken.None)).Count == 1);
+        (await Store.GetEventsAsync(started.MatchId, trigger.Seq, trigger.Seq, CancellationToken.None)).ShouldBeEmpty();
+        Replays.Stop(started.MatchId);
+        Replays.TryJump("MER-404", out _).ShouldBeFalse();
     }
 
     private static async Task WaitFor(Func<Task<bool>> condition)
