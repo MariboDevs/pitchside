@@ -135,9 +135,13 @@ The provisioning order from the specification, with what can be checked at each 
 
    and add the 80% notification and its addresses in the portal (Cost Management, Budgets).
 
-A deployment without azd is the same template:
+A deployment without azd is the same template. Once the apps have been deployed, export the three
+`SERVICE_*_RESOURCE_EXISTS` flags first: `fetch-image.bicep` keeps an app's running image only when its flag is
+`true`, and both parameter files default the flags to `false`, which would put the placeholder image back and take the
+app offline. azd sets them itself after its first deploy.
 
 ```bash
+export SERVICE_API_RESOURCE_EXISTS=true SERVICE_AGENTS_RESOURCE_EXISTS=true SERVICE_WEB_RESOURCE_EXISTS=true
 export AZURE_LOCATION=southafricanorth
 az deployment sub create --location "$AZURE_LOCATION" --name pitchside-dev \
   --template-file infra/main.bicep --parameters infra/main.dev.bicepparam
