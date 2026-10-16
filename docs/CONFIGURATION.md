@@ -29,7 +29,7 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Evaluation:Provider` | `Local` | `Local` (deterministic proxy: the share of sentences citing only the moment's evidence keys), `Foundry` (a judge model scores groundedness) | WP-07 |
 | `Evaluation:BatchSeconds` | `30` | verified narratives are scored in batches this many seconds apart | WP-07 |
 | `Evaluation:Deployment` | | the Foundry deployment that judges groundedness; empty uses `Foundry:Deployments:Quality` | WP-07 |
-| `UsageGuard:Enabled` | | unset means on, except with `Agents:Provider=Scripted`, whose limits never apply; `true` or `false` overrides | WP-07 |
+| `UsageGuard:Enabled` | | unset means on whenever a paid service is called (`Agents:Provider=Foundry` or `Speech:Provider=Azure`) and off when both are scripted; `true` or `false` overrides | WP-07, WP-10 |
 | `UsageGuard:ReplaysPerHourPerIp` | `6` | replays one address may start per clock hour; the next gets 429 with `Retry-After` | WP-07 |
 | `UsageGuard:NarrativesPerHour` | `400` | moment workflows (a base narrative and its variants) one host runs per clock hour; later moments are skipped | WP-07 |
 | `UsageGuard:SpokenLinesPerHour` | `60` | spoken commentary lines per host per clock hour, enforced by the speech service | WP-07, WP-10 |
