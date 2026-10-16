@@ -1,7 +1,11 @@
 namespace Pitchside.Agents.Tests;
 
-/// <summary>A clock that always reads the same instant, so generated narratives are byte-for-byte repeatable.</summary>
-internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+/// <summary>A clock that stands still until a test advances it.</summary>
+public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
 {
-    public override DateTimeOffset GetUtcNow() => now;
+    private DateTimeOffset _now = now;
+
+    public override DateTimeOffset GetUtcNow() => _now;
+
+    public void Advance(TimeSpan by) => _now += by;
 }

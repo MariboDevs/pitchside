@@ -1,5 +1,5 @@
 using Pitchside.Agents.Executors;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Workflow;
 using Pitchside.Contracts;

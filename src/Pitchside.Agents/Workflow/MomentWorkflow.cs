@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Pitchside.Agents.Checking;
 using Pitchside.Agents.Executors;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Speech;
 using Pitchside.Contracts;

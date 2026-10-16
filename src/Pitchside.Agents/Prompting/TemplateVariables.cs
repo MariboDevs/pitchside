@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using Pitchside.Contracts;
 using Pitchside.Stats;
 
-namespace Pitchside.Agents.Prompts;
+namespace Pitchside.Agents.Prompting;
 
 /// <summary>
 /// The placeholders a fallback template or a scripted answer may use: <c>{{homeName}}</c>, <c>{{awayName}}</c>,

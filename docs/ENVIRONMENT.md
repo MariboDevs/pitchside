@@ -116,6 +116,34 @@ The subscription bills in USD. R2,500 at the September 2026 rate of about R16.4 
 | `budget-pitchside-dev` | `rg-pitchside-dev` | 150 USD per month, October 2026 to September 2027 | 80% and 100% actual spend, email sipho@maribodevs.com |
 | `budget-pitchside-demo` | `rg-pitchside-demo` | 150 USD per month, October 2026 to September 2027 | 80% and 100% actual spend, email sipho@maribodevs.com |
 
+### Dev environment (WP-09, provisioned 16 October)
+
+`azd provision --environment dev` from `infra/main.bicep` with `infra/main.dev.bicepparam`; 13 minutes 25 seconds.
+The azd environment lives in `.azure/dev/` (git-ignored) with `AZURE_LOCATION`, the Foundry endpoint, deployment
+names and resource id, `PITCHSIDE_ALERT_EMAILS` and `PITCHSIDE_OWNER` set.
+
+| Resource | Name |
+| --- | --- |
+| Container Apps environment | `cae-pitchside-dev` |
+| Container Apps | `pitchside-api`, `pitchside-agents`, `pitchside-web` |
+| API URL | `https://pitchside-api.nicebay-8594be81.southafricanorth.azurecontainerapps.io` |
+| Web URL | `https://pitchside-web.nicebay-8594be81.southafricanorth.azurecontainerapps.io` |
+| Container Registry | `crpitchsidedevz2v4pwsvwphcy.azurecr.io` |
+| Cosmos DB | `cosmos-pitchside-dev-z2v4pwsvwphcy`, endpoint `https://cosmos-pitchside-dev-z2v4pwsvwphcy.documents.azure.com:443/` |
+| Event Hubs namespace | `evhns-pitchside-dev-z2v4pwsvwphcy.servicebus.windows.net` |
+| Checkpoint storage | `stpitchdevz2v4pwsvwphcy` |
+| Key Vault | `kv-pitch-dev-z2v4pwsvwph` |
+| Log Analytics, Application Insights | `log-pitchside-dev`, `appi-pitchside-dev` |
+| App identities (client ids) | API `2ad2833c-f6f1-4ed1-bb07-3d7cb85ace8e`, agents `42ab6d8c-99fe-4205-a793-425b9f0666f3` |
+
+The Speech resource and the Foundry resource are the Phase 0 ones above; the template assigns the roles.
+
+Deployed on 16 October with `azd deploy` from the `fix/foundry-gpt6-parameters` branch, then a second
+`azd provision` for the probes. Verified: `/health` and `/alive` 200 on the API, 200 on the web app and its `/api`
+proxy, and a replay through the proxy reached a verified narrative written by the Foundry deployments in 8 s. The
+first image crashed at startup because the Windows checkout merges `Prompts/` and `prompts/`; the source folder was
+renamed in the same branch. Build images from a checkout where `src/Pitchside.Agents/prompts` is lower case.
+
 ### Fabric
 
 | Item | Value |

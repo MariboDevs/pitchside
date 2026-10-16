@@ -4,7 +4,7 @@ using Pitchside.Agents.Personalisation;
 using Pitchside.Agents.Workflow;
 using Pitchside.Contracts;
 
-namespace Pitchside.Agents.Prompts;
+namespace Pitchside.Agents.Prompting;
 
 /// <summary>
 /// The persona writer's user message: everything the explainer saw, with both sides' facts, plus the verified base

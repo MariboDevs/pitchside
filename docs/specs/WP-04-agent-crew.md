@@ -151,7 +151,10 @@ Objection { string SentenceIndex; string Kind; string Detail }   // Kind: uncite
 | `Foundry:Endpoint` | | the Azure OpenAI or Foundry project endpoint |
 | `Foundry:Deployments:Fast` | | deployment name |
 | `Foundry:Deployments:Quality` | | deployment name |
-| `Foundry:TimeoutSeconds` | `4` | deadline for one model call; past it the attempt fails and retry or fallback follows |
+| `Foundry:TimeoutSeconds` | `4` | deadline for one fast-tier call; past it the attempt fails and retry or fallback follows |
+| `Foundry:QualityTimeoutSeconds` | `12` | deadline for one quality-tier call; the quality model reasons before it answers |
+| `Foundry:ReasoningEffort:Fast` | `none` | reasoning effort on the fast tier; the only effort that accepts temperature 0 |
+| `Foundry:ReasoningEffort:Quality` | `low` | reasoning effort on the quality tier; a reasoning call rejects a fixed temperature |
 | `Agents:AgentFactCheck` | `true` | second-pass model check |
 
 ## Done when
