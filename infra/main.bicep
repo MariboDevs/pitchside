@@ -25,6 +25,9 @@ param owner string
 ])
 param speechSku string
 
+@description('Name of the Speech account; empty generates one. dev reuses the existing free-tier account, since a subscription may hold only one F0 Speech account.')
+param speechName string = ''
+
 @description('Event Hubs SKU. Basic holds only the $Default consumer group; Standard adds api, agents and fabric.')
 @allowed([
   'Basic'
@@ -179,7 +182,7 @@ module speech 'modules/speech.bicep' = {
   scope: rg
   params: {
     location: location
-    name: 'spch-pitchside-${environmentName}-${token}'
+    name: empty(speechName) ? 'spch-pitchside-${environmentName}-${token}' : speechName
     sku: speechSku
     tags: tags
     speechUserPrincipalIds: [

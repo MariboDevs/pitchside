@@ -5,11 +5,12 @@ name: Deploy
 # Push to main deploys dev; a manual run picks dev or demo, and demo waits for approval in the `demo` GitHub
 # environment. Sign-in is OIDC federation: the repository variables below hold identifiers, not secrets, and the
 # workflow skips its job until the chosen environment's client id is set, so it never fails on main before Azure is
-# configured. Each environment has its own identity, trusted only by its own GitHub environment and allowed to write
-# only to its own resource group and registry, so the demo approval is a real boundary.
+# configured. AZURE_CLIENT_ID is the deployment identity recorded in docs/ENVIRONMENT.md, trusted by both GitHub
+# environments. AZURE_CLIENT_ID_DEV and AZURE_CLIENT_ID_DEMO, when set, replace it per environment with identities
+# that can each write only to their own environment, which makes the demo approval a real boundary.
 #
-# Repository variables: AZURE_CLIENT_ID_DEV, AZURE_CLIENT_ID_DEMO, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID,
-# AZURE_LOCATION.
+# Repository variables: AZURE_CLIENT_ID (or AZURE_CLIENT_ID_DEV and AZURE_CLIENT_ID_DEMO), AZURE_TENANT_ID,
+# AZURE_SUBSCRIPTION_ID, AZURE_LOCATION.
 
 on:
   push:
@@ -40,8 +41,8 @@ jobs:
     name: Deploy and smoke test
     if: >-
       ${{
-        (github.event_name == 'workflow_dispatch' && inputs.environment == 'demo' && vars.AZURE_CLIENT_ID_DEMO != '') ||
-        ((github.event_name != 'workflow_dispatch' || inputs.environment == 'dev') && vars.AZURE_CLIENT_ID_DEV != '')
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'demo' && (vars.AZURE_CLIENT_ID_DEMO || vars.AZURE_CLIENT_ID) != '') ||
+        ((github.event_name != 'workflow_dispatch' || inputs.environment == 'dev') && (vars.AZURE_CLIENT_ID_DEV || vars.AZURE_CLIENT_ID) != '')
       }}
     runs-on: ubuntu-latest
     environment:
@@ -57,7 +58,7 @@ jobs:
       - name: Sign in to Azure (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ (github.event_name == 'workflow_dispatch' && inputs.environment == 'demo') && vars.AZURE_CLIENT_ID_DEMO || vars.AZURE_CLIENT_ID_DEV }}
+          client-id: ${{ (github.event_name == 'workflow_dispatch' && inputs.environment == 'demo') && (vars.AZURE_CLIENT_ID_DEMO || vars.AZURE_CLIENT_ID) || (vars.AZURE_CLIENT_ID_DEV || vars.AZURE_CLIENT_ID) }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 

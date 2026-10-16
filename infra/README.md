@@ -160,15 +160,17 @@ bicep build-params infra/main.demo.bicepparam --stdout > /dev/null
 `.github/workflows/deploy.yml` deploys `dev` on every push to `main` and either environment on a manual run. It skips
 itself until the chosen environment's client id exists. One-time setup:
 
-1. Two Entra ID app registrations (or user-assigned identities) for GitHub, one per environment, so a job signed in
-   for `dev` cannot write to `demo` and the demo approval is a real boundary:
-   - `github-pitchside-dev`: Contributor on `rg-pitchside-dev`, AcrPush on the dev registry, and one federated
-     credential for the subject `repo:MariboDevs/pitchside:environment:dev`.
-   - `github-pitchside-demo`: Contributor on `rg-pitchside-demo`, AcrPush on the demo registry, and one federated
-     credential for the subject `repo:MariboDevs/pitchside:environment:demo`.
-   - Both also need Reader on the subscription: `main.bicep` deploys at subscription scope, and `azd env refresh`
-     reads that deployment's outputs, which a role on the resource group alone does not allow.
-2. Repository variables (not secrets; none of them is one): `AZURE_CLIENT_ID_DEV`, `AZURE_CLIENT_ID_DEMO`,
+1. A deployment identity. `id-pitchside-github` (docs/ENVIRONMENT.md) already exists: Contributor and User Access
+   Administrator on both resource groups, federated credentials for `environment:dev` and `environment:demo`, and
+   its client id in the repository variable `AZURE_CLIENT_ID`. It still needs **Reader on the subscription**:
+   `main.bicep` deploys at subscription scope, and `azd env refresh` reads that deployment's outputs, which a role
+   on a resource group alone does not allow.
+   - Because that one identity can write to both environments, the `demo` approval stops the workflow but not the
+     identity. To make it a real boundary, create one identity per environment, each with Contributor and AcrPush
+     on its own resource group and registry, one federated credential for its own environment, and Reader on the
+     subscription, and set `AZURE_CLIENT_ID_DEV` and `AZURE_CLIENT_ID_DEMO`; they take precedence over
+     `AZURE_CLIENT_ID`.
+2. Repository variables (not secrets; none of them is one): `AZURE_CLIENT_ID` (or the two per-environment ones),
    `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_LOCATION`. They are repository variables because a job's `if`
    cannot see variables scoped to an environment.
 3. GitHub environments `dev` and `demo`; `demo` with Sipho as required reviewer.

@@ -30,6 +30,10 @@ resource speech 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   sku: {
     name: sku
   }
+  // Kept as the existing dev account has it, so redeploying over that account never removes its identity.
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     customSubDomainName: name
     disableLocalAuth: true
