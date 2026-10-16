@@ -15,9 +15,12 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # Documentation only. Not every Markdown file: the agents' prompts and templates are Markdown embedded in the
+    # build, so a change to them must deploy.
     paths-ignore:
       - 'docs/**'
-      - '**/*.md'
+      - '*.md'
+      - 'infra/README.md'
   workflow_dispatch:
     inputs:
       environment:
