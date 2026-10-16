@@ -23,6 +23,11 @@ server {
     proxy_http_version 1.1;
     proxy_ssl_server_name on;
     proxy_ssl_name ${API_HOST};
+    # SNI alone does not check who answers: the API's certificate is verified against the image's CA bundle and must
+    # name API_HOST, so nothing between the two apps can read or change the traffic, the MCP key header included.
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 3;
+    proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
     proxy_set_header Host ${API_HOST};
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
