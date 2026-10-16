@@ -11,8 +11,9 @@ namespace Pitchside.Agents.Providers;
 /// <summary>
 /// The Foundry provider: Microsoft Agent Framework's OpenAI integration against the Azure OpenAI v1 endpoint of a
 /// Foundry project, keyless through a token credential (managed identity in Azure, the developer's sign-in
-/// locally). Temperature 0, JSON output, 400 output tokens per call, and a deadline of
-/// <c>Foundry:TimeoutSeconds</c> per call.
+/// locally). JSON output, 400 output tokens per call, the tier's reasoning effort (see
+/// <see cref="FoundryReasoningEffort"/>), and a deadline per tier: <c>Foundry:TimeoutSeconds</c> on the fast tier,
+/// <c>Foundry:QualityTimeoutSeconds</c> on the quality tier.
 /// </summary>
 public sealed class FoundryChatProvider : IChatProvider
 {
@@ -37,14 +38,10 @@ public sealed class FoundryChatProvider : IChatProvider
         ArgumentNullException.ThrowIfNull(request);
         var deployment = Deployment(request.Tier);
         AIAgent agent = CreateClient(deployment).AsAIAgent(instructions: request.SystemPrompt, name: request.PromptName);
-        var options = new ChatClientAgentRunOptions(new ChatOptions
-        {
-            Temperature = 0,
-            MaxOutputTokens = request.MaxOutputTokens,
-            ResponseFormat = Microsoft.Extensions.AI.ChatResponseFormat.Json,
-        });
+        var options = new ChatClientAgentRunOptions(FoundryChatOptionsBuilder.Build(_options, request.Tier, request.MaxOutputTokens));
+        var timeout = _options.TimeoutFor(request.Tier);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(_options.TimeoutSeconds));
+        deadline.CancelAfter(timeout);
         AgentResponse response;
         try
         {
@@ -52,7 +49,7 @@ public sealed class FoundryChatProvider : IChatProvider
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new TimeoutException($"Foundry deployment '{deployment}' did not answer within {_options.TimeoutSeconds} s.", ex);
+            throw new TimeoutException($"Foundry deployment '{deployment}' did not answer within {timeout.TotalSeconds:0} s.", ex);
         }
 
         return new ChatResult(response.Text, ProviderName, deployment, response.Usage?.InputTokenCount ?? 0, response.Usage?.OutputTokenCount ?? 0);
@@ -60,12 +57,17 @@ public sealed class FoundryChatProvider : IChatProvider
 
     /// <summary>
     /// A chat client on a Foundry deployment for other model work, such as the groundedness judge (WP-07); the
-    /// quality deployment when <paramref name="deployment"/> is empty. Each call has the same deadline as the crew's.
+    /// quality deployment when <paramref name="deployment"/> is empty. Each call carries the quality tier's reasoning
+    /// effort and deadline.
     /// </summary>
     public IChatClient ChatClientFor(string? deployment)
     {
         var name = string.IsNullOrWhiteSpace(deployment) ? Deployment(DeploymentTier.Quality) : deployment;
-        return new DeadlineChatClient(CreateClient(name).AsIChatClient(), TimeSpan.FromSeconds(_options.TimeoutSeconds), name);
+        var effort = _options.ReasoningEffort.For(DeploymentTier.Quality);
+        var client = CreateClient(name).AsIChatClient().AsBuilder()
+            .ConfigureOptions(chat => FoundryChatOptionsBuilder.Apply(chat, effort))
+            .Build();
+        return new DeadlineChatClient(client, _options.TimeoutFor(DeploymentTier.Quality), name);
     }
 
     private string Deployment(DeploymentTier tier)
