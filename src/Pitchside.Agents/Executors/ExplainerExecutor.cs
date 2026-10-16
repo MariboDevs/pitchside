@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Rendering;
 using Pitchside.Agents.Workflow;

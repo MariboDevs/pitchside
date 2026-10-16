@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Pitchside.Contracts;
 
-namespace Pitchside.Agents.Prompts;
+namespace Pitchside.Agents.Prompting;
 
 /// <summary>
 /// The translator's user message: the target language, the English sentences with their tokens, and the names that

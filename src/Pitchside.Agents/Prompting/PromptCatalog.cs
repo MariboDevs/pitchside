@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
-namespace Pitchside.Agents.Prompts;
+namespace Pitchside.Agents.Prompting;
 
 /// <summary>
 /// The prompts, templates and forbidden vocabulary, embedded from <c>src/Pitchside.Agents/prompts/</c>. A prompt is

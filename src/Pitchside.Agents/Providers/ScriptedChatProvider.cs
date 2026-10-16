@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 
 namespace Pitchside.Agents.Providers;
 

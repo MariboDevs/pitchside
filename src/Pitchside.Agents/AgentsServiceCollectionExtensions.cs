@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Pitchside.Agents.Checking;
 using Pitchside.Agents.Personalisation;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Speech;
 using Pitchside.Agents.Workflow;
@@ -58,8 +58,13 @@ public static class AgentsServiceCollectionExtensions
         services.TryAddSingleton<IAuditStore, InMemoryAuditStore>();
         if (string.Equals(provider, AgentsOptions.FoundryProvider, StringComparison.OrdinalIgnoreCase))
         {
+            // The default chain, narrowed by AZURE_TOKEN_CREDENTIALS where the host sets it (Aspire sets the managed
+            // identity in Container Apps; a developer shell sets `dev`). The provider caches tokens across calls
+            // whichever component registered the credential: the runtime registers its own in the API.
             services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
-            services.TryAddSingleton<IChatProvider>(sp => Audited(sp, new FoundryChatProvider(sp.GetRequiredService<IOptions<FoundryOptions>>(), sp.GetRequiredService<TokenCredential>())));
+            services.TryAddSingleton<IChatProvider>(sp => Audited(sp, new FoundryChatProvider(
+                sp.GetRequiredService<IOptions<FoundryOptions>>(),
+                CachingTokenCredential.Wrap(sp.GetRequiredService<TokenCredential>()))));
         }
         else if (string.Equals(provider, AgentsOptions.ScriptedProvider, StringComparison.OrdinalIgnoreCase))
         {

@@ -1,49 +1,45 @@
 # Evaluation report: MER-7
 
-Agents provider `scripted`, evaluation provider `local`. 752 narratives from 34 moments; 1504 model calls.
+Agents provider `foundry`, evaluation provider `foundry`. 752 narratives from 34 moments; 1412 model calls.
 
 ## Narratives by status
 
 | Status | Count | Share |
 | --- | ---: | ---: |
 | draft | 0 | 0.0 % |
-| verified | 752 | 100.0 % |
-| rejected | 0 | 0.0 % |
-| fallback | 0 | 0.0 % |
+| verified | 315 | 41.9 % |
+| rejected | 184 | 24.5 % |
+| fallback | 253 | 33.6 % |
 
 ## Quality
 
 | Measure | Value |
 | --- | ---: |
-| Narratives scored for groundedness | 752 |
-| Mean groundedness | 0.173 |
-| Minimum groundedness | 0.000 |
-| Mean citation coverage | 1.000 |
-| Mean fact density (tokens per sentence) | 1.771 |
-| Fallback rate | 0.0 % |
-
-Groundedness here is the local proxy: the share of a narrative's sentences that cite only the moment's
-evidence keys. The crew may also cite `match.*` facts and the side's and players' facts, so this measures how
-closely a narrative keeps to its moment, not whether its numbers are true; citation coverage shows that every
-number resolves. The Foundry judge scores groundedness against every fact the narrative cites.
+| Narratives scored for groundedness | 314 |
+| Mean groundedness | 0.702 |
+| Minimum groundedness | 0.500 |
+| Mean citation coverage | 0.994 |
+| Mean fact density (tokens per sentence) | 2.941 |
+| Fallback rate | 33.6 % |
 
 ## Latency per stage
 
 | Stage | Calls | p50 ms | p95 ms |
 | --- | ---: | ---: | ---: |
-| explainer | 34 | 0 | 0 |
-| factcheck | 752 | 0 | 0 |
-| persona-analyst | 34 | 0 | 0 |
-| persona-casual | 34 | 0 | 0 |
-| persona-clubfan | 68 | 0 | 0 |
-| persona-player | 18 | 0 | 0 |
-| translator | 564 | 0 | 0 |
+| explainer | 42 | 2068 | 3672 |
+| factcheck | 378 | 3779 | 8486 |
+| groundedness | 315 | 4117 | 6022 |
+| persona-analyst | 58 | 2461 | 3150 |
+| persona-casual | 64 | 1762 | 2865 |
+| persona-clubfan | 102 | 2058 | 4003 |
+| persona-player | 27 | 2981 | 4015 |
+| translator | 426 | 3566 | 4111 |
 
 ## Tokens and cost
 
 | Measure | Value |
 | --- | ---: |
-| Input tokens | 0 |
-| Output tokens | 0 |
-| Tokens per narrative | 0.000 |
+| Input tokens | 1397567 |
+| Output tokens | 112604 |
+| Tokens per narrative | 2008.206 |
 | Estimated cost at the configured prices | 0.0000 |

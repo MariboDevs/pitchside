@@ -1,3 +1,4 @@
+using Azure.Core;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -22,7 +23,7 @@ using Pitchside.Stats;
 namespace Pitchside.Cli;
 
 /// <summary>Argument parsing and dispatch. Kept dependency-free on purpose.</summary>
-public static class CommandLine
+public static partial class CommandLine
 {
     public static async Task<int> RunAsync(string[] args, TextWriter output, IFormatProvider culture)
     {
@@ -166,7 +167,7 @@ public static class CommandLine
             : recap ? [.. Languages.All] : [Languages.English];
         var everyVariant = options.ContainsKey("personas") || options.ContainsKey("languages");
         await using var services = new ServiceCollection()
-            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning))
+            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning).AddConsole(console => console.LogToStandardErrorThreshold = LogLevel.Trace))
             .AddPitchsideAgents(configuration)
             .Configure<AgentsOptions>(agents =>
             {
@@ -332,29 +333,44 @@ public static class CommandLine
             })
             .Build();
         var collection = new ServiceCollection()
-            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning))
+            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning).AddConsole(console => console.LogToStandardErrorThreshold = LogLevel.Trace))
             .AddPitchsideAgents(configuration)
             .AddPitchsideEvaluation(configuration)
             .Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
         if (string.Equals(evaluation, EvaluationOptions.FoundryProvider, StringComparison.OrdinalIgnoreCase))
         {
+            // The judge shares the crew's cached credential when the crew is on Foundry too; otherwise it gets its own.
             collection.AddKeyedSingleton<IChatClient>(EvaluationServiceCollectionExtensions.JudgeKey, (sp, _) =>
-                new FoundryChatProvider(sp.GetRequiredService<IOptions<FoundryOptions>>(), new DefaultAzureCredential())
+                new FoundryChatProvider(
+                        sp.GetRequiredService<IOptions<FoundryOptions>>(),
+                        CachingTokenCredential.Wrap(sp.GetService<TokenCredential>() ?? new DefaultAzureCredential()))
                     .ChatClientFor(sp.GetRequiredService<IOptions<EvaluationOptions>>().Value.Deployment));
         }
 
         await using var services = collection.BuildServiceProvider();
         var workflow = services.GetRequiredService<MomentWorkflow>();
         var scorer = services.GetRequiredService<IEvaluationProvider>();
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Pitchside.Cli.Evaluate");
         var narratives = new List<Narrative>();
         foreach (var (moment, sheet, document) in DetectedMoments(seed))
         {
             var context = await workflow.RunAsync(new MomentWorkItem(moment, sheet, document), CancellationToken.None).ConfigureAwait(false);
             foreach (var narrative in context.Narratives)
             {
-                var score = narrative.Status == NarrativeStatus.Verified
-                    ? await scorer.ScoreAsync(new EvaluationItem(narrative, moment, sheet, document), CancellationToken.None).ConfigureAwait(false)
-                    : null;
+                double? score = null;
+                if (narrative.Status == NarrativeStatus.Verified)
+                {
+                    try
+                    {
+                        score = await scorer.ScoreAsync(new EvaluationItem(narrative, moment, sheet, document), CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ProviderFailure.IsRecoverable(ex))
+                    {
+                        // An unscored narrative is reported as such; a judge fault never loses the report.
+                        LogJudgeFailed(logger, narrative.Id, ex.GetType().Name, ex.Message);
+                    }
+                }
+
                 narratives.Add(narrative with { Evaluation = narrative.Evaluation with { Groundedness = score } });
             }
         }
@@ -411,4 +427,7 @@ public static class CommandLine
 
         return options;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Narrative {NarrativeId}: groundedness judge failed ({Kind}): {Detail}; left unscored")]
+    private static partial void LogJudgeFailed(ILogger logger, string narrativeId, string kind, string detail);
 }

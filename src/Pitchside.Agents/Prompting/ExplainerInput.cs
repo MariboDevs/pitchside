@@ -5,7 +5,7 @@ using Pitchside.Agents.Workflow;
 using Pitchside.Contracts;
 using Pitchside.Stats;
 
-namespace Pitchside.Agents.Prompts;
+namespace Pitchside.Agents.Prompting;
 
 /// <summary>
 /// The user messages the crew sends: the moment, the subset of the fact sheet it may cite (the evidence keys,
