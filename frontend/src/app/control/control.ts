@@ -389,6 +389,10 @@ export class Control implements OnInit {
     );
   }
 
+  protected async jump(): Promise<void> {
+    await this.run(() => this.api.jump(this.matchId()));
+  }
+
   protected onKey(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
     if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) {
@@ -398,6 +402,11 @@ export class Control implements OnInit {
     const last = this.moments().length - 1;
     switch (event.key) {
       case ' ':
+        // Space on a focused button or link is its own click, so it does what the control says.
+        if (target?.closest('button, a[href]')) {
+          return;
+        }
+
         event.preventDefault();
         void this.togglePause();
         break;

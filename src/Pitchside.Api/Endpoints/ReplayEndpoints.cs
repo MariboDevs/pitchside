@@ -4,7 +4,7 @@ using Pitchside.Runtime.Replay;
 
 namespace Pitchside.Api.Endpoints;
 
-/// <summary>Start, stop, pause and resume replays. Mapped only in <c>Replay</c> mode.</summary>
+/// <summary>Start, stop, pause, resume and jump replays. Mapped only in <c>Replay</c> mode.</summary>
 public static class ReplayEndpoints
 {
     /// <summary>The <c>HttpContext.Items</c> key set once a replay has started, read by the usage guard.</summary>
@@ -30,6 +30,15 @@ public static class ReplayEndpoints
         group.MapPost("/{matchId}/resume", Results<NoContent, NotFound> (string matchId, IReplayService replays) =>
             replays.Resume(matchId) ? TypedResults.NoContent() : TypedResults.NotFound())
             .WithName("ResumeReplay");
+
+        // WP-11: run ahead to ten seconds of match time before the next moment, then on at the replay's own speed.
+        group.MapPost("/{matchId}/jump", Results<Ok<ReplayJump>, NotFound, ProblemHttpResult> (string matchId, IReplayService replays) =>
+            !replays.TryJump(matchId, out var jump)
+                ? TypedResults.NotFound()
+                : jump is null
+                    ? TypedResults.Problem("No moment is left ahead in this replay.", statusCode: StatusCodes.Status409Conflict, title: "No later moment")
+                    : TypedResults.Ok(jump))
+            .WithName("JumpReplay");
 
         return app;
     }

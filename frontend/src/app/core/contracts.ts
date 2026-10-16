@@ -178,6 +178,15 @@ export interface AuditPage {
   next: string | null;
 }
 
+/** A jump to the next moment (WP-11): the moment ahead and the event the replay runs to without waiting. */
+export interface ReplayJump {
+  matchId: string;
+  momentId: string;
+  momentType: string;
+  headline: string;
+  toSeq: number;
+}
+
 /** The spoken full-time recap in one viewer language (WP-10); the audio is served at /recap/audio. */
 export interface Recap {
   matchId: string;

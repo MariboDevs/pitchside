@@ -68,6 +68,15 @@ export class Viewer implements OnInit {
   protected readonly languages = LANGUAGES;
   protected readonly preferences = this.store.preferences;
 
+  /** What the last "jump to next moment" did, or why it could not, for the status line. */
+  protected readonly jumped = signal<string | null>(null);
+
+  /** A match still being played can be jumped forward to its next moment (WP-11). */
+  protected readonly canJump = computed(() => {
+    const state = this.session.status()?.status ?? this.session.match()?.status;
+    return state === 'live';
+  });
+
   /** The spoken full-time recap in the chosen language, once the match has reached full time (WP-10). */
   protected readonly recap = signal<{ recap: Recap; src: string } | null>(null);
   protected readonly recapError = signal<string | null>(null);
@@ -191,6 +200,15 @@ export class Viewer implements OnInit {
     this.destroyRef.onDestroy(() => clearInterval(clock));
     const prefs = this.preferences();
     void this.session.connect(this.matchId(), prefs);
+  }
+
+  protected async jump(): Promise<void> {
+    try {
+      const jump = await this.api.jump(this.matchId());
+      this.jumped.set(`Next up: ${jump.headline}`);
+    } catch (error) {
+      this.jumped.set(toApiError(error));
+    }
   }
 
   /**
