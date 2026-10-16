@@ -91,6 +91,7 @@ they are invited as guests.
 | Federated credential `github-env-dev` | subject `repo:MariboDevs/pitchside:environment:dev` |
 | Federated credential `github-env-demo` | subject `repo:MariboDevs/pitchside:environment:demo` |
 | Federated credential `github-branch-main` | subject `repo:MariboDevs/pitchside:ref:refs/heads/main` |
+| Federated credentials `github-env-dev-id`, `github-env-demo-id`, `github-branch-main-id` | the same three subjects with GitHub's numeric ids, `repo:MariboDevs@212003298/pitchside@1409706237:...`, which is the form GitHub presented on 16 October and the one Entra matched |
 | Issuer, audience | `https://token.actions.githubusercontent.com`, `api://AzureADTokenExchange` |
 
 GitHub Actions repository variables (not secrets; none of these values is secret): `AZURE_CLIENT_ID`,
