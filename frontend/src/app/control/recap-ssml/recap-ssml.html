@@ -1,0 +1,24 @@
+<details class="recap" data-testid="recap-ssml">
+  <summary>Spoken recap</summary>
+  @switch (state()) {
+    @case ('loading') {
+      <p class="muted" role="status">Waiting for the recap to be spoken.</p>
+    }
+    @case ('none') {
+      <p class="muted">{{ error() ?? 'No spoken recap: speech is off or not finished.' }}</p>
+    }
+    @default {
+      <ul>
+        @for (r of recaps(); track r.language) {
+          <li>
+            <span class="label">{{ r.language }} · {{ r.voice }}</span>
+            @if (r.englishFallback) {
+              <span class="pill pill--waiting">English stands in</span>
+            }
+            <pre class="ssml">{{ r.ssml }}</pre>
+          </li>
+        }
+      </ul>
+    }
+  }
+</details>

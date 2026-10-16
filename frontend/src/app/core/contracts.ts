@@ -178,6 +178,19 @@ export interface AuditPage {
   next: string | null;
 }
 
+/** The spoken full-time recap in one viewer language (WP-10); the audio is served at /recap/audio. */
+export interface Recap {
+  matchId: string;
+  momentId: string;
+  narrativeId: string;
+  language: string;
+  spokenLanguage: string;
+  voice: string;
+  englishFallback: boolean;
+  ssml: string;
+  createdUtc: string;
+}
+
 /** One usage guard limit's current use (WP-07). */
 export interface UsageCount {
   name: 'replays' | 'narratives' | 'spokenLines' | 'connections';
