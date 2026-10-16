@@ -178,6 +178,15 @@ export interface AuditPage {
   next: string | null;
 }
 
+/** A jump to the next moment (WP-11): the moment ahead and the event the replay runs to without waiting. */
+export interface ReplayJump {
+  matchId: string;
+  momentId: string;
+  momentType: string;
+  headline: string;
+  toSeq: number;
+}
+
 /** One usage guard limit's current use (WP-07). */
 export interface UsageCount {
   name: 'replays' | 'narratives' | 'spokenLines' | 'connections';

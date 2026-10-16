@@ -388,6 +388,10 @@ export class Control implements OnInit {
     );
   }
 
+  protected async jump(): Promise<void> {
+    await this.run(() => this.api.jump(this.matchId()));
+  }
+
   protected onKey(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
     if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) {

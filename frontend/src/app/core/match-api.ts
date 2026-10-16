@@ -8,6 +8,7 @@ import {
   FactSheet,
   MatchEvent,
   OverlayEntry,
+  ReplayJump,
   ReplayStarted,
   StoredMatch,
   UsageReport,
@@ -53,6 +54,13 @@ export class MatchApi {
   resume(matchId: string): Promise<void> {
     return firstValueFrom(
       this.http.post<void>(`${apiBase()}/api/v1/replays/${matchId}/resume`, null),
+    );
+  }
+
+  /** Runs the replay ahead to ten seconds before its next moment (WP-11). */
+  jump(matchId: string): Promise<ReplayJump> {
+    return firstValueFrom(
+      this.http.post<ReplayJump>(`${apiBase()}/api/v1/replays/${matchId}/jump`, null),
     );
   }
 
