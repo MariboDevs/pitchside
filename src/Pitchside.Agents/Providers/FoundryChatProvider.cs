@@ -39,6 +39,7 @@ public sealed class FoundryChatProvider : IChatProvider
         var deployment = Deployment(request.Tier);
         AIAgent agent = CreateClient(deployment).AsAIAgent(instructions: request.SystemPrompt, name: request.PromptName);
         var options = new ChatClientAgentRunOptions(FoundryChatOptionsBuilder.Build(_options, request.Tier, request.MaxOutputTokens));
+        await WarmTokenAsync(cancellationToken).ConfigureAwait(false);
         var timeout = _options.TimeoutFor(request.Tier);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(timeout);
@@ -67,8 +68,15 @@ public sealed class FoundryChatProvider : IChatProvider
         var client = CreateClient(name).AsIChatClient().AsBuilder()
             .ConfigureOptions(chat => FoundryChatOptionsBuilder.Apply(chat, effort))
             .Build();
-        return new DeadlineChatClient(client, _options.TimeoutFor(DeploymentTier.Quality), name);
+        return new DeadlineChatClient(client, _options.TimeoutFor(DeploymentTier.Quality), name, WarmTokenAsync);
     }
+
+    /// <summary>
+    /// Fetches the token, or serves it from the cache, before a call's deadline starts: a developer credential can
+    /// take as long as the fast tier's whole budget to answer, and that time is not the model's.
+    /// </summary>
+    public async ValueTask WarmTokenAsync(CancellationToken cancellationToken) =>
+        await _credential.GetTokenAsync(new TokenRequestContext([Scope]), cancellationToken).ConfigureAwait(false);
 
     private string Deployment(DeploymentTier tier)
     {
