@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { apiBase } from './api-base';
@@ -8,6 +8,7 @@ import {
   FactSheet,
   MatchEvent,
   OverlayEntry,
+  Recap,
   ReplayStarted,
   StoredMatch,
   UsageReport,
@@ -88,6 +89,28 @@ export class MatchApi {
     }
 
     return firstValueFrom(this.http.get<AuditPage>(`${apiBase()}/api/v1/audit`, { params }));
+  }
+
+  /** The spoken full-time recap in a language, or null while there is none (or speech is off). */
+  async recap(matchId: string, language: string): Promise<Recap | null> {
+    try {
+      return await firstValueFrom(
+        this.http.get<Recap>(`${apiBase()}/api/v1/matches/${matchId}/recap`, {
+          params: { language },
+        }),
+      );
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 404) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  /** Where the recap's MP3 is served, for an audio element. */
+  recapAudioUrl(matchId: string, language: string): string {
+    return `${apiBase()}/api/v1/matches/${matchId}/recap/audio?language=${encodeURIComponent(language)}`;
   }
 
   usage(): Promise<UsageReport> {

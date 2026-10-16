@@ -28,6 +28,7 @@ export default defineConfig({
         Agents__Provider: 'Scripted',
         Storage__Provider: 'InMemory',
         Bus__Provider: 'InProcess',
+        Speech__Provider: 'Scripted',
       },
     },
     {
