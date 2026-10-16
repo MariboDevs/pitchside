@@ -72,6 +72,9 @@ jobs:
         run: |
           azd config set auth.useAzCliAuth true
           azd env new "$AZURE_ENV_NAME" --location "$AZURE_LOCATION" --subscription "$AZURE_SUBSCRIPTION_ID" --no-prompt
+          # azd resolves the template's parameters before it reads the deployment's outputs; the preprovision hook
+          # only runs on provision, so copy the environment's parameter file here as the hook would.
+          cp "infra/main.$AZURE_ENV_NAME.bicepparam" infra/main.bicepparam
           azd env refresh --environment "$AZURE_ENV_NAME" --no-prompt
           registry="$(azd env get-value AZURE_CONTAINER_REGISTRY_ENDPOINT)"
           echo "REGISTRY=$registry" >> "$GITHUB_ENV"
