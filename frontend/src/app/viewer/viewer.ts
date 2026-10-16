@@ -4,17 +4,21 @@ import {
   DestroyRef,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   signal,
 } from '@angular/core';
-import { Club, LANGUAGES, PERSONAS, Player } from '../core/contracts';
+import { Club, LANGUAGES, PERSONAS, Player, RECAP_POLL_MS, Recap } from '../core/contracts';
+import { toApiError } from '../core/api-error';
+import { MatchApi } from '../core/match-api';
 import { findFact, formatFact } from '../core/format';
 import { MatchSession } from '../core/match-session';
 import { resolveVariant, textLanguage } from '../core/variant';
 import { ViewerStore } from '../core/viewer-store';
 import { LowerThird, LowerThirdChip } from '../shared/lower-third/lower-third';
 import { Pitch } from '../shared/pitch/pitch';
+import { RecapPlayer } from '../shared/recap-player/recap-player';
 import { ScoreBug } from '../shared/score-bug/score-bug';
 import { SegmentedControl } from '../shared/segmented-control/segmented-control';
 
@@ -46,7 +50,7 @@ const PLAYER_STRIP = [
  */
 @Component({
   selector: 'app-viewer',
-  imports: [LowerThird, Pitch, ScoreBug, SegmentedControl],
+  imports: [LowerThird, Pitch, RecapPlayer, ScoreBug, SegmentedControl],
   templateUrl: './viewer.html',
   styleUrl: './viewer.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,12 +60,27 @@ export class Viewer implements OnInit {
   protected readonly session = inject(MatchSession);
   private readonly store = inject(ViewerStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly api = inject(MatchApi);
 
   readonly matchId = input.required<string>();
 
   protected readonly personas = PERSONAS;
   protected readonly languages = LANGUAGES;
   protected readonly preferences = this.store.preferences;
+
+  /** The spoken full-time recap in the chosen language, once the match has reached full time (WP-10). */
+  protected readonly recap = signal<{ recap: Recap; src: string } | null>(null);
+  protected readonly recapError = signal<string | null>(null);
+
+  /**
+   * The chosen language alone, so a change of persona, club or player (which replaces the whole preferences object)
+   * does not reload the recap and cut off what is playing.
+   */
+  private readonly language = computed(() => this.preferences().language);
+
+  private readonly fullTime = computed(() =>
+    this.session.moments().some((m) => m.type === 'full_time'),
+  );
 
   /** The wall clock, a second at a time, so a variant that never arrives gives way to the base narrative. */
   private readonly now = signal(Date.now());
@@ -151,11 +170,77 @@ export class Viewer implements OnInit {
     };
   });
 
+  constructor() {
+    // At full time, and again when the language changes, the recap is fetched. It is spoken after the full-time
+    // narratives are written, so a few tries are made before giving up; speech that is off simply shows no player.
+    effect((onCleanup) => {
+      const language = this.language();
+      if (!this.fullTime()) {
+        this.recap.set(null);
+        return;
+      }
+
+      let cancelled = false;
+      onCleanup(() => (cancelled = true));
+      void this.loadRecap(this.matchId(), language, () => cancelled);
+    });
+  }
+
   ngOnInit(): void {
     const clock = setInterval(() => this.now.set(Date.now()), 1_000);
     this.destroyRef.onDestroy(() => clearInterval(clock));
     const prefs = this.preferences();
     void this.session.connect(this.matchId(), prefs);
+  }
+
+  /**
+   * Reads the recap until it is ready, on the RECAP_POLL_MS schedule: the recap is spoken after the full-time
+   * narratives, and a real voice per language can take a while. Speech that is off stops the reads at once.
+   */
+  private async loadRecap(
+    matchId: string,
+    language: string,
+    cancelled: () => boolean,
+  ): Promise<void> {
+    // Only the chosen language's recap is offered: the last language's player goes as soon as the language changes.
+    this.recap.set(null);
+    this.recapError.set(null);
+    let failure: unknown = null;
+    for (const wait of [0, ...RECAP_POLL_MS]) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      if (cancelled()) {
+        return;
+      }
+
+      try {
+        const result = await this.api.recap(matchId, language);
+        if (cancelled()) {
+          return;
+        }
+
+        failure = null;
+        if (result.state === 'ready') {
+          this.recap.set({ recap: result.recap, src: this.api.recapAudioUrl(matchId, language) });
+          return;
+        }
+
+        if (result.state === 'off') {
+          this.recap.set(null);
+          return;
+        }
+      } catch (error) {
+        // A failed read is tried again like a recap still being spoken; only the last failure is shown.
+        failure = error;
+      }
+    }
+
+    // A load the viewer has moved on from must not overwrite the current one.
+    if (cancelled()) {
+      return;
+    }
+
+    this.recap.set(null);
+    this.recapError.set(failure ? toApiError(failure) : null);
   }
 
   protected setPersona(persona: string): void {

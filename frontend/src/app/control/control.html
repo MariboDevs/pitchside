@@ -170,6 +170,9 @@
                     </div>
                   </dl>
                   <app-swimlane [narrative]="n" [calls]="callsOf(moment)" />
+                  @if (moment.type === 'full_time') {
+                    <app-recap-ssml [matchId]="matchId()" />
+                  }
                   @if (variantsOf(moment); as variants) {
                     @if (variants.length > 0) {
                       <details class="variants" data-testid="variants">

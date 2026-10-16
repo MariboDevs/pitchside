@@ -18,6 +18,9 @@ public sealed record MomentContext
     public ImmutableList<Verdict> Verdicts { get; init; } = [];
     public ImmutableList<Narrative> Narratives { get; init; } = [];
 
+    /// <summary>The spoken full-time recaps (WP-10), one per viewer language; empty for any other moment.</summary>
+    public ImmutableList<Speech.RecapAudio> Recaps { get; init; } = [];
+
     /// <summary>
     /// Where a narrative goes the moment it is final (WP06-R3): the base as soon as it is verified or composed, each
     /// persona variant and translation as it completes. Null when nothing is listening, as in the CLI and most tests.
