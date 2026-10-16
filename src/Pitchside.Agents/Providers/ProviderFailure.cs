@@ -14,7 +14,21 @@ public static class ProviderFailure
     {
         JsonException or FormatException or InvalidOperationException or HttpRequestException or TimeoutException => true,
         System.ClientModel.ClientResultException or AuthenticationFailedException => true,
-        AggregateException aggregate => aggregate.InnerExceptions.Count > 0 && aggregate.InnerExceptions.All(IsRecoverable),
+        AggregateException aggregate => aggregate.InnerExceptions.Count > 0 && aggregate.InnerExceptions.All(IsRecoverableInside),
         _ => false,
+    };
+
+    /// <summary>
+    /// Inside an aggregate, a cancelled attempt counts as recoverable too: the OpenAI SDK's retry policy wraps the
+    /// attempt a deadline cancelled together with the transport error that preceded it.
+    /// </summary>
+    private static bool IsRecoverableInside(Exception exception) => exception is OperationCanceledException || IsRecoverable(exception);
+
+    /// <summary>Whether <paramref name="exception"/> is, or wraps, the cancellation a deadline caused.</summary>
+    public static bool IsCancellation(Exception exception) => exception switch
+    {
+        OperationCanceledException => true,
+        AggregateException aggregate => aggregate.InnerExceptions.Any(IsCancellation),
+        _ => exception.InnerException is { } inner && IsCancellation(inner),
     };
 }

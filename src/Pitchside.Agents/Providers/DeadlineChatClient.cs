@@ -24,7 +24,7 @@ public sealed class DeadlineChatClient(IChatClient inner, TimeSpan deadline, str
         {
             return await base.GetResponseAsync(messages, options, timeout.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested && ProviderFailure.IsCancellation(ex))
         {
             throw new TimeoutException($"Foundry deployment '{deployment}' did not answer within {deadline.TotalSeconds:0} s.", ex);
         }

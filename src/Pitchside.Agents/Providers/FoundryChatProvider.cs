@@ -48,8 +48,9 @@ public sealed class FoundryChatProvider : IChatProvider
         {
             response = await agent.RunAsync(request.UserMessage, options: options, cancellationToken: deadline.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested && ProviderFailure.IsCancellation(ex))
         {
+            // The deadline fired: as a plain cancellation, or wrapped by the SDK's retry policy with the error before it.
             throw new TimeoutException($"Foundry deployment '{deployment}' did not answer within {timeout.TotalSeconds:0} s.", ex);
         }
 
