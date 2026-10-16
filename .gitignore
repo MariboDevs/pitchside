@@ -25,6 +25,8 @@ secrets.json
 # Azure
 .azure/
 *.azurePubxml
+# Copied from main.<env>.bicepparam by the azd preprovision hook (azure.yaml)
+infra/main.bicepparam
 
 # OS / editors
 .DS_Store
