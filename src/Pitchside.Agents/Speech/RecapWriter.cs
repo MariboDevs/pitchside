@@ -94,13 +94,18 @@ public sealed partial class RecapWriter(
         Analyst(context, Languages.English)
         ?? (context.BaseNarrative is { Status: NarrativeStatus.Verified or NarrativeStatus.Fallback } baseNarrative ? baseNarrative : null);
 
-    /// <summary>A translation counts only when it is verified: a fallback translation is English text.</summary>
+    /// <summary>
+    /// A translation counts when it really was translated: its provenance says so. A translation that fell back is the
+    /// English text, while a translated template keeps the template's <c>fallback</c> status but is in the language.
+    /// </summary>
     private static Narrative? ChooseTranslated(MomentContext context, string language) =>
         Analyst(context, language)
-        ?? context.Narratives.FirstOrDefault(n => n.Persona == Personas.Base && n.Language == language && n.Status == NarrativeStatus.Verified);
+        ?? context.Narratives.FirstOrDefault(n => n.Persona == Personas.Base && n.Language == language
+            && n.Status is NarrativeStatus.Verified or NarrativeStatus.Fallback && !n.Provenance.Fallback);
 
     private static Narrative? Analyst(MomentContext context, string language) =>
-        context.Narratives.FirstOrDefault(n => n.Persona == Personas.Analyst && n.Subject is null && n.Language == language && n.Status == NarrativeStatus.Verified);
+        context.Narratives.FirstOrDefault(n => n.Persona == Personas.Analyst && n.Subject is null && n.Language == language
+            && n.Status == NarrativeStatus.Verified && !n.Provenance.Fallback);
 
     /// <summary>Counts one spoken line per sentence; when the hour's limit is reached, gives back what this recap took.</summary>
     private bool TakeLines(int lines)
