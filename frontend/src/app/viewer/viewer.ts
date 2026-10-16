@@ -72,6 +72,12 @@ export class Viewer implements OnInit {
   protected readonly recap = signal<{ recap: Recap; src: string } | null>(null);
   protected readonly recapError = signal<string | null>(null);
 
+  /**
+   * The chosen language alone, so a change of persona, club or player (which replaces the whole preferences object)
+   * does not reload the recap and cut off what is playing.
+   */
+  private readonly language = computed(() => this.preferences().language);
+
   private readonly fullTime = computed(() =>
     this.session.moments().some((m) => m.type === 'full_time'),
   );
@@ -168,7 +174,7 @@ export class Viewer implements OnInit {
     // At full time, and again when the language changes, the recap is fetched. It is spoken after the full-time
     // narratives are written, so a few tries are made before giving up; speech that is off simply shows no player.
     effect((onCleanup) => {
-      const language = this.preferences().language;
+      const language = this.language();
       if (!this.fullTime()) {
         this.recap.set(null);
         return;
