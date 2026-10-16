@@ -1,0 +1,23 @@
+# Build context for the .NET images (src/Pitchside.Api/Dockerfile, src/Pitchside.Agents.Host/Dockerfile).
+# The Dockerfiles copy only what they need; this keeps the context small and keeps local state out of it.
+.git
+.github
+.azure
+.claude
+.vs
+.idea
+**/bin
+**/obj
+**/TestResults
+**/*.user
+artifacts
+out
+docs
+infra
+frontend
+schemas
+data/samples
+.env
+.env.*
+**/appsettings.*.local.json
+**/secrets.json
