@@ -1,7 +1,8 @@
 // demo: the judged environment, rg-pitchside-demo, frozen from 25 October to 10 November. Standard Speech tier and
 // one warm web replica so judges never wait on a cold start (the API is always exactly one replica).
 // Values that differ per person or per subscription are read from the environment (azd env set, or exported in the
-// shell), so nothing here is a secret and nothing real is committed: an empty Foundry endpoint keeps the scripted crew.
+// shell). The defaults are the Foundry resource and deployments recorded in docs/ENVIRONMENT.md: identifiers, not
+// secrets. Setting FOUNDRY_ENDPOINT to an empty value keeps the scripted crew.
 using 'main.bicep'
 
 param environmentName = 'demo'
@@ -13,10 +14,10 @@ param eventHubsSku = 'Basic'
 param webMinReplicas = 1
 param runAgentsInApi = true
 
-param foundryEndpoint = readEnvironmentVariable('FOUNDRY_ENDPOINT', '')
-param foundryFastDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_FAST', '')
-param foundryQualityDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_QUALITY', '')
-param foundryResourceId = readEnvironmentVariable('FOUNDRY_RESOURCE_ID', '')
+param foundryEndpoint = readEnvironmentVariable('FOUNDRY_ENDPOINT', 'https://ais-pitchside-dev.openai.azure.com/')
+param foundryFastDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_FAST', 'pitchside-fast')
+param foundryQualityDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_QUALITY', 'pitchside-quality')
+param foundryResourceId = readEnvironmentVariable('FOUNDRY_RESOURCE_ID', '/subscriptions/1641c920-b05d-4921-8a24-029ca939893a/resourceGroups/rg-pitchside-dev/providers/Microsoft.CognitiveServices/accounts/ais-pitchside-dev')
 
 // Comma-separated, set with `azd env set PITCHSIDE_ALERT_EMAILS ...`; empty means no action group.
 param alertEmails = empty(readEnvironmentVariable('PITCHSIDE_ALERT_EMAILS', ''))
