@@ -39,4 +39,12 @@ public sealed class DeadlineChatClientTests
         prepared.ShouldBeTrue();
         response.Text.ShouldBe("ready");
     }
+
+    [Fact]
+    public async Task A_deadline_wrapped_by_a_retry_policy_is_still_a_timeout()
+    {
+        using var client = new DeadlineChatClient(new AggregatingHangingChatClient(), TimeSpan.FromMilliseconds(100), "judge");
+
+        await Should.ThrowAsync<TimeoutException>(() => client.GetResponseAsync([new ChatMessage(ChatRole.User, "score")]));
+    }
 }

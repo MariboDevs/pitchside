@@ -28,4 +28,21 @@ public sealed class ProviderFailureTests
         ProviderFailure.IsRecoverable(aggregate).ShouldBeFalse();
         ProviderFailure.IsRecoverable(new AggregateException()).ShouldBeFalse();
     }
+
+    [Fact]
+    public void A_cancelled_attempt_inside_an_aggregate_is_recoverable()
+    {
+        var aggregate = new AggregateException(new HttpRequestException("unavailable"), new TaskCanceledException("deadline"));
+
+        ProviderFailure.IsRecoverable(aggregate).ShouldBeTrue();
+        ProviderFailure.IsCancellation(aggregate).ShouldBeTrue();
+        ProviderFailure.IsRecoverable(new TaskCanceledException("alone")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_wrapped_cancellation_is_recognised()
+    {
+        ProviderFailure.IsCancellation(new InvalidOperationException("outer", new TaskCanceledException("inner"))).ShouldBeTrue();
+        ProviderFailure.IsCancellation(new InvalidOperationException("outer")).ShouldBeFalse();
+    }
 }
