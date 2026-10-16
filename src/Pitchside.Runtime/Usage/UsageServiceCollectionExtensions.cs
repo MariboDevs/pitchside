@@ -17,10 +17,21 @@ public static class UsageServiceCollectionExtensions
         services.TryAddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<UsageGuardOptions>>();
-            // Limits never apply to the scripted provider, the agents' default, so tests and local runs are not capped.
-            var scripted = string.Equals(configuration["Agents:Provider"] ?? "Scripted", "Scripted", StringComparison.OrdinalIgnoreCase);
-            return new UsageGuard(options, sp.GetRequiredService<TimeProvider>(), options.Value.Enabled ?? !scripted);
+            return new UsageGuard(options, sp.GetRequiredService<TimeProvider>(), options.Value.Enabled ?? EnabledByDefault(configuration));
         });
         return services;
+    }
+
+    /// <summary>
+    /// Whether the limits apply when <c>UsageGuard:Enabled</c> is unset: whenever something paid is called. A host that
+    /// is scripted throughout (the agents' and the speech's defaults) is not capped, so tests and local runs are not;
+    /// Foundry agents or Azure speech, either one, turn the limits on.
+    /// </summary>
+    public static bool EnabledByDefault(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        var scriptedAgents = string.Equals(configuration["Agents:Provider"] ?? "Scripted", "Scripted", StringComparison.OrdinalIgnoreCase);
+        var azureSpeech = string.Equals(configuration["Speech:Provider"], "Azure", StringComparison.OrdinalIgnoreCase);
+        return !scriptedAgents || azureSpeech;
     }
 }

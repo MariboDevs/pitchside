@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+# azd maps the three Container Apps to their source. The environment name selects the parameter file: before every
+# provision the hook copies infra/main.<env>.bicepparam to infra/main.bicepparam (git-ignored), which azd then uses.
+# See infra/README.md.
+
+name: pitchside
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+hooks:
+  preprovision:
+    posix:
+      shell: sh
+      continueOnError: false
+      run: |
+        set -eu
+        source="infra/main.${AZURE_ENV_NAME}.bicepparam"
+        if [ ! -f "$source" ]; then
+          echo "No parameter file $source: the azd environment must be named dev or demo." >&2
+          exit 1
+        fi
+        cp "$source" infra/main.bicepparam
+    windows:
+      shell: pwsh
+      continueOnError: false
+      run: |
+        $source = "infra/main.$($env:AZURE_ENV_NAME).bicepparam"
+        if (-not (Test-Path $source)) {
+          Write-Error "No parameter file ${source}: the azd environment must be named dev or demo."
+          exit 1
+        }
+        Copy-Item $source infra/main.bicepparam -Force
+
+services:
+  api:
+    project: ./src/Pitchside.Api
+    language: dotnet
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ../..
+      platform: linux/amd64
+
+  agents:
+    project: ./src/Pitchside.Agents.Host
+    language: dotnet
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ../..
+      platform: linux/amd64
+
+  web:
+    project: ./frontend
+    language: js
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      platform: linux/amd64
