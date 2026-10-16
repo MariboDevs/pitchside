@@ -196,6 +196,8 @@ export class Viewer implements OnInit {
     language: string,
     cancelled: () => boolean,
   ): Promise<void> {
+    // Only the chosen language's recap is offered: the last language's player goes as soon as the language changes.
+    this.recap.set(null);
     this.recapError.set(null);
     let failure: unknown = null;
     for (const wait of [0, ...RECAP_POLL_MS]) {
@@ -224,6 +226,11 @@ export class Viewer implements OnInit {
         // A failed read is tried again like a recap still being spoken; only the last failure is shown.
         failure = error;
       }
+    }
+
+    // A load the viewer has moved on from must not overwrite the current one.
+    if (cancelled()) {
+      return;
     }
 
     this.recap.set(null);
