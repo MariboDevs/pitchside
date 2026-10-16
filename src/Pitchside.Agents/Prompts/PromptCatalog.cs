@@ -35,6 +35,11 @@ public sealed partial class PromptCatalog
             }
         }
 
+        var pronunciation = assembly.GetManifestResourceNames().SingleOrDefault(n => n == PromptPrefix + "pronunciation.json")
+            ?? throw new InvalidOperationException("prompts/pronunciation.json is not embedded.");
+        Pronunciations = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(Read(assembly, pronunciation))
+            ?? throw new InvalidOperationException("prompts/pronunciation.json is empty.");
+
         var forbidden = assembly.GetManifestResourceNames().SingleOrDefault(n => n == PromptPrefix + "forbidden.sha256")
             ?? throw new InvalidOperationException("prompts/forbidden.sha256 is not embedded.");
         ForbiddenHashes = [.. Read(assembly, forbidden)
@@ -43,6 +48,12 @@ public sealed partial class PromptCatalog
     }
 
     public IReadOnlyCollection<string> PromptNames => _latest.Keys;
+
+    /// <summary>
+    /// The spoken recap's phonetic aliases (WP10-R1), per language and then per club or player name, from
+    /// <c>prompts/pronunciation.json</c>. A name without one is read as written.
+    /// </summary>
+    public IReadOnlyDictionary<string, Dictionary<string, string>> Pronunciations { get; }
 
     public IReadOnlyCollection<string> TemplateTypes => _templates.Keys;
 

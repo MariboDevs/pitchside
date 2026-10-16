@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { apiBase } from './api-base';
@@ -8,10 +8,16 @@ import {
   FactSheet,
   MatchEvent,
   OverlayEntry,
+  Recap,
+  RecapResult,
+  ReplayJump,
   ReplayStarted,
   StoredMatch,
   UsageReport,
 } from './contracts';
+
+/** The problem title the recap endpoints answer with when speech is off (WP-10). */
+const SPEECH_OFF = 'Speech is off';
 
 /** The match REST API under /api/v1. */
 @Injectable({ providedIn: 'root' })
@@ -56,6 +62,13 @@ export class MatchApi {
     );
   }
 
+  /** Runs the replay ahead to ten seconds before its next moment (WP-11). */
+  jump(matchId: string): Promise<ReplayJump> {
+    return firstValueFrom(
+      this.http.post<ReplayJump>(`${apiBase()}/api/v1/replays/${matchId}/jump`, null),
+    );
+  }
+
   hold(matchId: string, entryId: string): Promise<OverlayEntry> {
     return firstValueFrom(
       this.http.post<OverlayEntry>(
@@ -88,6 +101,33 @@ export class MatchApi {
     }
 
     return firstValueFrom(this.http.get<AuditPage>(`${apiBase()}/api/v1/audit`, { params }));
+  }
+
+  /**
+   * The spoken full-time recap in a language: `ready` with the recap, `off` when the server has speech turned off,
+   * or `pending` while it is still being spoken (or full time has not come).
+   */
+  async recap(matchId: string, language: string): Promise<RecapResult> {
+    try {
+      const recap = await firstValueFrom(
+        this.http.get<Recap>(`${apiBase()}/api/v1/matches/${matchId}/recap`, {
+          params: { language },
+        }),
+      );
+      return { state: 'ready', recap };
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 404) {
+        const title = (error.error as { title?: string } | null)?.title;
+        return title === SPEECH_OFF ? { state: 'off' } : { state: 'pending' };
+      }
+
+      throw error;
+    }
+  }
+
+  /** Where the recap's MP3 is served, for an audio element. */
+  recapAudioUrl(matchId: string, language: string): string {
+    return `${apiBase()}/api/v1/matches/${matchId}/recap/audio?language=${encodeURIComponent(language)}`;
   }
 
   usage(): Promise<UsageReport> {

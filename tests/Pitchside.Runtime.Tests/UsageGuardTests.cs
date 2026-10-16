@@ -118,4 +118,15 @@ public sealed class UsageGuardTests
 
         guard.TryTake(UsageLimits.Replays, "10.0.0.1").Allowed.ShouldBeFalse();
     }
+
+    [Fact]
+    public void Several_uses_are_taken_all_or_none()
+    {
+        var guard = new UsageGuard(Options.Create(new UsageGuardOptions { SpokenLinesPerHour = 4 }), new ManualClock(DateTimeOffset.UnixEpoch), enabled: true);
+
+        guard.TryTake(UsageLimits.SpokenLines, UsageGuard.HostKey, 3).Allowed.ShouldBeTrue();
+        guard.TryTake(UsageLimits.SpokenLines, UsageGuard.HostKey, 3).Allowed.ShouldBeFalse();
+        guard.TryTake(UsageLimits.SpokenLines, UsageGuard.HostKey, 1).Allowed.ShouldBeTrue();
+        guard.Snapshot("caller").Single(u => u.Name == UsageLimits.SpokenLines).Used.ShouldBe(4);
+    }
 }
