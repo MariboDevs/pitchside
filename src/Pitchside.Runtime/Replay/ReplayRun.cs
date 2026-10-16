@@ -43,8 +43,8 @@ public sealed class ReplayRun(string matchId, CancellationTokenSource cancellati
     public void MarkPublished(int count) => Volatile.Write(ref _published, count);
 
     /// <summary>
-    /// Publishes every event up to <paramref name="index"/> without waiting between them, and cuts short the wait in
-    /// progress. A jump never moves the replay backwards.
+    /// Publishes every event up to <paramref name="index"/> without waiting between them, and wakes the wait in
+    /// progress so it can check whether the jump reaches it. A jump never moves the replay backwards.
     /// </summary>
     public void FastForward(int index)
     {
@@ -64,30 +64,48 @@ public sealed class ReplayRun(string matchId, CancellationTokenSource cancellati
         }
     }
 
-    /// <summary>Waits <paramref name="gap"/> before the event at <paramref name="index"/>, unless a jump reaches past it first.</summary>
+    /// <summary>
+    /// Waits <paramref name="gap"/> before the event at <paramref name="index"/>, unless a jump reaches it first. A jump
+    /// that stops short of it wakes the wait, which then goes on for the time that is left.
+    /// </summary>
     public async Task DelayAsync(int index, TimeSpan gap, TimeProvider time, CancellationToken cancellationToken)
     {
-        Task wake;
-        lock (_lock)
+        ArgumentNullException.ThrowIfNull(time);
+        var due = time.GetUtcNow() + gap;
+        while (true)
         {
-            // A jump that landed before this wait started has already been checked against the index below.
-            if (index <= _fastForwardTo)
+            Task wake;
+            lock (_lock)
+            {
+                if (index <= _fastForwardTo)
+                {
+                    return;
+                }
+
+                if (_wake.Task.IsCompleted)
+                {
+                    _wake = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                }
+
+                wake = _wake.Task;
+            }
+
+            var remaining = due - time.GetUtcNow();
+            if (remaining <= TimeSpan.Zero)
             {
                 return;
             }
 
-            if (_wake.Task.IsCompleted)
+            using var delay = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var timer = Task.Delay(remaining, time, delay.Token);
+            var first = await Task.WhenAny(timer, wake).ConfigureAwait(false);
+            await delay.CancelAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (first == timer)
             {
-                _wake = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                return;
             }
-
-            wake = _wake.Task;
         }
-
-        using var delay = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        await Task.WhenAny(Task.Delay(gap, time, delay.Token), wake).ConfigureAwait(false);
-        await delay.CancelAsync().ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
     }
 
     /// <summary>

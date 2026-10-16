@@ -157,6 +157,13 @@ public sealed class ReplayServiceTests : IAsyncLifetime
         // The run reaches the landing event at once, then waits out the last ten seconds in real time.
         await WaitFor(async () => (await Store.GetEventsAsync(started.MatchId, jump.ToSeq, jump.ToSeq, CancellationToken.None)).Count == 1);
         (await Store.GetEventsAsync(started.MatchId, trigger.Seq, trigger.Seq, CancellationToken.None)).ShouldBeEmpty();
+
+        // A second jump in the lead-in has nowhere to go: the next event, 17.5 s of match time away, still waits.
+        Replays.TryJump(started.MatchId, out var again).ShouldBeTrue();
+        again!.MomentId.ShouldBe(jump.MomentId);
+        again.ToSeq.ShouldBe(jump.ToSeq);
+        await Task.Delay(1_000);
+        (await Store.GetEventsAsync(started.MatchId, jump.ToSeq + 1, jump.ToSeq + 1, CancellationToken.None)).ShouldBeEmpty();
         Replays.Stop(started.MatchId);
         Replays.TryJump("MER-404", out _).ShouldBeFalse();
     }
