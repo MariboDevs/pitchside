@@ -11,6 +11,13 @@ public sealed class CachingTokenCredential(TokenCredential inner, TimeProvider? 
 {
     private static readonly TimeSpan RefreshBefore = TimeSpan.FromMinutes(5);
 
+    /// <summary>The credential behind a cache, whoever registered it; a credential that already is one stays as it is.</summary>
+    public static TokenCredential Wrap(TokenCredential credential)
+    {
+        ArgumentNullException.ThrowIfNull(credential);
+        return credential as CachingTokenCredential ?? new CachingTokenCredential(credential);
+    }
+
     private readonly TimeProvider _time = time ?? TimeProvider.System;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, AccessToken> _tokens = new(StringComparer.Ordinal);

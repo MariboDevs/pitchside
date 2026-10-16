@@ -49,4 +49,15 @@ public sealed class CachingTokenCredentialTests
 
         inner.Calls.ShouldBe(2);
     }
+
+    [Fact]
+    public void Wrap_caches_any_credential_once()
+    {
+        var inner = new CountingTokenCredential(TimeProvider.System, TimeSpan.FromHours(1));
+
+        var wrapped = CachingTokenCredential.Wrap(inner);
+
+        wrapped.ShouldBeOfType<CachingTokenCredential>();
+        CachingTokenCredential.Wrap(wrapped).ShouldBeSameAs(wrapped);
+    }
 }

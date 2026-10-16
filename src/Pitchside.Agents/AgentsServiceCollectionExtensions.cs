@@ -59,9 +59,12 @@ public static class AgentsServiceCollectionExtensions
         if (string.Equals(provider, AgentsOptions.FoundryProvider, StringComparison.OrdinalIgnoreCase))
         {
             // The default chain, narrowed by AZURE_TOKEN_CREDENTIALS where the host sets it (Aspire sets the managed
-            // identity in Container Apps; a developer shell sets `dev`), with its tokens cached across calls.
-            services.TryAddSingleton<TokenCredential>(_ => new CachingTokenCredential(new DefaultAzureCredential()));
-            services.TryAddSingleton<IChatProvider>(sp => Audited(sp, new FoundryChatProvider(sp.GetRequiredService<IOptions<FoundryOptions>>(), sp.GetRequiredService<TokenCredential>())));
+            // identity in Container Apps; a developer shell sets `dev`). The provider caches tokens across calls
+            // whichever component registered the credential: the runtime registers its own in the API.
+            services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+            services.TryAddSingleton<IChatProvider>(sp => Audited(sp, new FoundryChatProvider(
+                sp.GetRequiredService<IOptions<FoundryOptions>>(),
+                CachingTokenCredential.Wrap(sp.GetRequiredService<TokenCredential>()))));
         }
         else if (string.Equals(provider, AgentsOptions.ScriptedProvider, StringComparison.OrdinalIgnoreCase))
         {

@@ -343,7 +343,7 @@ public static partial class CommandLine
             collection.AddKeyedSingleton<IChatClient>(EvaluationServiceCollectionExtensions.JudgeKey, (sp, _) =>
                 new FoundryChatProvider(
                         sp.GetRequiredService<IOptions<FoundryOptions>>(),
-                        sp.GetService<TokenCredential>() ?? new CachingTokenCredential(new DefaultAzureCredential()))
+                        CachingTokenCredential.Wrap(sp.GetService<TokenCredential>() ?? new DefaultAzureCredential()))
                     .ChatClientFor(sp.GetRequiredService<IOptions<EvaluationOptions>>().Value.Deployment));
         }
 
