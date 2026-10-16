@@ -8,13 +8,13 @@ import {
   signal,
 } from '@angular/core';
 import { toApiError } from '../../core/api-error';
-import { LANGUAGES, Recap } from '../../core/contracts';
+import { LANGUAGES, RECAP_POLL_MS, Recap } from '../../core/contracts';
 import { MatchApi } from '../../core/match-api';
 
 /**
  * The control room's view of the spoken full-time recap (WP10-R3): for each language, the voice, whether English
- * stands in, and the SSML that was synthesised. Recaps are spoken after the full-time narratives, so the read is
- * tried a few times.
+ * stands in, and the SSML that was synthesised. Recaps are spoken after the full-time narratives, one language
+ * after another, so the reads go on until every language is there.
  */
 @Component({
   selector: 'app-recap-ssml',
@@ -29,7 +29,7 @@ export class RecapSsml implements OnInit {
   readonly matchId = input.required<string>();
 
   protected readonly recaps = signal<Recap[]>([]);
-  protected readonly state = signal<'loading' | 'ready' | 'none'>('loading');
+  protected readonly state = signal<'loading' | 'ready' | 'none' | 'off'>('loading');
   protected readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -38,25 +38,47 @@ export class RecapSsml implements OnInit {
     void this.load(() => destroyed);
   }
 
+  /**
+   * Reads every language's recap until all four are there, on the RECAP_POLL_MS schedule: languages are spoken one
+   * after another, so the first read can find some and not others. What has arrived is shown as it arrives.
+   */
   private async load(destroyed: () => boolean): Promise<void> {
-    for (let attempt = 0; attempt < 10 && !destroyed(); attempt++) {
+    const found = new Map<string, Recap>();
+    for (const wait of [0, ...RECAP_POLL_MS]) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      if (destroyed()) {
+        return;
+      }
+
       try {
-        const found = await Promise.all(LANGUAGES.map((l) => this.api.recap(this.matchId(), l.id)));
-        const recaps = found.filter((r): r is Recap => r !== null);
+        const missing = LANGUAGES.filter((l) => !found.has(l.id));
+        const results = await Promise.all(missing.map((l) => this.api.recap(this.matchId(), l.id)));
         this.error.set(null);
-        if (recaps.length > 0) {
-          this.recaps.set(recaps);
+        if (results.some((r) => r.state === 'off')) {
+          this.state.set('off');
+          return;
+        }
+
+        for (const result of results) {
+          if (result.state === 'ready') {
+            found.set(result.recap.language, result.recap);
+          }
+        }
+
+        if (found.size > 0) {
+          this.recaps.set(LANGUAGES.flatMap((l) => found.get(l.id) ?? []));
           this.state.set('ready');
+        }
+
+        if (found.size === LANGUAGES.length) {
           return;
         }
       } catch (error) {
         this.error.set(toApiError(error));
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
     }
 
-    if (!destroyed()) {
+    if (found.size === 0) {
       this.state.set('none');
     }
   }

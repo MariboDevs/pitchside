@@ -191,6 +191,13 @@ export interface Recap {
   createdUtc: string;
 }
 
+/** A recap read: ready, still being spoken, or speech turned off on the server. */
+export type RecapResult =
+  { state: 'ready'; recap: Recap } | { state: 'pending' } | { state: 'off' };
+
+/** How long to wait before each read of a recap that is still being spoken: about three minutes in all. */
+export const RECAP_POLL_MS = [2_000, 3_000, 5_000, 5_000, ...Array<number>(16).fill(10_000)];
+
 /** One usage guard limit's current use (WP-07). */
 export interface UsageCount {
   name: 'replays' | 'narratives' | 'spokenLines' | 'connections';

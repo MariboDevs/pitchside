@@ -4,8 +4,11 @@
     @case ('loading') {
       <p class="muted" role="status">Waiting for the recap to be spoken.</p>
     }
+    @case ('off') {
+      <p class="muted">Speech is off on this server.</p>
+    }
     @case ('none') {
-      <p class="muted">{{ error() ?? 'No spoken recap: speech is off or not finished.' }}</p>
+      <p class="muted">{{ error() ?? 'No spoken recap yet.' }}</p>
     }
     @default {
       <ul>
