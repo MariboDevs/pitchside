@@ -38,4 +38,10 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Pricing:InputPerMillion` | `0` | price of a million input tokens, for the evaluation report's cost estimate | WP-07 |
 | `Pricing:OutputPerMillion` | `0` | price of a million output tokens, for the evaluation report's cost estimate | WP-07 |
 | `Mcp:ApiKey` | | when set, the MCP tool `explain_moment` needs it in the `X-Pitchside-Key` header; user-secrets locally, a Key Vault reference in Azure, never in a file | WP-08 |
+| `Speech:Provider` | `None` | `None` (no recap; the recap endpoints answer 404 "Speech is off"), `Scripted` (one second of silent MP3, no network), `Azure` (Azure AI Speech, keyless) | WP-10 |
+| `Speech:Region` | | the Speech resource's region, such as `southafricanorth`; the REST endpoint is `https://{region}.tts.speech.microsoft.com` | WP-10 |
+| `Speech:ResourceId` | | the Speech resource's ARM id; the Entra ID token is sent as `aad#{resourceId}#{token}` | WP-10 |
+| `Speech:Voices:en`, `:af`, `:zu`, `:es` | `en-ZA-LeahNeural`, `af-ZA-AdriNeural`, `zu-ZA-ThandoNeural`, `es-ES-ElviraNeural` | the neural voice per language; check each is offered in the region; a language without one gets the English audio and the viewer says so | WP-10 |
+| `Speech:BlobServiceUri` | | the blob service the recap audio is kept in, such as `https://<account>.blob.core.windows.net`; unset keeps it in process | WP-10 |
+| `Speech:BlobContainer` | `recaps` | the container for `{matchId}/{language}.mp3` and its `{matchId}/{language}.json` recap | WP-10 |
 | `Speech:Provider` | `None` | `None`, `Azure` | WP-10 |
