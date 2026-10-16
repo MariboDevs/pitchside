@@ -11,6 +11,22 @@ public static class DemoSeedScorer
     public const int MinGoals = 3;
     public const int MaxGoals = 5;
 
+    /// <summary>
+    /// Every seed from <paramref name="from"/> to <paramref name="to"/> inclusive. It stops on the last seed rather
+    /// than testing past it, so a range ending at <see cref="long.MaxValue"/> never wraps round.
+    /// </summary>
+    public static IEnumerable<long> Seeds(long from, long to)
+    {
+        for (var seed = from; seed <= to; seed++)
+        {
+            yield return seed;
+            if (seed == to)
+            {
+                yield break;
+            }
+        }
+    }
+
     public static DemoSeedScore Score(long seed, MatchDocument document, IReadOnlyList<MatchEvent> events, IReadOnlyList<Moment> moments)
     {
         ArgumentNullException.ThrowIfNull(document);

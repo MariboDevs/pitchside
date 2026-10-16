@@ -243,7 +243,7 @@ public static class CommandLine
         }
 
         var scores = new List<DemoSeedScore>();
-        for (var seed = from; seed <= to; seed++)
+        foreach (var seed in DemoSeedScorer.Seeds(from, to))
         {
             var simulated = MatchSimulator.Simulate(seed);
             scores.Add(DemoSeedScorer.Score(seed, simulated.Document, simulated.Events, MatchMoments.Detect(simulated.Document, simulated.Events)));

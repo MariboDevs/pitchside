@@ -15,6 +15,14 @@ public sealed class DemoSeedScorerTests
         DemoSeedScorer.LeadChanges(homeGoals).ShouldBe(changes);
 
     [Fact]
+    public void A_seed_range_is_inclusive() =>
+        DemoSeedScorer.Seeds(3, 6).ShouldBe([3L, 4L, 5L, 6L]);
+
+    [Fact]
+    public void A_seed_range_ending_at_the_largest_seed_stops_there() =>
+        DemoSeedScorer.Seeds(long.MaxValue - 1, long.MaxValue).ShouldBe([long.MaxValue - 1, long.MaxValue]);
+
+    [Fact]
     public void A_seed_is_scored_from_its_own_events_and_moments()
     {
         var match = MatchSimulator.Simulate(7);
