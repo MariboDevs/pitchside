@@ -11,9 +11,12 @@ test.beforeAll(async ({ request }) => {
 test('home lists the match and links to its surfaces', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/');
-  // Other specs replay more matches, so the sample's row is found by its clubs rather than its position.
-  const row = page.getByTestId('match-row').filter({ hasText: 'Amanzi United v Inyoni Wanderers' });
+  // Other specs replay more matches, some with the same clubs, so the sample's row is found by its own link.
+  const row = page
+    .getByTestId('match-row')
+    .filter({ has: page.locator(`a[href="/control/${MATCH}"]`) });
   await expect(row).toHaveCount(1);
+  await expect(row).toContainText('Amanzi United v Inyoni Wanderers');
   await expect(row.getByRole('link', { name: 'Control room' })).toBeVisible();
   await page.screenshot({ path: `${SCREENS}/home.png`, fullPage: true });
 });
