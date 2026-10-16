@@ -10,6 +10,8 @@ import {
 } from '@angular/core';
 import { Club, LANGUAGES, PERSONAS, Player } from '../core/contracts';
 import { findFact, formatFact } from '../core/format';
+import { toApiError } from '../core/api-error';
+import { MatchApi } from '../core/match-api';
 import { MatchSession } from '../core/match-session';
 import { resolveVariant, textLanguage } from '../core/variant';
 import { ViewerStore } from '../core/viewer-store';
@@ -56,12 +58,22 @@ export class Viewer implements OnInit {
   protected readonly session = inject(MatchSession);
   private readonly store = inject(ViewerStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly api = inject(MatchApi);
 
   readonly matchId = input.required<string>();
 
   protected readonly personas = PERSONAS;
   protected readonly languages = LANGUAGES;
   protected readonly preferences = this.store.preferences;
+
+  /** What the last "jump to next moment" did, or why it could not, for the status line. */
+  protected readonly jumped = signal<string | null>(null);
+
+  /** A match still being played can be jumped forward to its next moment (WP-11). */
+  protected readonly canJump = computed(() => {
+    const state = this.session.status()?.status ?? this.session.match()?.status;
+    return state === 'live';
+  });
 
   /** The wall clock, a second at a time, so a variant that never arrives gives way to the base narrative. */
   private readonly now = signal(Date.now());
@@ -156,6 +168,15 @@ export class Viewer implements OnInit {
     this.destroyRef.onDestroy(() => clearInterval(clock));
     const prefs = this.preferences();
     void this.session.connect(this.matchId(), prefs);
+  }
+
+  protected async jump(): Promise<void> {
+    try {
+      const jump = await this.api.jump(this.matchId());
+      this.jumped.set(`Next up: ${jump.headline}`);
+    } catch (error) {
+      this.jumped.set(toApiError(error));
+    }
   }
 
   protected setPersona(persona: string): void {
