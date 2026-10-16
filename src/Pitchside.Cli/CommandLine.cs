@@ -14,6 +14,7 @@ using Pitchside.Engine;
 using Pitchside.Engine.Calibration;
 using Pitchside.Evaluation;
 using Pitchside.Moments;
+using Pitchside.Moments.Demo;
 using Pitchside.Runtime.Audit;
 using Pitchside.Runtime.MomentSink;
 using Pitchside.Stats;
@@ -55,6 +56,8 @@ public static class CommandLine
                 return await NarrateAsync(options, output, culture).ConfigureAwait(false);
             case "evaluate":
                 return await EvaluateAsync(options, output, culture).ConfigureAwait(false);
+            case "demo-seed":
+                return await DemoSeedAsync(options, output, culture).ConfigureAwait(false);
             default:
                 await output.WriteLineAsync(Usage).ConfigureAwait(false);
                 return 1;
@@ -73,6 +76,7 @@ public static class CommandLine
                     [--recap [--speech scripted|azure] [--out <dir>]]  speak the full-time recap into <dir>/recap/
           evaluate  --match MER-<n> [--provider local]   narrate every persona and language, score groundedness and
                     [--agents scripted] [--report <file>] write docs/evaluation/report-<match>.md
+          demo-seed [--from 1] [--to 500] [--out <file>] score seeds for drama and write docs/DEMO.md
         """;
 
     private static readonly JsonSerializerOptions Indented = new(ContractJson.Options) { WriteIndented = true };
@@ -221,6 +225,85 @@ public static class CommandLine
         }
 
         return unresolved == 0 ? 0 : 3;
+    }
+
+    /// <summary>
+    /// The demo seed (WP-11): every seed in the range simulated and scored for drama by <see cref="DemoSeedScorer"/>,
+    /// the best one written to <c>docs/DEMO.md</c> with its moment list.
+    /// </summary>
+    private static async Task<int> DemoSeedAsync(Dictionary<string, string> options, TextWriter output, IFormatProvider culture)
+    {
+        var from = long.Parse(options.GetValueOrDefault("from", "1"), culture);
+        var to = long.Parse(options.GetValueOrDefault("to", "500"), culture);
+        var path = options.GetValueOrDefault("out", Path.Combine("docs", "DEMO.md"));
+        if (from <= 0 || to < from)
+        {
+            await output.WriteLineAsync("--from must be positive and --to at least --from.").ConfigureAwait(false);
+            return 1;
+        }
+
+        var scores = new List<DemoSeedScore>();
+        foreach (var seed in DemoSeedScorer.Seeds(from, to))
+        {
+            var simulated = MatchSimulator.Simulate(seed);
+            scores.Add(DemoSeedScorer.Score(seed, simulated.Document, simulated.Events, MatchMoments.Detect(simulated.Document, simulated.Events)));
+        }
+
+        var best = DemoSeedScorer.Best(scores);
+        var match = MatchSimulator.Simulate(best.Seed);
+        var moments = MatchMoments.Detect(match.Document, match.Events);
+        var markdown = DemoMarkdown(best, match, moments, scores, from, to, culture);
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        await File.WriteAllTextAsync(path, markdown).ConfigureAwait(false);
+        await output.WriteLineAsync(string.Format(
+            culture,
+            "seed {0} scores {1}/5: {2} {3}-{4} {5}, {6} moments -> {7}",
+            best.Seed, best.Total, match.Document.Home.Club.Name, match.HomeScore, match.AwayScore, match.Document.Away.Club.Name, moments.Count, path)).ConfigureAwait(false);
+        return 0;
+    }
+
+    private static string DemoMarkdown(
+        DemoSeedScore best, SimulatedMatch match, IReadOnlyList<Moment> moments, List<DemoSeedScore> scores, long from, long to, IFormatProvider culture)
+    {
+        static string Mark(bool yes) => yes ? "yes" : "no";
+        var text = new System.Text.StringBuilder();
+        text.AppendLine("# Demo match")
+            .AppendLine()
+            .AppendLine(string.Format(culture, "Seed **{0}**, match `{1}`: {2} {3}, {4} {5}. Chosen by", best.Seed, match.Document.MatchId, match.Document.Home.Club.Name, match.HomeScore, match.Document.Away.Club.Name, match.AwayScore))
+            .AppendLine(string.Format(culture, "`dotnet run --project src/Pitchside.Cli -- demo-seed --from {0} --to {1}`, which simulates every seed in", from, to))
+            .AppendLine("the range and scores it one point each for three to five goals, a lead that changes hands, a red card or a")
+            .AppendLine("penalty, a big chance missed, and a momentum swing in each half. The highest total wins and the lowest seed")
+            .AppendLine("breaks a tie, so the choice is the same on every machine. This file is generated; run the command again rather")
+            .AppendLine("than editing it.")
+            .AppendLine()
+            .AppendLine("| Criterion | Seed " + best.Seed.ToString(culture) + " |")
+            .AppendLine("| --- | --- |")
+            .AppendLine(string.Format(culture, "| Three to five goals | {0} ({1}) |", Mark(best.GoalsInRange), best.Goals))
+            .AppendLine(string.Format(culture, "| The lead changes hands | {0} |", Mark(best.Comeback)))
+            .AppendLine(string.Format(culture, "| A red card or a penalty | {0} |", Mark(best.RedCardOrPenalty)))
+            .AppendLine(string.Format(culture, "| A big chance missed | {0} |", Mark(best.BigChanceMissed)))
+            .AppendLine(string.Format(culture, "| A momentum swing in each half | {0} |", Mark(best.MomentumSwingEachHalf)))
+            .AppendLine(string.Format(culture, "| Total | {0} of 5 |", best.Total))
+            .AppendLine()
+            .AppendLine(string.Format(culture, "Of the {0} seeds scored, {1} reach the same total.", scores.Count, scores.Count(s => s.Total == best.Total)))
+            .AppendLine()
+            .AppendLine("## Moments")
+            .AppendLine()
+            .AppendLine("| Clock | Type | Headline |")
+            .AppendLine("| --- | --- | --- |");
+        foreach (var moment in moments)
+        {
+            text.AppendLine(string.Format(culture, "| {0} | `{1}` | {2} |", Clock(moment.Period, moment.ClockMs, culture), moment.Type, moment.Headline.Replace("|", "/", StringComparison.Ordinal)));
+        }
+
+        return text.ToString();
+    }
+
+    private static string Clock(int period, int clockMs, IFormatProvider culture)
+    {
+        var minutes = clockMs / 60_000;
+        var seconds = clockMs / 1000 % 60;
+        return string.Format(culture, "{0}H {1:00}:{2:00}", period, minutes, seconds);
     }
 
     /// <summary>

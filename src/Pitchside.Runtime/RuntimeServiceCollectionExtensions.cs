@@ -54,6 +54,8 @@ public static class RuntimeServiceCollectionExtensions
         services.TryAddSingleton<IReplayService>(sp => sp.GetRequiredService<ReplayService>());
         services.AddHostedService(sp => sp.GetRequiredService<ReplayService>());
         services.AddHostedService<MatchIngestConsumer>();
+        services.Configure<DemoOptions>(configuration.GetSection(DemoOptions.SectionName));
+        services.AddHostedService<DemoAutoStart>();
 
         services.AddAkka(ActorSystemName, builder => builder.WithActors((system, registry, resolver) =>
         {

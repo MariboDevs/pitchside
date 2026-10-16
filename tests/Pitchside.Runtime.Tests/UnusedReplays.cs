@@ -16,4 +16,10 @@ internal sealed class UnusedReplays : IReplayService
     public bool Pause(string matchId) => false;
 
     public bool Resume(string matchId) => false;
+
+    public bool TryJump(string matchId, out ReplayJump? jump)
+    {
+        jump = null;
+        return false;
+    }
 }

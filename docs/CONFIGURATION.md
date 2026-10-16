@@ -38,6 +38,9 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Pricing:InputPerMillion` | `0` | price of a million input tokens, for the evaluation report's cost estimate | WP-07 |
 | `Pricing:OutputPerMillion` | `0` | price of a million output tokens, for the evaluation report's cost estimate | WP-07 |
 | `Mcp:ApiKey` | | when set, the MCP tool `explain_moment` needs it in the `X-Pitchside-Key` header; user-secrets locally, a Key Vault reference in Azure, never in a file | WP-08 |
+| `Demo:AutoStart` | `false` | when on, the host starts the demo seed once it is up; a seed already stored is left as it is | WP-11 |
+| `Demo:Seed` | `26` | the demo seed, chosen by `demo-seed` and recorded in `docs/DEMO.md` | WP-11 |
+| `Demo:Speed` | `1.0` | the demo replay's speed; `1` is real time | WP-11 |
 | `Speech:Provider` | `None` | `None` (no recap; the recap endpoints answer 404 "Speech is off"), `Scripted` (one second of silent MP3, no network), `Azure` (Azure AI Speech, keyless) | WP-10 |
 | `Speech:Region` | | the Speech resource's region, such as `southafricanorth`; the REST endpoint is `https://{region}.tts.speech.microsoft.com` | WP-10 |
 | `Speech:ResourceId` | | the Speech resource's ARM id; the Entra ID token is sent as `aad#{resourceId}#{token}` | WP-10 |

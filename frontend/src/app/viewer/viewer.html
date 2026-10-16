@@ -12,6 +12,14 @@
       @if (session.connection() !== 'live') {
         <span class="pill pill--waiting" role="status">{{ session.connection() }}</span>
       }
+      @if (canJump()) {
+        <button class="btn" type="button" (click)="jump()" data-testid="jump">
+          Jump to next moment
+        </button>
+      }
+      @if (jumped(); as message) {
+        <span class="muted" role="status">{{ message }}</span>
+      }
     </header>
 
     <div class="body">
