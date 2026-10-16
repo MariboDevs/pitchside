@@ -72,8 +72,11 @@ public sealed class RecapTests
     public async Task A_translation_that_fell_back_to_english_is_spoken_in_english()
     {
         var context = await FullTimeAsync();
+        // As the translator leaves it when the translation fails: the English sentences, marked as a fallback.
         var fellBack = context.Narratives
-            .Select(n => n.Language == Languages.Afrikaans ? n with { Status = NarrativeStatus.Fallback } : n)
+            .Select(n => n.Language == Languages.Afrikaans
+                ? n with { Status = NarrativeStatus.Fallback, Provenance = n.Provenance with { Fallback = true } }
+                : n)
             .ToList();
 
         var recaps = await Crew.Recaps().WriteAsync(context with { Narratives = [.. fellBack] }, CancellationToken.None);
@@ -81,6 +84,23 @@ public sealed class RecapTests
         var afrikaans = recaps.Single(r => r.Recap.Language == Languages.Afrikaans).Recap;
         afrikaans.EnglishFallback.ShouldBeTrue();
         afrikaans.NarrativeId.ShouldBe(Narrative.IdFor(FullTimeId, Personas.Analyst, Languages.English));
+    }
+
+    [Fact]
+    public async Task A_translated_template_is_spoken_in_its_own_language()
+    {
+        // A template base keeps its fallback status through a translation that succeeded.
+        var context = await FullTimeAsync();
+        var template = context.Narratives
+            .Where(n => n.Persona != Personas.Analyst)
+            .Select(n => n.Persona == Personas.Base ? n with { Status = NarrativeStatus.Fallback } : n)
+            .ToList();
+
+        var recaps = await Crew.Recaps().WriteAsync(context with { Narratives = [.. template] }, CancellationToken.None);
+
+        var zulu = recaps.Single(r => r.Recap.Language == Languages.IsiZulu).Recap;
+        zulu.EnglishFallback.ShouldBeFalse();
+        zulu.NarrativeId.ShouldBe(Narrative.IdFor(FullTimeId, Personas.Base, Languages.IsiZulu));
     }
 
     [Fact]
