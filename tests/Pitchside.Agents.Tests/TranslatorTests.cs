@@ -159,7 +159,7 @@ public sealed class TranslatorTests
         var context = await BaseAsync();
         var cited = context.FactSheet.Facts.First(f => f.Key.StartsWith("player.", StringComparison.Ordinal) && !Goal.Moment.PlayerIds.Any(id => f.Key.Contains(id, StringComparison.Ordinal)));
 
-        var input = Prompts.ExplainerInput.BuildVariantCheck(context, [Rendering.NarrativeRenderer.Cite($"Compare [[{cited.Key}]] with [[home.shots]] and [[away.shots]].")]);
+        var input = Prompting.ExplainerInput.BuildVariantCheck(context, [Rendering.NarrativeRenderer.Cite($"Compare [[{cited.Key}]] with [[home.shots]] and [[away.shots]].")]);
 
         input.ShouldContain("\"home.shots\"");
         input.ShouldContain("\"away.shots\"");

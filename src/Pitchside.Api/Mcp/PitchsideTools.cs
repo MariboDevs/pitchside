@@ -7,7 +7,7 @@ using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using Pitchside.Agents;
 using Pitchside.Agents.Checking;
-using Pitchside.Agents.Prompts;
+using Pitchside.Agents.Prompting;
 using Pitchside.Agents.Providers;
 using Pitchside.Agents.Workflow;
 using Pitchside.Api.Broadcast;
