@@ -155,7 +155,7 @@ public static class CommandLine
             : [Languages.English];
         var everyVariant = options.ContainsKey("personas") || options.ContainsKey("languages");
         await using var services = new ServiceCollection()
-            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning))
+            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning).AddConsole(console => console.LogToStandardErrorThreshold = LogLevel.Trace))
             .AddPitchsideAgents(configuration)
             .Configure<AgentsOptions>(agents =>
             {
@@ -231,7 +231,7 @@ public static class CommandLine
             })
             .Build();
         var collection = new ServiceCollection()
-            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning))
+            .AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning).AddConsole(console => console.LogToStandardErrorThreshold = LogLevel.Trace))
             .AddPitchsideAgents(configuration)
             .AddPitchsideEvaluation(configuration)
             .Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
