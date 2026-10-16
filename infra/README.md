@@ -75,13 +75,16 @@ the environment, so `azd env set NAME value` (or `export NAME=value` for a hand 
 | --- | --- | --- |
 | `AZURE_LOCATION` | `location` | `southafricanorth` |
 | `PITCHSIDE_OWNER` | `owner` tag | `maribodevs` |
-| `FOUNDRY_ENDPOINT` | `foundryEndpoint` | empty: the scripted crew runs |
-| `FOUNDRY_DEPLOYMENT_FAST` | `foundryFastDeployment` | empty |
-| `FOUNDRY_DEPLOYMENT_QUALITY` | `foundryQualityDeployment` | empty |
-| `FOUNDRY_RESOURCE_ID` | `foundryResourceId` | empty: no OpenAI User role is granted |
+| `FOUNDRY_ENDPOINT` | `foundryEndpoint` | `https://ais-pitchside-dev.openai.azure.com/`, the Foundry resource in docs/ENVIRONMENT.md, so the apps call Foundry and the judge scores groundedness; set it empty for the scripted crew |
+| `FOUNDRY_DEPLOYMENT_FAST` | `foundryFastDeployment` | `pitchside-fast` |
+| `FOUNDRY_DEPLOYMENT_QUALITY` | `foundryQualityDeployment` | `pitchside-quality` |
+| `FOUNDRY_RESOURCE_ID` | `foundryResourceId` | the id of `ais-pitchside-dev`, so the app identities get Cognitive Services OpenAI User on it; set it empty to grant no role |
 | `PITCHSIDE_ALERT_EMAILS` | `alertEmails`, comma-separated | empty: no action group, alerts show in the portal only |
 | `PITCHSIDE_MCP_KEY_FROM_VAULT` | `mcpApiKeyFromKeyVault` | `false` |
 | `SERVICE_{API,AGENTS,WEB}_RESOURCE_EXISTS` | `{api,agents,web}Exists` | set by azd |
+
+To run an environment with no Foundry calls and no role on the Foundry account, set both `FOUNDRY_ENDPOINT` and
+`FOUNDRY_RESOURCE_ID` to empty values.
 
 azd uses `infra/main.bicepparam`. The `preprovision` hook in `azure.yaml` copies `main.<azd env name>.bicepparam` to
 it before every provision (the copy is git-ignored), so the azd environment must be named `dev` or `demo`.
