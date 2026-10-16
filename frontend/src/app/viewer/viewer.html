@@ -12,6 +12,14 @@
       @if (session.connection() !== 'live') {
         <span class="pill pill--waiting" role="status">{{ session.connection() }}</span>
       }
+      @if (canJump()) {
+        <button class="btn" type="button" (click)="jump()" data-testid="jump">
+          Jump to next moment
+        </button>
+      }
+      @if (jumped(); as message) {
+        <span class="muted" role="status">{{ message }}</span>
+      }
     </header>
 
     <div class="body">
@@ -86,6 +94,12 @@
             </ul>
           }
         </section>
+      }
+
+      @if (recap(); as spoken) {
+        <app-recap-player [recap]="spoken.recap" [src]="spoken.src" />
+      } @else if (recapError(); as problem) {
+        <p class="muted" role="status">The spoken recap is unavailable: {{ problem }}</p>
       }
 
       <section class="cards" aria-label="Latest moments" aria-live="polite">

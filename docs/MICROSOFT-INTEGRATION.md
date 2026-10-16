@@ -13,9 +13,9 @@ kept current as the build lands. Status: **planned** until a commit makes it tru
 | Azure Container Apps | Hosts the API, the agent host and the overlay UI, scale-to-zero outside demo hours | planned |
 | Azure Cosmos DB | Match state, event log and narratives, the same choice the Premier League's own platform made | built (WP-03: `CosmosMatchStore`, keyless; the emulator runs from the AppHost) |
 | Azure Event Hubs | The live event feed the simulator publishes and the ingest stage consumes | built (WP-03: `EventHubsEventBus`, partitioned by match, blob checkpoints, keyless) |
-| Azure AI Speech | Spoken full-time recap in the viewer's language | planned |
+| Azure AI Speech | Spoken full-time recap in the viewer's language | built (WP-10: SSML by code, a neural voice per language over the keyless REST endpoint, audio in Blob Storage; the first real synthesis runs in a local session) |
 | Azure Key Vault and managed identity | No secret in any container's environment; Container Apps secret references | planned |
 | Azure Monitor and Application Insights | Operational telemetry, the enterprise readiness story | planned |
 | .NET Aspire | Local orchestration of every service, and the dashboard that shows agent traces in the demo video | built (API, agent host and Cosmos DB emulator in `src/Pitchside.AppHost`) |
-| Bicep and azd | Infrastructure as code, one command to deploy | planned |
+| Bicep and azd | Infrastructure as code, one command to deploy | built (WP-09: `infra/`, `azure.yaml`, `.github/workflows/deploy.yml`; not yet provisioned) |
 | Microsoft Fabric Real-Time Intelligence | Stretch goal: Eventstream and KQL over the live feed for analyst dashboards | stretch |

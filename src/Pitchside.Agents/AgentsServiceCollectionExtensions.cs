@@ -8,9 +8,11 @@ using Pitchside.Agents.Checking;
 using Pitchside.Agents.Personalisation;
 using Pitchside.Agents.Prompts;
 using Pitchside.Agents.Providers;
+using Pitchside.Agents.Speech;
 using Pitchside.Agents.Workflow;
 using Pitchside.Runtime.Audit;
 using Pitchside.Runtime.MomentSink;
+using Pitchside.Runtime.Recaps;
 using Pitchside.Runtime.Usage;
 
 namespace Pitchside.Agents;
@@ -47,6 +49,7 @@ public static class AgentsServiceCollectionExtensions
         services.TryAddSingleton<INarrativePublisher, InMemoryNarrativeLog>();
         services.TryAddSingleton<IMomentSink, ChannelMomentSink>();
         services.TryAddSingleton<MomentWorkflow>();
+        AddSpeech(services, configuration);
         services.TryAddSingleton<WorkflowGate>();
 
         var provider = configuration[$"{AgentsOptions.SectionName}:{nameof(AgentsOptions.Provider)}"] ?? AgentsOptions.ScriptedProvider;
@@ -70,6 +73,36 @@ public static class AgentsServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    /// <summary>
+    /// The spoken recap (WP-10), chosen by <c>Speech:Provider</c>: <c>None</c> (the default) registers no speech provider,
+    /// so the recap stage does nothing; <c>Scripted</c> writes a silent clip; <c>Azure</c> calls Azure AI Speech keyless.
+    /// The recap store is the runtime's when it is registered (the API, the agent host), otherwise in process.
+    /// </summary>
+    private static void AddSpeech(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<SpeechOptions>(configuration.GetSection(SpeechOptions.SectionName));
+        services.TryAddSingleton<IRecapStore, InMemoryRecapStore>();
+        services.TryAddSingleton<RecapWriter>();
+        var provider = configuration[$"{SpeechOptions.SectionName}:{nameof(SpeechOptions.Provider)}"] ?? SpeechOptions.NoneProvider;
+        if (string.Equals(provider, SpeechOptions.ScriptedProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            services.TryAddSingleton<ISpeechProvider, ScriptedSpeechProvider>();
+        }
+        else if (string.Equals(provider, SpeechOptions.AzureProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+            services.TryAddSingleton<ISpeechProvider>(sp => new AzureSpeechProvider(
+                new HttpClient { Timeout = TimeSpan.FromSeconds(30) },
+                sp.GetRequiredService<TokenCredential>(),
+                sp.GetRequiredService<IOptions<SpeechOptions>>()));
+        }
+        else if (!string.Equals(provider, SpeechOptions.NoneProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Speech:Provider must be '{SpeechOptions.NoneProvider}', '{SpeechOptions.ScriptedProvider}' or '{SpeechOptions.AzureProvider}', not '{provider}'.");
+        }
     }
 
     private static AuditingChatProvider Audited(IServiceProvider sp, IChatProvider inner) => new(

@@ -178,6 +178,35 @@ export interface AuditPage {
   next: string | null;
 }
 
+/** A jump to the next moment (WP-11): the moment ahead and the event the replay runs to without waiting. */
+export interface ReplayJump {
+  matchId: string;
+  momentId: string;
+  momentType: string;
+  headline: string;
+  toSeq: number;
+}
+
+/** The spoken full-time recap in one viewer language (WP-10); the audio is served at /recap/audio. */
+export interface Recap {
+  matchId: string;
+  momentId: string;
+  narrativeId: string;
+  language: string;
+  spokenLanguage: string;
+  voice: string;
+  englishFallback: boolean;
+  ssml: string;
+  createdUtc: string;
+}
+
+/** A recap read: ready, still being spoken, or speech turned off on the server. */
+export type RecapResult =
+  { state: 'ready'; recap: Recap } | { state: 'pending' } | { state: 'off' };
+
+/** How long to wait before each read of a recap that is still being spoken: about three minutes in all. */
+export const RECAP_POLL_MS = [2_000, 3_000, 5_000, 5_000, ...Array<number>(16).fill(10_000)];
+
 /** One usage guard limit's current use (WP-07). */
 export interface UsageCount {
   name: 'replays' | 'narratives' | 'spokenLines' | 'connections';

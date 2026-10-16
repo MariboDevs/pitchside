@@ -17,6 +17,12 @@ chance missed, and a momentum swing in each half; pick the highest-scoring seed 
 judge who opens the link sees a live match within a minute, with a "jump to next moment" control that
 advances the replay to 10 seconds before the next moment at speed 0 and resumes at speed 1.
 
+Built so far: `demo-seed` (the scoring above, `Pitchside.Moments.Demo`), `Demo:AutoStart` and `Demo:Seed`, which
+start the seed once when the host is up, and `POST /api/v1/replays/{matchId}/jump` with a button in the viewer and
+the control room. Not built: the loop. A match id is replayed once per store, so replaying the same seed again
+needs the match, its derived records and the overlay book reset first; that is a decision for the owner (reset in
+place, or a fresh store per loop) before it is built.
+
 ## The video, under two minutes
 
 | Second | Shot | Line |

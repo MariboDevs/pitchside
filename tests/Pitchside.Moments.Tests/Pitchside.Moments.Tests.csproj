@@ -13,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Pitchside.Moments/Pitchside.Moments.csproj" />
+    <ProjectReference Include="../../src/Pitchside.Engine/Pitchside.Engine.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

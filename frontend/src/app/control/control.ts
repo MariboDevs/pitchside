@@ -27,6 +27,7 @@ import { MatchApi } from '../core/match-api';
 import { textLanguage } from '../core/variant';
 import { MatchSession } from '../core/match-session';
 import { Monogram } from '../shared/monogram/monogram';
+import { RecapSsml } from './recap-ssml/recap-ssml';
 import { Swimlane } from '../shared/swimlane/swimlane';
 import { UsagePanel } from './usage-panel/usage-panel';
 
@@ -51,7 +52,7 @@ const FACT_GROUPS = ['match', 'home', 'away', 'player'] as const;
  */
 @Component({
   selector: 'app-control',
-  imports: [Monogram, Swimlane, UsagePanel],
+  imports: [Monogram, RecapSsml, Swimlane, UsagePanel],
   templateUrl: './control.html',
   styleUrl: './control.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -388,6 +389,10 @@ export class Control implements OnInit {
     );
   }
 
+  protected async jump(): Promise<void> {
+    await this.run(() => this.api.jump(this.matchId()));
+  }
+
   protected onKey(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
     if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) {
@@ -397,6 +402,11 @@ export class Control implements OnInit {
     const last = this.moments().length - 1;
     switch (event.key) {
       case ' ':
+        // Space on a focused button or link is its own click, so it does what the control says.
+        if (target?.closest('button, a[href]')) {
+          return;
+        }
+
         event.preventDefault();
         void this.togglePause();
         break;

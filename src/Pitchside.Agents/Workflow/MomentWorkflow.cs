@@ -6,6 +6,7 @@ using Pitchside.Agents.Checking;
 using Pitchside.Agents.Executors;
 using Pitchside.Agents.Prompts;
 using Pitchside.Agents.Providers;
+using Pitchside.Agents.Speech;
 using Pitchside.Contracts;
 using Pitchside.Runtime.MomentSink;
 
@@ -14,7 +15,8 @@ namespace Pitchside.Agents.Workflow;
 /// <summary>
 /// One Microsoft Agent Framework workflow per moment. The graph:
 /// explainer, then fact-checker; on objections back to the explainer once, then to the fallback template; on a
-/// pass, or after the fallback, through the persona writer to the translator, which yields the final context.
+/// pass, or after the fallback, through the persona writer to the translator, then the recap stage, which speaks the
+/// full-time recap and yields the final context.
 /// </summary>
 public sealed partial class MomentWorkflow(
     IChatProvider provider,
@@ -24,7 +26,8 @@ public sealed partial class MomentWorkflow(
     ITranslator translator,
     IOptions<AgentsOptions> options,
     TimeProvider time,
-    ILogger<MomentWorkflow> logger)
+    ILogger<MomentWorkflow> logger,
+    RecapWriter? recaps = null)
 {
     /// <summary>The explainer runs at most twice: the first draft and one retry with the objections.</summary>
     public const int MaxExplainerAttempts = 2;
@@ -36,17 +39,19 @@ public sealed partial class MomentWorkflow(
         var fallback = new FallbackExecutor(new FallbackComposer(catalog, checker, time));
         var persona = new PersonaExecutor(personas);
         var translate = new TranslatorExecutor(translator);
+        var recap = new RecapExecutor(recaps);
 
         return new WorkflowBuilder(explainer)
             .WithName("pitchside-moment")
-            .WithDescription("Explain a moment, check every number against the fact sheet, fall back to a template, write personas and languages.")
+            .WithDescription("Explain a moment, check every number against the fact sheet, fall back to a template, write personas and languages, speak the full-time recap.")
             .AddEdge(explainer, factCheck)
             .AddEdge<MomentContext>(factCheck, explainer, c => c is not null && !Passed(c) && c.Attempts < MaxExplainerAttempts)
             .AddEdge<MomentContext>(factCheck, fallback, c => c is not null && !Passed(c) && c.Attempts >= MaxExplainerAttempts)
             .AddEdge<MomentContext>(factCheck, persona, c => c is not null && Passed(c))
             .AddEdge(fallback, persona)
             .AddEdge(persona, translate)
-            .WithOutputFrom(translate)
+            .AddEdge(translate, recap)
+            .WithOutputFrom(recap)
             .Build();
     }
 

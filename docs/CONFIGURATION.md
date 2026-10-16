@@ -33,7 +33,7 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Evaluation:Provider` | `Local` | `Local` (deterministic proxy: the share of sentences citing only the moment's evidence keys), `Foundry` (a judge model scores groundedness) | WP-07 |
 | `Evaluation:BatchSeconds` | `30` | verified narratives are scored in batches this many seconds apart | WP-07 |
 | `Evaluation:Deployment` | | the Foundry deployment that judges groundedness; empty uses `Foundry:Deployments:Quality` | WP-07 |
-| `UsageGuard:Enabled` | | unset means on, except with `Agents:Provider=Scripted`, whose limits never apply; `true` or `false` overrides | WP-07 |
+| `UsageGuard:Enabled` | | unset means on whenever a paid service is called (`Agents:Provider=Foundry` or `Speech:Provider=Azure`) and off when both are scripted; `true` or `false` overrides | WP-07, WP-10 |
 | `UsageGuard:ReplaysPerHourPerIp` | `6` | replays one address may start per clock hour; the next gets 429 with `Retry-After` | WP-07 |
 | `UsageGuard:NarrativesPerHour` | `400` | moment workflows (a base narrative and its variants) one host runs per clock hour; later moments are skipped | WP-07 |
 | `UsageGuard:SpokenLinesPerHour` | `60` | spoken commentary lines per host per clock hour, enforced by the speech service | WP-07, WP-10 |
@@ -42,4 +42,12 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Pricing:InputPerMillion` | `0` | price of a million input tokens, for the evaluation report's cost estimate | WP-07 |
 | `Pricing:OutputPerMillion` | `0` | price of a million output tokens, for the evaluation report's cost estimate | WP-07 |
 | `Mcp:ApiKey` | | when set, the MCP tool `explain_moment` needs it in the `X-Pitchside-Key` header; user-secrets locally, a Key Vault reference in Azure, never in a file | WP-08 |
-| `Speech:Provider` | `None` | `None`, `Azure` | WP-10 |
+| `Demo:AutoStart` | `false` | when on, the host starts the demo seed once it is up; a seed already stored is left as it is | WP-11 |
+| `Demo:Seed` | `26` | the demo seed, chosen by `demo-seed` and recorded in `docs/DEMO.md` | WP-11 |
+| `Demo:Speed` | `1.0` | the demo replay's speed; `1` is real time | WP-11 |
+| `Speech:Provider` | `None` | `None` (no recap; the recap endpoints answer 404 "Speech is off"), `Scripted` (one second of silent MP3, no network), `Azure` (Azure AI Speech, keyless) | WP-10 |
+| `Speech:Region` | | the Speech resource's region, such as `southafricanorth`; the REST endpoint is `https://{region}.tts.speech.microsoft.com` | WP-10 |
+| `Speech:ResourceId` | | the Speech resource's ARM id; the Entra ID token is sent as `aad#{resourceId}#{token}` | WP-10 |
+| `Speech:Voices:en`, `:af`, `:zu`, `:es` | `en-ZA-LeahNeural`, `af-ZA-AdriNeural`, `zu-ZA-ThandoNeural`, `es-ES-ElviraNeural` | the neural voice per language; check each is offered in the region; a language without one gets the English audio and the viewer says so | WP-10 |
+| `Speech:BlobServiceUri` | | the blob service the recap audio is kept in, such as `https://<account>.blob.core.windows.net`; unset keeps it in process | WP-10 |
+| `Speech:BlobContainer` | `recaps` | the container for `{matchId}/{language}.mp3` and its `{matchId}/{language}.json` recap | WP-10 |
