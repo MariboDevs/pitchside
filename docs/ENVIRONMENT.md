@@ -138,6 +138,12 @@ names and resource id, `PITCHSIDE_ALERT_EMAILS` and `PITCHSIDE_OWNER` set.
 
 The Speech resource and the Foundry resource are the Phase 0 ones above; the template assigns the roles.
 
+Deployed on 16 October with `azd deploy` from the `fix/foundry-gpt6-parameters` branch, then a second
+`azd provision` for the probes. Verified: `/health` and `/alive` 200 on the API, 200 on the web app and its `/api`
+proxy, and a replay through the proxy reached a verified narrative written by the Foundry deployments in 8 s. The
+first image crashed at startup because the Windows checkout merges `Prompts/` and `prompts/`; the source folder was
+renamed in the same branch. Build images from a checkout where `src/Pitchside.Agents/prompts` is lower case.
+
 ### Fabric
 
 | Item | Value |
