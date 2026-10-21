@@ -91,13 +91,14 @@ fabric() {
   code="$(curl "${args[@]}" "$API$path")" || fail "$method $path did not complete"
   case "$code" in
     200 | 201) cat "$out" ;;
-    202) wait_for_operation "$headers" ;;
+    # updateDefinition has no result; every other long-running call here (create, getDefinition) returns one.
+    202) if [[ "$path" == */updateDefinition ]]; then wait_for_operation "$headers" none; else wait_for_operation "$headers" result; fi ;;
     *) fail "$method $path answered $code: $(cat "$out")" ;;
   esac
 }
 
 wait_for_operation() {
-  local headers="$1" id retry status state="$WORK/operation.json" result="$WORK/result.json" code
+  local headers="$1" wants="$2" id retry status state="$WORK/operation.json" result="$WORK/result.json" code
   id="$(tr -d '\r' <"$headers" | awk 'tolower($1) == "x-ms-operation-id:" { print $2 }')"
   retry="$(tr -d '\r' <"$headers" | awk 'tolower($1) == "retry-after:" { print $2 }')"
   [[ -n "$id" ]] || fail "a 202 came without an operation id"
@@ -108,8 +109,13 @@ wait_for_operation() {
     status="$(jq -r '.status' "$state")"
     case "$status" in
       Succeeded)
+        if [[ "$wants" == none ]]; then
+          echo '{}'
+          return 0
+        fi
         code="$(curl -sS -H @"$AUTH" -o "$result" -w '%{http_code}' "$API/operations/$id/result")" || fail "reading the result of $id did not complete"
-        if [[ "$code" == 200 ]]; then cat "$result"; else echo '{}'; fi
+        [[ "$code" == 200 ]] || fail "the result of operation $id answered $code: $(cat "$result")"
+        cat "$result"
         return 0
         ;;
       Failed) fail "operation $id failed: $(jq -c '.error' "$state")" ;;

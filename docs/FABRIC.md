@@ -154,7 +154,10 @@ azd provision
 #    Prints every step and stops on the first error. Safe to run again: existing items get their definition replaced.
 infra/scripts/fabric-apply.sh $WS
 
-# 4. Portal step 4 (Eventstream), then replay a match and compare counts.
+# 4. Portal steps 4 (Eventstream) and 5 (Activator, rule started). Both must be running before the replay: a match id
+#    replays once per store, and the alert only looks back over its lookback, so a rule set up afterwards sees nothing.
+
+# 5. Replay the match and compare counts.
 API=$(azd env get-value API_URL)
 curl -s -X POST "$API/api/v1/replays" -H 'Content-Type: application/json' -d '{"seed": 13, "speed": 1}'
 #    within 30 s, in the queryset tab "Evidence: row count for the latest match", or:
@@ -162,12 +165,14 @@ curl -s -X POST "$API/api/v1/replays" -H 'Content-Type: application/json' -d '{"
 #    at full time, the API's count:
 curl -s "$API/api/v1/matches/MER-13/events?fromSeq=1&toSeq=2000" | jq length
 
-# 5. Portal step 5 (Activator), then save its definition and commit it.
+# 6. Save the Activator's definition and commit it.
 infra/scripts/fabric-apply.sh $WS --export-activator
 ```
 
 Seed 13 (`MER-13`, Lindenfield United against Brightwater FC) has 1,642 events and reaches the alert twice: Brightwater
-FC in the 27th minute and Lindenfield United in the 83rd. The demo seed 26 never reaches 4 shots in 3 minutes.
+FC in the 27th minute and Lindenfield United in the 83rd. The demo seed 26 never reaches 4 shots in 3 minutes. If
+`MER-13` is already stored in that environment (the replay answers 409), use another seed that reaches the alert:
+6, 8, 9, 32, 54, 57, 58, 65, 116 or 119 (`fabric/activator/README.md`).
 
 If the dashboard upload is refused (Fabric publishes only the outline of `RealTimeDashboard.json`; the file follows the
 documented field list and load rules), the error names the field: fix it in the file and run the script again, or

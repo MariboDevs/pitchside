@@ -39,7 +39,9 @@ then makes the rule rebuildable by Create Item with that definition.
 6. Action: an email (or a Teams message) to the demo owner. Headline: `Pressure alert`. Message:
    `Side {teamId} has {shotsInWindow} shots in 3 minutes (match {matchId}, minute {matchMinute}).` Every value is a
    column of the query: numbers from code.
-7. Start the rule. Replay a match with a pressure spell and take the screenshot of the alert for `docs/FABRIC.md`.
+7. Start the rule **before** replaying: a match id replays once per store, and `PressureAlerts` looks back only over
+   its lookback, so a rule started after the spell sees nothing. Then replay a match with a pressure spell and take
+   the screenshot of the alert for `docs/FABRIC.md`.
    Seed 13 has two: one side reaches 4 shots in 3 minutes at minute 27 and the other at minute 83. The demo seed 26
    (`docs/DEMO.md`) has none, nor does the sample seed 7. Of seeds 1 to 120, 11 reach the threshold (6, 8, 9, 13,
    32, 54, 57, 58, 65, 116, 119), counted from `simulate` output with the same window and threshold.
