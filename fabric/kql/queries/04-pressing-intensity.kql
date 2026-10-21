@@ -1,0 +1,37 @@
+// Pressing intensity over time: {side}.pressingIntensity from Pitchside.Stats, a side's pressures per opponent pass
+// over the last 10 minutes of period clock (EventRules.TenMinutesMs), 0 when the opponent made no pass. The window
+// never crosses half time. It is taken at the last event of every match minute, as the fact sheet would show it then.
+.create-or-alter function with (folder = "pitchside", docstring = "Pressures per opponent pass over the last 10 minutes, per minute") PressingIntensity(_match: string) {
+    let windowMs = 600000;
+    let ev = MatchEvents(_match);
+    let sides = ev | distinct teamId;
+    let pairs = sides
+        | extend k = 1
+        | join kind=inner (sides | project opponent = teamId, k = 1) on k
+        | where teamId != opponent
+        | project teamId, opponent;
+    let points = ev
+        | summarize arg_max(seq, clockMs, wallTimeUtc) by period, minuteOfPeriod = clockMs / 60000
+        | project period, atSeq = seq, atClockMs = clockMs, wallTimeUtc, matchMinute = (period - 1) * 45 + minuteOfPeriod + 1;
+    let actions = ev
+        | where type in ("pressure", "pass")
+        | project period, seq, clockMs, actor = teamId, action = type;
+    let counted = points
+        | join kind=inner actions on period
+        | where seq <= atSeq and clockMs >= atClockMs - windowMs
+        | project atSeq, actor, action;
+    let pressures = counted
+        | where action == "pressure"
+        | summarize pressures = count() by atSeq, teamId = actor;
+    let passes = counted
+        | where action == "pass"
+        | summarize passes = count() by atSeq, opponent = actor;
+    points
+    | extend k = 1
+    | join kind=inner (pairs | extend k = 1) on k
+    | join kind=leftouter pressures on atSeq, teamId
+    | join kind=leftouter passes on atSeq, opponent
+    | project wallTimeUtc, matchMinute, period, teamId, pressures = coalesce(pressures, 0), opponentPasses = coalesce(passes, 0)
+    | extend pressingIntensity = iff(opponentPasses == 0, 0.0, round(todouble(pressures) / opponentPasses, 2))
+    | order by wallTimeUtc asc, teamId asc
+}

@@ -1,0 +1,41 @@
+// Momentum: match.momentum.home and match.momentum.away from Pitchside.Stats, so the dashboard and the overlay show
+// the same number. Each event weighs, for its side: a shot 3, 4 more when on target, plus 10 per unit of xG; a corner
+// 2; a final-third entry (a completed pass or a carry from x <= 70 to beyond 70) 1 (EventRules.MomentumWeight). A
+// side's momentum is its share of the summed weight over the last 5 minutes of period clock (EventRules.FiveMinutesMs,
+// never across half time), both sides 0.5 when nothing weighed, rounded to 2 decimals like the fact. It is taken at
+// the last event of every match minute, so each point equals the fact sheet at that event.
+//
+// MomentumParityTests in tests/Pitchside.Stats.Tests reads the six constants below and fails if any differs from
+// the C# rule.
+.create-or-alter function with (folder = "pitchside", docstring = "Momentum share per side over the last 5 minutes, per minute (WP-01 formula)") MatchMomentum(_match: string) {
+    let shotWeight = 3.0;
+    let onTargetWeight = 4.0;
+    let xgWeight = 10.0;
+    let cornerWeight = 2.0;
+    let finalThirdEntryWeight = 1.0;
+    let finalThirdX = 70.0;
+    let windowMs = 300000;
+    let ev = MatchEvents(_match)
+        | extend shot = iff(type == "shot", shotWeight + iff(onTarget == true, onTargetWeight, 0.0) + xgWeight * coalesce(xg, 0.0), 0.0)
+        | extend corner = iff(type == "corner", cornerWeight, 0.0)
+        | extend entry = iff(((type == "pass" and completed == true) or type == "carry") and isnotnull(endX) and x <= finalThirdX and endX > finalThirdX, finalThirdEntryWeight, 0.0)
+        | extend weight = shot + corner + entry;
+    let sides = ev | distinct teamId;
+    let points = ev
+        | summarize arg_max(seq, clockMs, wallTimeUtc) by period, minuteOfPeriod = clockMs / 60000
+        | project period, atSeq = seq, atClockMs = clockMs, wallTimeUtc, matchMinute = (period - 1) * 45 + minuteOfPeriod + 1;
+    let weights = points
+        | join kind=inner (ev | where weight > 0 | project period, seq, clockMs, teamId, weight) on period
+        | where seq <= atSeq and clockMs >= atClockMs - windowMs
+        | summarize weight = sum(weight) by atSeq, teamId;
+    let totals = weights
+        | summarize total = sum(weight) by atSeq;
+    points
+    | extend k = 1
+    | join kind=inner (sides | extend k = 1) on k
+    | join kind=leftouter weights on atSeq, teamId
+    | join kind=leftouter totals on atSeq
+    | project wallTimeUtc, matchMinute, period, teamId, weight = coalesce(weight, 0.0), total = coalesce(total, 0.0)
+    | extend momentum = iff(total == 0, 0.5, round(weight / total, 2))
+    | order by wallTimeUtc asc, teamId asc
+}

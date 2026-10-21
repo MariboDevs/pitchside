@@ -1,0 +1,18 @@
+// xG race: each side's cumulative xG after every shot, as {side}.xg sums it in Pitchside.Stats (a shot without
+// xG adds 0). Each side starts at 0 at kick-off. The time axis is the event's wall time, which only moves forward,
+// so the second half follows the first; matchMinute is the minute the overlay shows.
+.create-or-alter function with (folder = "pitchside", docstring = "Cumulative xG per side after every shot") XgRace(_match: string) {
+    let ev = MatchEvents(_match);
+    let kickOff = toscalar(ev | where type == "kick_off" and period == 1 | summarize min(wallTimeUtc));
+    let start = ev
+        | distinct teamId
+        | project wallTimeUtc = kickOff, matchMinute = 0, teamId, cumulativeXg = 0.0, seq = 0;
+    let race = ev
+        | where type == "shot"
+        | project wallTimeUtc, matchMinute = (period - 1) * 45 + clockMs / 60000 + 1, teamId, xg = coalesce(xg, 0.0), seq
+        | order by teamId asc, seq asc
+        | extend cumulativeXg = row_cumsum(xg, teamId != prev(teamId))
+        | project wallTimeUtc, matchMinute, teamId, cumulativeXg = round(cumulativeXg, 2), seq;
+    union start, race
+    | order by seq asc, teamId asc
+}
