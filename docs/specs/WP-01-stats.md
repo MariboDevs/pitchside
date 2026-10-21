@@ -148,3 +148,10 @@ catalogue above.
   pressure changes, and game rhythm"). Keep their definitions exactly as the table says; the narrative prompts
   describe them in those words.
 - Floating point: round at `Snapshot`, never inside accumulators.
+
+## Contract change: loop match ids
+
+Added by the WP-11 demo loop. A match id is `MER-<seed>` or, for a later replay of the same seed under a new id,
+`MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26`, then `MER-26-2`, `MER-26-3`).
+`schemas/fact-sheet.schema.json` (`matchId`) accepts both forms. Every id that was valid stays valid, and
+`MatchSimulator` still names a simulated match `MER-<seed>`.

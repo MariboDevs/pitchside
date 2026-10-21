@@ -179,3 +179,10 @@ moment must end `verified` or `fallback`, never `rejected` without a fallback.
 - Keep prompts short and literal. Small, fast models follow "write every number as a [[key]] token" when the
   example in the prompt shows it three times.
 - Token budgets: cap output at 400 tokens per call; log tokens per stage.
+
+## Contract change: loop match ids
+
+Added by the WP-11 demo loop. A match id is `MER-<seed>` or, for a later replay of the same seed under a new id,
+`MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26`, then `MER-26-2`, `MER-26-3`).
+`schemas/narrative.schema.json` (`matchId`, and the narrative `id` and `momentId`, which start with it) accepts both
+forms. Every id that was valid stays valid, and `MatchSimulator` still names a simulated match `MER-<seed>`.
