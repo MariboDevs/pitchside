@@ -20,6 +20,7 @@
     <Project Path="tests/Pitchside.Api.IntegrationTests/Pitchside.Api.IntegrationTests.csproj" />
     <Project Path="tests/Pitchside.Engine.Tests/Pitchside.Engine.Tests.csproj" />
     <Project Path="tests/Pitchside.Evaluation.Tests/Pitchside.Evaluation.Tests.csproj" />
+    <Project Path="tests/Pitchside.Fabric.Tests/Pitchside.Fabric.Tests.csproj" />
     <Project Path="tests/Pitchside.Moments.Tests/Pitchside.Moments.Tests.csproj" />
     <Project Path="tests/Pitchside.Overlay.Tests/Pitchside.Overlay.Tests.csproj" />
     <Project Path="tests/Pitchside.Runtime.Tests/Pitchside.Runtime.Tests.csproj" />

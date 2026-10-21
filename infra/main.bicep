@@ -28,7 +28,7 @@ param speechSku string
 @description('Name of the Speech account; empty generates one. dev reuses the existing free-tier account, since a subscription may hold only one F0 Speech account.')
 param speechName string = ''
 
-@description('Event Hubs SKU. Basic holds only the $Default consumer group; Standard adds api, agents and fabric.')
+@description('Event Hubs SKU. Basic holds only the $Default consumer group; Standard adds api, agents and fabric, which the Fabric Eventstream needs.')
 @allowed([
   'Basic'
   'Standard'
@@ -63,6 +63,15 @@ param alertEmails array = []
 
 @description('Read Mcp:ApiKey from the Key Vault secret mcp-api-key. Create the secret by hand first.')
 param mcpApiKeyFromKeyVault bool = false
+
+@description('Object id of the Fabric workspace identity that reads the hub (WP-12, docs/FABRIC.md). Empty grants nothing.')
+param fabricWorkspacePrincipalId string = ''
+
+@description('Create the optional F2 Fabric capacity (WP-12). It starts running: pause it with infra/scripts/fabric-capacity.sh.')
+param fabricCapacity bool = false
+
+@description('Administrators of the F2 capacity, required when fabricCapacity is true.')
+param fabricCapacityAdministrators array = []
 
 @description('Set by azd: whether pitchside-api already exists, so its deployed image is kept.')
 param apiExists bool = false
@@ -167,6 +176,17 @@ module eventHubs 'modules/eventhubs.bicep' = {
       identity.outputs.apiPrincipalId
       identity.outputs.agentsPrincipalId
     ]
+    fabricReaderPrincipalId: fabricWorkspacePrincipalId
+  }
+}
+
+module fabric 'modules/fabric.bicep' = if (fabricCapacity) {
+  scope: rg
+  params: {
+    location: location
+    name: 'fcpitchside${environmentName}'
+    tags: tags
+    administrators: fabricCapacityAdministrators
   }
 }
 
@@ -279,8 +299,10 @@ module agents 'modules/app-agents.bicep' = {
     eventHubsNamespaceName: eventHubs.outputs.namespaceName
     eventHubsNamespace: eventHubs.outputs.fullyQualifiedNamespace
     eventHubName: eventHubs.outputs.hubName
-    // Basic has only $Default, which the API's ingest also reads; Standard gives the agent host its own group.
-    consumerGroup: eventHubsSku == 'Basic' ? '$Default' : 'agents'
+    // The scaler measures lag in this group from its checkpoints. While the crew runs in the API, nothing reads the
+    // agents group, so its lag would never drain and the idle host would stay scaled out: it follows $Default, which
+    // the API checkpoints. The agents group is used only on Standard with the crew in its own host.
+    consumerGroup: eventHubsSku == 'Basic' || runAgentsInApi ? '$Default' : 'agents'
     checkpointStorageAccountName: eventHubs.outputs.storageAccountName
     checkpointContainerName: eventHubs.outputs.checkpointContainerName
     checkpointBlobUri: eventHubs.outputs.checkpointBlobUri
@@ -330,6 +352,9 @@ output API_URL string = api.outputs.uri
 output WEB_URL string = web.outputs.uri
 output COSMOS_ENDPOINT string = cosmos.outputs.endpoint
 output EVENT_HUBS_NAMESPACE string = eventHubs.outputs.fullyQualifiedNamespace
+output EVENT_HUBS_HUB string = eventHubs.outputs.hubName
+output EVENT_HUBS_FABRIC_CONSUMER_GROUP string = eventHubs.outputs.fabricConsumerGroup
+output FABRIC_CAPACITY_NAME string = fabricCapacity ? fabric!.outputs.name : ''
 output KEY_VAULT_NAME string = keyVault.outputs.name
 output SPEECH_ENDPOINT string = speech.outputs.endpoint
 output SPEECH_RESOURCE_ID string = speech.outputs.id

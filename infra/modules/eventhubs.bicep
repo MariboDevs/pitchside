@@ -30,8 +30,13 @@ param hubName string = 'match-events'
 @description('Blob container for processor checkpoints.')
 param checkpointContainerName string = 'checkpoints'
 
+@description('Object id of the Fabric workspace identity the Eventstream reads the hub with (WP-12). Empty grants nothing.')
+param fabricReaderPrincipalId string = ''
+
 // The API's ingest reads $Default (BusOptions.IngestConsumerGroup maps to it). The named groups exist for the
 // separate agent host and the Fabric eventstream; Basic cannot hold them, so they are created on Standard only.
+// The Eventstream must not share $Default: the API's EventProcessorClient holds each partition with an exclusive
+// (epoch) receiver, which disconnects any other reader in the same group.
 var namedConsumerGroups = [
   'api'
   'agents'
@@ -131,6 +136,17 @@ resource receiver 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   }
 ]
 
+// The Fabric Eventstream reads with the workspace identity, so local auth stays disabled. Listen on this one hub only.
+resource fabricReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(fabricReaderPrincipalId)) {
+  name: guid(hub.id, fabricReaderPrincipalId, eventHubsDataReceiverRoleId)
+  scope: hub
+  properties: {
+    principalId: fabricReaderPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', eventHubsDataReceiverRoleId)
+  }
+}
+
 resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for principalId in principalIds: {
     name: guid(storage.id, principalId, storageBlobDataContributorRoleId)
@@ -146,6 +162,7 @@ resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
 output namespaceName string = namespace.name
 output fullyQualifiedNamespace string = '${namespace.name}.servicebus.windows.net'
 output hubName string = hub.name
+output fabricConsumerGroup string = sku == 'Basic' ? '' : 'fabric'
 output storageAccountName string = storage.name
 output checkpointContainerName string = checkpoints.name
 output checkpointBlobUri string = '${storage.properties.primaryEndpoints.blob}${checkpoints.name}'
