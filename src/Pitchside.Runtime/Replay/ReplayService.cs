@@ -70,6 +70,13 @@ public sealed partial class ReplayService(
 
         try
         {
+            // A stored id is refused before the match is simulated: after a restart the demo loop walks past every
+            // stored loop. TryCreateMatchAsync below stays the guard against two starts racing for the same id.
+            if (await store.GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                throw new ReplayConflictException($"{matchId} is already stored; a match id is replayed once per store.");
+            }
+
             var match = MatchLoops.As(MatchSimulator.Simulate(seed), matchId);
             var stored = new StoredMatch(match.Document, MatchStatus.Scheduled, 0, time.GetUtcNow());
             if (!await store.TryCreateMatchAsync(stored, cancellationToken).ConfigureAwait(false))
