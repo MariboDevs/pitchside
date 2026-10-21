@@ -3,18 +3,24 @@
 // of a side, never across half time. The alert threshold is 4 shots, one more than the moment's 3, so the alert
 // marks the stronger spells. Unlike the moment, it does not stand down when the side scores in the window.
 //
-// Each row is one shot that brought its side to 4 or more shots in the window. Activator keys the rows on
-// matchId and teamId and alerts on each new row. PressureParityTests in tests/Pitchside.Moments.Tests fails if
-// windowMs differs from SustainedPressureRule.WindowMs.
+// Each row is one shot, published within the lookback, that brought its side to 4 or more shots in the window.
+// Activator keys the rows on matchId and teamId and alerts on each new row. PressureAlertParityTests in
+// tests/Pitchside.Fabric.Tests fails if windowMs differs from SustainedPressureRule.WindowMs.
 .create-or-alter function with (folder = "pitchside/alerts", docstring = "Shots that bring a side to 4 shots in 3 minutes") PressureAlerts(lookback: timespan = 30m) {
     let windowMs = 180000;
     let shotThreshold = 4;
-    let shots = events
+    // The lookback picks the shots that may raise an alert now. The shots they are counted against are all of those
+    // matches' shots, so a pause or a slow replay between two shots of one spell never hides it.
+    let live = events
         | where publishedUtc > ago(lookback)
+        | distinct matchId;
+    let shots = events
+        | where matchId in (live)
         | summarize arg_max(publishedUtc, *) by matchId, seq
         | where type == "shot"
         | project matchId, teamId, period, seq, clockMs, wallTimeUtc, publishedUtc;
     shots
+    | where publishedUtc > ago(lookback)
     | join kind=inner (shots | project matchId, teamId, period, earlierSeq = seq, earlierClockMs = clockMs) on matchId, teamId, period
     | where earlierSeq <= seq and earlierClockMs >= clockMs - windowMs
     | summarize shotsInWindow = count() by matchId, teamId, period, seq, clockMs, wallTimeUtc, publishedUtc
