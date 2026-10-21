@@ -1,5 +1,6 @@
 // pitchside-api: match actors, stats, SignalR hub (/hubs/match), REST (/api/v1) and the MCP server (/mcp).
-// External ingress with sticky sessions, exactly one replica because the Akka.NET actor system is a single node, and
+// Internal ingress, so pitchside-web's nginx is the one way in and the usage guard can trust the address it forwards,
+// with sticky sessions, exactly one replica because the Akka.NET actor system is a single node, and
 // probes on the ServiceDefaults endpoints /alive (liveness) and /health (readiness). WebSockets need no switch on
 // Container Apps: the HTTP ingress upgrades them by default.
 
@@ -86,6 +87,8 @@ var baseSettings = [
   // The app is public and calls paid services (Cosmos DB, Event Hubs) even with the scripted crew, so the usage
   // limits always apply here rather than following the crew's provider.
   { name: 'UsageGuard__Enabled', value: 'true' }
+  // Two hops append to X-Forwarded-For before the API: nginx (the viewer's address) and this app's ingress (nginx's).
+  { name: 'UsageGuard__ForwardedHops', value: '2' }
   // WP-10: the full-time recap is spoken by Azure AI Speech, keyless, and kept in Blob Storage.
   { name: 'Speech__Provider', value: 'Azure' }
   { name: 'Speech__Region', value: location }
@@ -153,7 +156,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: true
+        external: false
         targetPort: port
         transport: 'auto'
         allowInsecure: false

@@ -17,7 +17,7 @@ param tags object
 @description('Application Insights component id.')
 param appInsightsId string
 
-@description('API health URL the availability test calls.')
+@description('API health URL the availability test calls: the web app\'s /health, which nginx proxies to the internal API.')
 param apiHealthUrl string
 
 @description('Action group id; empty means the alerts fire without notifying anyone.')

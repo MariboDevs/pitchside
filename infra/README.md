@@ -25,10 +25,10 @@ The apps authenticate with `DefaultAzureCredential` and their user-assigned iden
 | `modules/speech.bicep` | Azure AI Speech with a custom subdomain (needed for Entra ID); Speech User for the API and agents identities |
 | `modules/ai.bicep` | Foundry: role assignment only (Cognitive Services OpenAI User) on an account created outside this template |
 | `modules/fetch-image.bicep` | Reads an app's current image so a later `azd provision` keeps it |
-| `modules/app-api.bicep` | `pitchside-api`: external ingress, sticky sessions, exactly one replica, probes on `/alive` and `/health` |
+| `modules/app-api.bicep` | `pitchside-api`: internal ingress (only the web app's nginx reaches it), sticky sessions, exactly one replica, probes on `/alive` and `/health` |
 | `modules/app-agents.bicep` | `pitchside-agents`: no ingress (a worker), 0 to 2 replicas on the KEDA `azure-eventhub` scaler with its identity |
-| `modules/app-web.bicep` | `pitchside-web`: nginx with the Angular build, proxies `/api`, `/hubs`, `/mcp` to the API, external, 0 to 2 replicas |
-| `modules/alerts.bicep` | API availability test on `/health` with its alert, and the narratives fallback-rate log alert |
+| `modules/app-web.bicep` | `pitchside-web`: nginx with the Angular build, proxies `/api`, `/hubs`, `/mcp` and `/health` to the API with the viewer's address in `X-Forwarded-For`, external, 0 to 2 replicas |
+| `modules/alerts.bicep` | API availability test on `/health` (through the web app, since the API's ingress is internal) with its alert, and the narratives fallback-rate log alert |
 | `modules/fabric.bicep` | Optional F2 Fabric capacity (`PITCHSIDE_FABRIC_CAPACITY=true`), off by default (WP-12) |
 | `scripts/fabric-apply.sh` | Creates or updates the Fabric Eventhouse, KQL database, queryset and dashboard from `fabric/` (WP-12) |
 | `scripts/fabric-capacity.sh` | Resumes, pauses or reports the F2 capacity |
@@ -66,7 +66,7 @@ The keys are documented in [docs/CONFIGURATION.md](../docs/CONFIGURATION.md).
 
 | App | Settings |
 | --- | --- |
-| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `UsageGuard__Enabled=true`, `Speech__Provider=Azure`, `Speech__Region`, `Speech__ResourceId`, `Speech__BlobServiceUri`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
+| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `UsageGuard__Enabled=true`, `UsageGuard__ForwardedHops=2`, `Speech__Provider=Azure`, `Speech__Region`, `Speech__ResourceId`, `Speech__BlobServiceUri`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
 | agents | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, the `Bus__*` settings, `UsageGuard__Enabled=true`, the `Speech__*` settings, `Agents__Provider`, and the `Foundry__*` settings when an endpoint is given |
 | web | `API_HOST`, the API's FQDN, which nginx proxies to over HTTPS |
 
@@ -129,7 +129,7 @@ The provisioning order from the specification, with what can be checked at each 
    second one sees the deployed images and adds the `/alive` and `/health` probes. Check:
 
    ```bash
-   curl -fsS "$(azd env get-value API_URL)/health"
+   curl -fsS "$(azd env get-value WEB_URL)/health"   # the API's readiness, through the web app's proxy
    curl -fsS "$(azd env get-value WEB_URL)/"
    ```
 
