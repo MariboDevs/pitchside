@@ -1,20 +1,25 @@
 using System.Collections.Concurrent;
+using Pitchside.Contracts;
 using Pitchside.Engine;
 using Pitchside.Runtime.Replay;
+using Pitchside.Runtime.Storage;
 
 namespace Pitchside.Runtime.Tests;
 
 /// <summary>
 /// A replay service for <see cref="DemoAutoStart"/> tests: it records each start, refuses the loops it is told are
-/// stored, and reports a replay as running for as many checks as it is told.
+/// stored, reports a replay as running for as many checks as it is told, and stores each match it starts with the
+/// status it is told, as ingestion would once the replay has published everything.
 /// </summary>
-internal sealed class ScriptedReplays(IReadOnlySet<int> storedLoops, int runningChecks) : IReplayService
+internal sealed class ScriptedReplays(IReadOnlySet<int> storedLoops, int runningChecks, MatchStatus storedAs = MatchStatus.Completed) : IReplayService
 {
     private readonly ConcurrentDictionary<string, int> _remaining = new(StringComparer.Ordinal);
 
     public ConcurrentQueue<int> Attempts { get; } = new();
 
     public ConcurrentQueue<string> Started { get; } = new();
+
+    public InMemoryMatchStore Store { get; } = new();
 
     public IReadOnlyCollection<string> Running
     {
@@ -38,7 +43,7 @@ internal sealed class ScriptedReplays(IReadOnlySet<int> storedLoops, int running
 
     public bool IsInstant(string matchId) => false;
 
-    public Task<ReplayStarted> StartAsync(long seed, double speed, int loop, CancellationToken cancellationToken)
+    public async Task<ReplayStarted> StartAsync(long seed, double speed, int loop, CancellationToken cancellationToken)
     {
         Attempts.Enqueue(loop);
         var matchId = MatchLoops.MatchIdFor(seed, loop);
@@ -49,7 +54,9 @@ internal sealed class ScriptedReplays(IReadOnlySet<int> storedLoops, int running
 
         Started.Enqueue(matchId);
         _remaining[matchId] = runningChecks;
-        return Task.FromResult(new ReplayStarted(matchId, seed, speed, 1));
+        var document = MatchSimulator.Simulate(seed).Document with { MatchId = matchId };
+        await Store.SaveMatchAsync(new StoredMatch(document, storedAs, 0, DateTimeOffset.UnixEpoch), cancellationToken);
+        return new ReplayStarted(matchId, seed, speed, 1);
     }
 
     public bool Stop(string matchId) => false;
