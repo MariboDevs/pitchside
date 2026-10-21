@@ -100,3 +100,10 @@ All commands exit 0; the report says all statistics within tolerance.
   a few seconds. Do not widen a tolerance to pass.
 - The tracking tick must be emitted at the same point in the loop on every run or determinism breaks.
 - `JsonSchema.Net` is the schema validator; check its current major version on NuGet before pinning.
+
+## Contract change: loop match ids
+
+Added by the WP-11 demo loop. A match id is `MER-<seed>` or, for a later replay of the same seed under a new id,
+`MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26`, then `MER-26-2`, `MER-26-3`).
+`schemas/match.schema.json` (`matchId`) accepts both forms. Every id that was valid stays valid, and `MatchSimulator`
+still names a simulated match `MER-<seed>`.

@@ -8,7 +8,7 @@
   "additionalProperties": false,
   "properties": {
     "schemaVersion": { "type": "string", "const": "0.2" },
-    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?$" },
     "seed": { "type": "integer" },
     "competition": { "type": "string" },
     "venue": { "type": "string" },

@@ -7,8 +7,8 @@
   "required": ["matchId", "momentId", "narrativeId", "language", "spokenLanguage", "voice", "englishFallback", "ssml", "createdUtc"],
   "additionalProperties": false,
   "properties": {
-    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
-    "momentId": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:full_time$" },
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?$" },
+    "momentId": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?:M:[0-9]{4,}:full_time$" },
     "narrativeId": { "type": "string", "minLength": 1 },
     "language": { "type": "string", "enum": ["en", "af", "zu", "es"] },
     "spokenLanguage": { "type": "string", "enum": ["en", "af", "zu", "es"] },

@@ -86,3 +86,10 @@ cd frontend && npm audit --audit-level=high
 ```
 
 The evaluation report exists and the README's "Evidence" section (WP-11) can quote it.
+
+## Contract change: loop match ids
+
+Added by the WP-11 demo loop. A match id is `MER-<seed>` or, for a later replay of the same seed under a new id,
+`MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26`, then `MER-26-2`, `MER-26-3`).
+`schemas/audit-record.schema.json` (`matchId` and `momentId`) accepts both forms. Every id that was valid stays valid,
+and `MatchSimulator` still names a simulated match `MER-<seed>`.
