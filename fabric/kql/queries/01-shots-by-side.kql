@@ -1,0 +1,20 @@
+// Shots by side per 5 minutes. A shot is a `shot` event, as {side}.shots counts it in Pitchside.Stats (a `goal`
+// event follows its shot and is not a second shot). Bins are 5 minutes of period clock, labelled in match minutes
+// with the half in front, so first-half stoppage time never shares a bar with the start of the second half. Every
+// side appears in every bin, with 0 when it had no shot.
+.create-or-alter function with (folder = "pitchside", docstring = "Shots by side per 5 minutes of match time") ShotsBySide(_match: string) {
+    let binMs = 300000;
+    let ev = MatchEvents(_match);
+    let sides = ev | distinct teamId;
+    let bins = ev | distinct period, bin = clockMs / binMs;
+    let shots = ev
+        | where type == "shot"
+        | summarize shots = count() by period, bin = clockMs / binMs, teamId;
+    bins
+    | extend k = 1
+    | join kind=inner (sides | extend k = 1) on k
+    | join kind=leftouter shots on period, bin, teamId
+    | extend fromMinute = (period - 1) * 45 + bin * 5
+    | project window = strcat("H", period, " ", fromMinute, "-", fromMinute + 5), teamId, shots = coalesce(shots, 0), period, fromMinute
+    | order by period asc, fromMinute asc, teamId asc
+}

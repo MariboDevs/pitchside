@@ -1,0 +1,463 @@
+{
+  "$schema": "https://dataexplorer.azure.com/static/d/schema/52/dashboard.json",
+  "schema_version": "52",
+  "title": "Pitchside Live",
+  "autoRefresh": {
+    "enabled": true,
+    "defaultInterval": "30s",
+    "minInterval": "30s"
+  },
+  "pages": [
+    {
+      "id": "ea7e0b36-19ee-54b3-a943-70487470eea0",
+      "name": "Live match"
+    }
+  ],
+  "dataSources": [
+    {
+      "id": "691b87c8-4222-5c60-a887-ba25f3a18c2a",
+      "name": "pitchside",
+      "kind": "kusto-trident",
+      "scopeId": "kusto-trident",
+      "clusterUri": "{{QUERY_SERVICE_URI}}",
+      "database": "{{DATABASE_ID}}",
+      "workspace": "{{WORKSPACE_ID}}"
+    }
+  ],
+  "parameters": [
+    {
+      "kind": "string",
+      "id": "f94a08f2-e186-5cef-a90d-8da1293c6729",
+      "displayName": "Match",
+      "description": "The match to show; the latest one by default",
+      "variableName": "_matchId",
+      "selectionType": "single",
+      "includeAllOption": false,
+      "defaultValue": {
+        "kind": "query-default"
+      },
+      "dataSource": {
+        "kind": "query",
+        "columns": {
+          "value": "matchId"
+        },
+        "queryRef": {
+          "kind": "query",
+          "queryId": "98d03e45-90b5-59ec-bd59-3016c177a4f0"
+        }
+      },
+      "showOnPages": {
+        "kind": "all"
+      },
+      "allIsNull": true
+    }
+  ],
+  "baseQueries": [],
+  "queries": [
+    {
+      "id": "1bb85026-a87a-52aa-b9aa-b68ea3aef618",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "691b87c8-4222-5c60-a887-ba25f3a18c2a"
+      },
+      "text": "MatchMomentum(_matchId)\n| project wallTimeUtc, teamId, momentum",
+      "usedVariables": [
+        "_matchId"
+      ]
+    },
+    {
+      "id": "7d7f55c6-35d1-549e-add5-cc444d0786c0",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "691b87c8-4222-5c60-a887-ba25f3a18c2a"
+      },
+      "text": "XgRace(_matchId)\n| project wallTimeUtc, teamId, cumulativeXg",
+      "usedVariables": [
+        "_matchId"
+      ]
+    },
+    {
+      "id": "1094366e-d5d4-50f5-93a9-c63840703dc0",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "691b87c8-4222-5c60-a887-ba25f3a18c2a"
+      },
+      "text": "ShotsBySide(_matchId)\n| project window, teamId, shots",
+      "usedVariables": [
+        "_matchId"
+      ]
+    },
+    {
+      "id": "74263780-9f8a-58b8-b8f6-f94805a804f6",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "691b87c8-4222-5c60-a887-ba25f3a18c2a"
+      },
+      "text": "PressingIntensity(_matchId)\n| project wallTimeUtc, teamId, pressingIntensity",
+      "usedVariables": [
+        "_matchId"
+      ]
+    },
+    {
+      "id": "be522414-c091-52c6-a459-69e32be00454",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "691b87c8-4222-5c60-a887-ba25f3a18c2a"
+      },
+      "text": "PassCompletionByPlayer(_matchId)",
+      "usedVariables": [
+        "_matchId"
+      ]
+    },
+    {
+      "id": "e42ddff7-3856-50a1-a217-8a538164d82b",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "691b87c8-4222-5c60-a887-ba25f3a18c2a"
+      },
+      "text": "TopSpeeds(_matchId)\n| project playerId, topSpeedKph",
+      "usedVariables": [
+        "_matchId"
+      ]
+    },
+    {
+      "id": "98d03e45-90b5-59ec-bd59-3016c177a4f0",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "691b87c8-4222-5c60-a887-ba25f3a18c2a"
+      },
+      "text": "Matches()\n| project matchId",
+      "usedVariables": []
+    }
+  ],
+  "tiles": [
+    {
+      "id": "d0b9702b-53e9-5c68-8ba0-a981e63dabd3",
+      "title": "Momentum (share of the last 5 minutes)",
+      "visualType": "line",
+      "pageId": "ea7e0b36-19ee-54b3-a943-70487470eea0",
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "width": 12,
+        "height": 7
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "1bb85026-a87a-52aa-b9aa-b68ea3aef618"
+      },
+      "visualOptions": {
+        "hideTileTitle": false,
+        "hideLegend": false,
+        "xColumn": {
+          "type": "specified",
+          "value": "wallTimeUtc"
+        },
+        "yColumns": {
+          "type": "specified",
+          "value": [
+            "momentum"
+          ]
+        },
+        "seriesColumns": {
+          "type": "specified",
+          "value": [
+            "teamId"
+          ]
+        },
+        "xColumnTitle": "match time",
+        "yColumnTitle": "share",
+        "xAxisScale": "linear",
+        "yAxisScale": "linear",
+        "yAxisMinimumValue": {
+          "type": "infer"
+        },
+        "yAxisMaximumValue": {
+          "type": "infer"
+        },
+        "horizontalLine": "",
+        "verticalLine": "",
+        "crossFilterDisabled": false,
+        "multipleYAxes": {
+          "base": {
+            "id": "-1",
+            "label": "",
+            "columns": [],
+            "yAxisMinimumValue": null,
+            "yAxisMaximumValue": null,
+            "yAxisScale": "linear",
+            "horizontalLines": []
+          },
+          "additional": [],
+          "showMultiplePanels": false
+        }
+      }
+    },
+    {
+      "id": "1a258f85-addc-5a69-9a0d-d77aff9877d9",
+      "title": "xG race",
+      "visualType": "line",
+      "pageId": "ea7e0b36-19ee-54b3-a943-70487470eea0",
+      "layout": {
+        "x": 12,
+        "y": 0,
+        "width": 12,
+        "height": 7
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "7d7f55c6-35d1-549e-add5-cc444d0786c0"
+      },
+      "visualOptions": {
+        "hideTileTitle": false,
+        "hideLegend": false,
+        "xColumn": {
+          "type": "specified",
+          "value": "wallTimeUtc"
+        },
+        "yColumns": {
+          "type": "specified",
+          "value": [
+            "cumulativeXg"
+          ]
+        },
+        "seriesColumns": {
+          "type": "specified",
+          "value": [
+            "teamId"
+          ]
+        },
+        "xColumnTitle": "match time",
+        "yColumnTitle": "xG",
+        "xAxisScale": "linear",
+        "yAxisScale": "linear",
+        "yAxisMinimumValue": {
+          "type": "infer"
+        },
+        "yAxisMaximumValue": {
+          "type": "infer"
+        },
+        "horizontalLine": "",
+        "verticalLine": "",
+        "crossFilterDisabled": false,
+        "multipleYAxes": {
+          "base": {
+            "id": "-1",
+            "label": "",
+            "columns": [],
+            "yAxisMinimumValue": null,
+            "yAxisMaximumValue": null,
+            "yAxisScale": "linear",
+            "horizontalLines": []
+          },
+          "additional": [],
+          "showMultiplePanels": false
+        }
+      }
+    },
+    {
+      "id": "05c169ed-1ba6-5dbb-a881-5382dcdb2e65",
+      "title": "Shots by side per 5 minutes",
+      "visualType": "column",
+      "pageId": "ea7e0b36-19ee-54b3-a943-70487470eea0",
+      "layout": {
+        "x": 0,
+        "y": 7,
+        "width": 12,
+        "height": 7
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "1094366e-d5d4-50f5-93a9-c63840703dc0"
+      },
+      "visualOptions": {
+        "hideTileTitle": false,
+        "hideLegend": false,
+        "xColumn": {
+          "type": "specified",
+          "value": "window"
+        },
+        "yColumns": {
+          "type": "specified",
+          "value": [
+            "shots"
+          ]
+        },
+        "seriesColumns": {
+          "type": "specified",
+          "value": [
+            "teamId"
+          ]
+        },
+        "xColumnTitle": "match minutes",
+        "yColumnTitle": "shots",
+        "xAxisScale": "linear",
+        "yAxisScale": "linear",
+        "yAxisMinimumValue": {
+          "type": "infer"
+        },
+        "yAxisMaximumValue": {
+          "type": "infer"
+        },
+        "horizontalLine": "",
+        "verticalLine": "",
+        "crossFilterDisabled": false,
+        "multipleYAxes": {
+          "base": {
+            "id": "-1",
+            "label": "",
+            "columns": [],
+            "yAxisMinimumValue": null,
+            "yAxisMaximumValue": null,
+            "yAxisScale": "linear",
+            "horizontalLines": []
+          },
+          "additional": [],
+          "showMultiplePanels": false
+        }
+      }
+    },
+    {
+      "id": "21afaef4-f9a3-51e4-8dd1-1c1fca9b6dd9",
+      "title": "Pressing intensity (pressures per opponent pass, last 10 minutes)",
+      "visualType": "line",
+      "pageId": "ea7e0b36-19ee-54b3-a943-70487470eea0",
+      "layout": {
+        "x": 12,
+        "y": 7,
+        "width": 12,
+        "height": 7
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "74263780-9f8a-58b8-b8f6-f94805a804f6"
+      },
+      "visualOptions": {
+        "hideTileTitle": false,
+        "hideLegend": false,
+        "xColumn": {
+          "type": "specified",
+          "value": "wallTimeUtc"
+        },
+        "yColumns": {
+          "type": "specified",
+          "value": [
+            "pressingIntensity"
+          ]
+        },
+        "seriesColumns": {
+          "type": "specified",
+          "value": [
+            "teamId"
+          ]
+        },
+        "xColumnTitle": "match time",
+        "yColumnTitle": "per pass",
+        "xAxisScale": "linear",
+        "yAxisScale": "linear",
+        "yAxisMinimumValue": {
+          "type": "infer"
+        },
+        "yAxisMaximumValue": {
+          "type": "infer"
+        },
+        "horizontalLine": "",
+        "verticalLine": "",
+        "crossFilterDisabled": false,
+        "multipleYAxes": {
+          "base": {
+            "id": "-1",
+            "label": "",
+            "columns": [],
+            "yAxisMinimumValue": null,
+            "yAxisMaximumValue": null,
+            "yAxisScale": "linear",
+            "horizontalLines": []
+          },
+          "additional": [],
+          "showMultiplePanels": false
+        }
+      }
+    },
+    {
+      "id": "55efce13-e56f-5044-9cc4-a2efed9fb63b",
+      "title": "Pass completion by player",
+      "visualType": "table",
+      "pageId": "ea7e0b36-19ee-54b3-a943-70487470eea0",
+      "layout": {
+        "x": 0,
+        "y": 14,
+        "width": 12,
+        "height": 7
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "be522414-c091-52c6-a459-69e32be00454"
+      },
+      "visualOptions": {
+        "hideTileTitle": false,
+        "table__enableRenderLinks": true,
+        "colorRulesDisabled": true
+      }
+    },
+    {
+      "id": "d7dad39f-ad5b-56ce-bb43-124e38135970",
+      "title": "Top speeds (kph)",
+      "visualType": "bar",
+      "pageId": "ea7e0b36-19ee-54b3-a943-70487470eea0",
+      "layout": {
+        "x": 12,
+        "y": 14,
+        "width": 12,
+        "height": 7
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "e42ddff7-3856-50a1-a217-8a538164d82b"
+      },
+      "visualOptions": {
+        "hideTileTitle": false,
+        "hideLegend": false,
+        "xColumn": {
+          "type": "specified",
+          "value": "playerId"
+        },
+        "yColumns": {
+          "type": "specified",
+          "value": [
+            "topSpeedKph"
+          ]
+        },
+        "seriesColumns": {
+          "type": "infer"
+        },
+        "xColumnTitle": "player",
+        "yColumnTitle": "kph",
+        "xAxisScale": "linear",
+        "yAxisScale": "linear",
+        "yAxisMinimumValue": {
+          "type": "infer"
+        },
+        "yAxisMaximumValue": {
+          "type": "infer"
+        },
+        "horizontalLine": "",
+        "verticalLine": "",
+        "crossFilterDisabled": false,
+        "multipleYAxes": {
+          "base": {
+            "id": "-1",
+            "label": "",
+            "columns": [],
+            "yAxisMinimumValue": null,
+            "yAxisMaximumValue": null,
+            "yAxisScale": "linear",
+            "horizontalLines": []
+          },
+          "additional": [],
+          "showMultiplePanels": false
+        }
+      }
+    }
+  ]
+}

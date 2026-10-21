@@ -1,0 +1,16 @@
+// Top speeds: player.<id>.topSpeedKph from Pitchside.Stats, the highest of a player's carry speeds (speedKph) and
+// the top speeds the tracking ticks report for them (tracking[].topSpeedKph). The ten fastest, to 1 decimal.
+.create-or-alter function with (folder = "pitchside", docstring = "The ten fastest players by top speed") TopSpeeds(_match: string) {
+    let ev = MatchEvents(_match);
+    let carries = ev
+        | where type == "carry" and isnotempty(playerId)
+        | project playerId, teamId, speedKph = coalesce(speedKph, 0.0);
+    let tracked = ev
+        | where type == "tracking"
+        | mv-expand entry = tracking
+        | project playerId = tostring(entry.playerId), teamId, speedKph = toreal(entry.topSpeedKph);
+    union carries, tracked
+    | summarize topSpeedKph = max(speedKph) by playerId, teamId
+    | top 10 by topSpeedKph desc, playerId asc
+    | extend topSpeedKph = round(topSpeedKph, 1)
+}

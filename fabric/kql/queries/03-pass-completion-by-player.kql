@@ -1,0 +1,9 @@
+// Pass completion by player: attempted passes, completed passes and their share, as player.<id>.passes,
+// .passesCompleted and .passCompletion define them in Pitchside.Stats (an incomplete pass has completed = false).
+.create-or-alter function with (folder = "pitchside", docstring = "Pass completion per player") PassCompletionByPlayer(_match: string) {
+    MatchEvents(_match)
+    | where type == "pass" and isnotempty(playerId)
+    | summarize passes = count(), passesCompleted = countif(completed == true) by playerId, teamId
+    | extend passCompletion = round(todouble(passesCompleted) / passes, 2)
+    | order by passes desc, playerId asc
+}
