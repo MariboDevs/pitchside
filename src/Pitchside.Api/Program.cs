@@ -52,16 +52,19 @@ if (pitchside.RunAgentsInApi)
     builder.Services.AddMomentWorkflowRunner();
 }
 
-// Behind the Container Apps ingress the caller's address arrives in X-Forwarded-For. The ingress appends the address
-// it saw, so only the last entry is trusted (ForwardLimit 1); the usage guard counts per-caller limits against it.
-// The header is honoured only where that ingress is the one way in: Container Apps sets CONTAINER_APP_NAME, and
-// UsageGuard:TrustForwardedFor overrides. Anywhere else a caller could write the header and pick its own address.
+// Behind the Container Apps ingress the caller's address arrives in X-Forwarded-For. Each trusted proxy appends the
+// address it saw, so only the last UsageGuard:ForwardedHops entries are read (1 by default, the ingress alone; 2 in
+// Azure, where the web app's nginx forwards the viewer's address to the API's internal ingress); the usage guard counts
+// per-caller limits against the address they lead to. The header is honoured only where those proxies are the one way
+// in: Container Apps sets CONTAINER_APP_NAME, and UsageGuard:TrustForwardedFor overrides. Anywhere else a caller could
+// write the header and pick its own address.
 var trustForwardedFor = builder.Configuration.GetValue<bool?>("UsageGuard:TrustForwardedFor")
     ?? !string.IsNullOrEmpty(builder.Configuration["CONTAINER_APP_NAME"]);
+var forwardedHops = Math.Max(1, builder.Configuration.GetValue<int?>("UsageGuard:ForwardedHops") ?? 1);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
-    options.ForwardLimit = 1;
+    options.ForwardLimit = forwardedHops;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });

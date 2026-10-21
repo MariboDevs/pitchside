@@ -336,7 +336,8 @@ module alerts 'modules/alerts.bicep' = {
     environmentName: environmentName
     tags: tags
     appInsightsId: monitoring.outputs.appInsightsId
-    apiHealthUrl: '${api.outputs.uri}/health'
+    // The API's ingress is internal, so the test reaches /health through the web app's proxy.
+    apiHealthUrl: '${web.outputs.uri}/health'
     actionGroupId: monitoring.outputs.actionGroupId
   }
 }
@@ -348,6 +349,7 @@ output AZURE_RESOURCE_GROUP string = rg.name
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = registry.outputs.loginServer
 output AZURE_CONTAINER_REGISTRY_NAME string = registry.outputs.name
 output AZURE_CONTAINER_APPS_ENVIRONMENT_NAME string = environment.outputs.name
+// Internal: reachable only from inside the Container Apps environment. From outside, use WEB_URL, which proxies the API.
 output API_URL string = api.outputs.uri
 output WEB_URL string = web.outputs.uri
 output COSMOS_ENDPOINT string = cosmos.outputs.endpoint
