@@ -18,7 +18,7 @@ The apps authenticate with `DefaultAzureCredential` and their user-assigned iden
 | `modules/identity.bicep` | One user-assigned managed identity per app: `id-pitchside-{api,agents,web}-<env>` |
 | `modules/monitoring.bicep` | Log Analytics workspace, workspace-based Application Insights, the alert action group (only when addresses are given) |
 | `modules/environment.bicep` | Container Apps environment (Consumption profile); logs to Log Analytics by diagnostic setting, OpenTelemetry traces and logs to Application Insights through the managed agent |
-| `modules/registry.bicep` | Container Registry Basic, admin user off; AcrPull for the three identities |
+| `modules/registry.bicep` | Container Registry Basic, admin user off; AcrPull for the three identities, AcrPush for the deploy workflow's identity |
 | `modules/cosmos.bicep` | Cosmos DB serverless, continuous backup 7 days, database `pitchside` and its seven containers, data-plane Data Contributor for the API and agents identities |
 | `modules/eventhubs.bicep` | Event Hubs namespace, hub `match-events` (4 partitions), checkpoint storage account and `checkpoints` container (the apps also create `recaps` there for the spoken recap); Data Sender, Data Receiver and Storage Blob Data Contributor |
 | `modules/keyvault.bicep` | Key Vault, RBAC mode; Secrets User for the API identity. Holds only the optional MCP key |
@@ -43,6 +43,7 @@ only checks they exist.
 | Identity | Role | Scope |
 | --- | --- | --- |
 | api, agents, web | AcrPull | registry |
+| deploy workflow (`PITCHSIDE_DEPLOYER_PRINCIPAL_ID`, default `id-pitchside-github`) | AcrPush | registry |
 | api, agents | Cosmos DB Built-in Data Contributor (`00000000-0000-0000-0000-000000000002`, data plane) | Cosmos DB account |
 | api, agents | Azure Event Hubs Data Sender, Azure Event Hubs Data Receiver | Event Hubs namespace |
 | api, agents | Storage Blob Data Contributor | checkpoint storage account (checkpoints and recaps) |
@@ -167,7 +168,8 @@ itself until the chosen environment's client id exists. One-time setup:
    Administrator on both resource groups, federated credentials for `environment:dev` and `environment:demo`, and
    its client id in the repository variable `AZURE_CLIENT_ID`. It still needs **Reader on the subscription**:
    `main.bicep` deploys at subscription scope, and `azd env refresh` reads that deployment's outputs, which a role
-   on a resource group alone does not allow.
+   on a resource group alone does not allow. AcrPush on each registry comes from the template
+   (`deployerPrincipalId`).
    - Because that one identity can write to both environments, the `demo` approval stops the workflow but not the
      identity. To make it a real boundary, create one identity per environment, each with Contributor and AcrPush
      on its own resource group and registry, one federated credential for its own environment, and Reader on the
