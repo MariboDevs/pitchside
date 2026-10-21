@@ -75,6 +75,8 @@ default has been observed to switch to it between sessions. Every provisioning c
 | `id-pitchside-github` | Cognitive Services Speech User | `spch-pitchside-dev` |
 | `id-pitchside-github` | Contributor | `rg-pitchside-dev`, `rg-pitchside-demo` |
 | `id-pitchside-github` | User Access Administrator | `rg-pitchside-dev`, `rg-pitchside-demo` |
+| `id-pitchside-github` | Reader | the subscription (`azd env refresh` reads the subscription-scope deployment) |
+| `id-pitchside-github` | AcrPush | each environment's registry, granted by `infra/modules/registry.bicep` |
 
 Pretty Kunene and Hlumela Tshazibana have no identity in this tenant yet; the tenant holds one member
 account and three guests, none of them identifiable as either. Their OpenAI User assignments are added when
