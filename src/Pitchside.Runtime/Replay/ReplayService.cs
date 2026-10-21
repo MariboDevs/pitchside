@@ -42,11 +42,14 @@ public sealed partial class ReplayService(
 
     public bool IsInstant(string matchId) => _instant.TryGetValue(matchId, out var instant) && instant;
 
-    public async Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken)
+    public Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken) =>
+        StartAsync(seed, speed, MatchLoops.First, cancellationToken);
+
+    public async Task<ReplayStarted> StartAsync(long seed, double speed, int loop, CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(seed);
         ArgumentOutOfRangeException.ThrowIfNegative(speed);
-        var matchId = MatchSimulator.MatchIdFor(seed);
+        var matchId = MatchLoops.MatchIdFor(seed, loop);
 
         ReplayRun run;
         lock (_startLock)
@@ -67,7 +70,7 @@ public sealed partial class ReplayService(
 
         try
         {
-            var match = MatchSimulator.Simulate(seed);
+            var match = MatchLoops.As(MatchSimulator.Simulate(seed), matchId);
             var stored = new StoredMatch(match.Document, MatchStatus.Scheduled, 0, time.GetUtcNow());
             if (!await store.TryCreateMatchAsync(stored, cancellationToken).ConfigureAwait(false))
             {

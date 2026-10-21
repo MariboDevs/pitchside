@@ -11,6 +11,8 @@ internal sealed class UnusedReplays : IReplayService
 
     public Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+    public Task<ReplayStarted> StartAsync(long seed, double speed, int loop, CancellationToken cancellationToken) => throw new NotSupportedException();
+
     public bool Stop(string matchId) => false;
 
     public bool Pause(string matchId) => false;

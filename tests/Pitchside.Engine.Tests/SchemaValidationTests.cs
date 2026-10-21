@@ -43,6 +43,17 @@ public sealed class SchemaValidationTests
     }
 
     [Fact]
+    public void A_match_replayed_under_a_loop_id_validates()
+    {
+        var loop = MatchLoops.As(MatchSimulator.Simulate(26), "MER-26-2");
+        AssertValid(MatchSchema, JsonSerializer.Serialize(loop.Document, ContractJson.Options));
+        foreach (var e in loop.Events)
+        {
+            AssertValid(EventSchema, JsonSerializer.Serialize(e, ContractJson.Options));
+        }
+    }
+
+    [Fact]
     public void Sample_carries_the_current_schema_version()
     {
         var text = File.ReadAllText(RepositoryRoot.Combine("data", "samples", "seed-7", "match.json"));

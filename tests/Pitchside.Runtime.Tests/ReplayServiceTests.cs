@@ -66,6 +66,26 @@ public sealed class ReplayServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_later_loop_replays_the_seed_under_its_own_id_beside_the_first()
+    {
+        await Replays.StartAsync(7, 0, CancellationToken.None);
+        await WaitFor(async () => (await Store.GetMatchAsync("MER-7", CancellationToken.None))!.Status == MatchStatus.Completed);
+
+        var loop = await Replays.StartAsync(7, 0, 2, CancellationToken.None);
+
+        loop.MatchId.ShouldBe("MER-7-2");
+        await WaitFor(async () => (await Store.GetMatchAsync("MER-7-2", CancellationToken.None))!.Status == MatchStatus.Completed);
+        (await Store.GetMatchAsync("MER-7-2", CancellationToken.None))!.Document.MatchId.ShouldBe("MER-7-2");
+        (await Store.GetEventsAsync("MER-7-2", 1, int.MaxValue, CancellationToken.None)).Select(e => e.Id)
+            .ShouldBe(Sample.Events.Select(e => $"MER-7-2-{e.Seq:00000}"));
+        await WaitFor(async () => (await Store.GetMomentsAsync("MER-7-2", CancellationToken.None)).Count
+            == (await Store.GetMomentsAsync("MER-7", CancellationToken.None)).Count);
+        (await Store.GetMomentsAsync("MER-7-2", CancellationToken.None)).Select(m => m.Id)
+            .ShouldBe((await Store.GetMomentsAsync("MER-7", CancellationToken.None)).Select(m => m.Id.Replace("MER-7:", "MER-7-2:", StringComparison.Ordinal)));
+        await Should.ThrowAsync<ReplayConflictException>(() => Replays.StartAsync(7, 0, 2, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task The_cap_refuses_a_replay_beyond_the_limit()
     {
         await Replays.StartAsync(101, 0.001, CancellationToken.None);

@@ -17,11 +17,13 @@ chance missed, and a momentum swing in each half; pick the highest-scoring seed 
 judge who opens the link sees a live match within a minute, with a "jump to next moment" control that
 advances the replay to 10 seconds before the next moment at speed 0 and resumes at speed 1.
 
-Built so far: `demo-seed` (the scoring above, `Pitchside.Moments.Demo`), `Demo:AutoStart` and `Demo:Seed`, which
-start the seed once when the host is up, and `POST /api/v1/replays/{matchId}/jump` with a button in the viewer and
-the control room. Not built: the loop. A match id is replayed once per store, so replaying the same seed again
-needs the match, its derived records and the overlay book reset first; that is a decision for the owner (reset in
-place, or a fresh store per loop) before it is built.
+Built: `demo-seed` (the scoring above, `Pitchside.Moments.Demo`), `Demo:AutoStart` and `Demo:Seed`, which start the
+seed when the host is up, `POST /api/v1/replays/{matchId}/jump` with a button in the viewer and the control room, and
+the loop (`Demo:Loop`, on by default). A match id is replayed once per store, so the owner chose a new id per loop
+over resetting stored records: loop 1 is `MER-26`, then `MER-26-2`, `MER-26-3`, each started `Demo:LoopPauseSeconds`
+(120) after the previous replay ends. The contracts accept `MER-<seed>-<loop>` (see the contract notes in WP-00, WP-01,
+WP-02, WP-04, WP-05, WP-07, WP-08 and WP-10). Each loop is a full match for the crew, so with Foundry it costs what a
+match costs; the usage guard's narratives-per-hour cap still applies.
 
 ## The video, under two minutes
 
