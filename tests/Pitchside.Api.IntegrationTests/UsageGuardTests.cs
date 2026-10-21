@@ -129,6 +129,28 @@ public sealed class UsageGuardTests
     }
 
     [Fact]
+    public async Task Behind_the_web_proxy_the_viewer_address_is_the_one_counted()
+    {
+        // In Azure the chain is the viewer, then nginx (which forwards the viewer's address alone), then the API's
+        // ingress (which appends nginx's): two hops. Two viewers behind the same nginx count apart; one viewer's second
+        // replay is refused whatever it writes in the header itself.
+        await using var factory = Guarded(
+            ("UsageGuard:ReplaysPerHourPerIp", "1"), ("UsageGuard:TrustForwardedFor", "true"), ("UsageGuard:ForwardedHops", "2"));
+        var client = factory.CreateClient();
+
+        async Task<HttpStatusCode> ReplayAsync(string forwardedFor, int seed)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/replays") { Content = JsonContent.Create(new { seed, speed = 0.001 }) };
+            request.Headers.Add("X-Forwarded-For", forwardedFor);
+            return (await client.SendAsync(request)).StatusCode;
+        }
+
+        (await ReplayAsync("203.0.113.1, 10.0.0.9", 71)).ShouldBe(HttpStatusCode.Accepted);
+        (await ReplayAsync("203.0.113.2, 10.0.0.9", 72)).ShouldBe(HttpStatusCode.Accepted);
+        (await ReplayAsync("203.0.113.1, 10.0.0.9", 73)).ShouldBe(HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
     public async Task Connections_negotiated_before_any_opens_still_hold_one_slot_each()
     {
         await using var factory = Guarded(("UsageGuard:ConnectionsPerIp", "1"));

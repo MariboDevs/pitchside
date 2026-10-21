@@ -79,7 +79,6 @@ jobs:
           registry="$(azd env get-value AZURE_CONTAINER_REGISTRY_ENDPOINT)"
           echo "REGISTRY=$registry" >> "$GITHUB_ENV"
           echo "REGISTRY_NAME=$(azd env get-value AZURE_CONTAINER_REGISTRY_NAME)" >> "$GITHUB_ENV"
-          echo "API_URL=$(azd env get-value API_URL)" >> "$GITHUB_ENV"
           echo "WEB_URL=$(azd env get-value WEB_URL)" >> "$GITHUB_ENV"
 
       - name: Build and push images tagged with the commit SHA
@@ -101,7 +100,8 @@ jobs:
       - name: Smoke test
         run: |
           set -euo pipefail
-          curl -fsS --retry 12 --retry-delay 10 --retry-all-errors "$API_URL/health"
+          # The API's ingress is internal; its readiness is reached through the web app's proxy.
+          curl -fsS --retry 12 --retry-delay 10 --retry-all-errors "$WEB_URL/health"
           echo
           curl -fsS --retry 12 --retry-delay 10 --retry-all-errors --output /dev/null "$WEB_URL/"
 
