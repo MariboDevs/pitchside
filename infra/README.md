@@ -13,14 +13,14 @@ The apps authenticate with `DefaultAzureCredential` and their user-assigned iden
 | File | What it is for |
 | --- | --- |
 | `main.bicep` | Subscription-scope entry point: creates `rg-pitchside-<env>` and composes the modules |
-| `main.dev.bicepparam` | `dev`: Speech F0, web scales to zero |
-| `main.demo.bicepparam` | `demo`: Speech S0, one warm web replica |
+| `main.dev.bicepparam` | `dev`: Speech F0, Event Hubs Standard (for the Fabric consumer group), web scales to zero |
+| `main.demo.bicepparam` | `demo`: Speech S0, Event Hubs Basic, one warm web replica |
 | `modules/identity.bicep` | One user-assigned managed identity per app: `id-pitchside-{api,agents,web}-<env>` |
 | `modules/monitoring.bicep` | Log Analytics workspace, workspace-based Application Insights, the alert action group (only when addresses are given) |
 | `modules/environment.bicep` | Container Apps environment (Consumption profile); logs to Log Analytics by diagnostic setting, OpenTelemetry traces and logs to Application Insights through the managed agent |
 | `modules/registry.bicep` | Container Registry Basic, admin user off; AcrPull for the three identities, AcrPush for the deploy workflow's identity |
 | `modules/cosmos.bicep` | Cosmos DB serverless, continuous backup 7 days, database `pitchside` and its seven containers, data-plane Data Contributor for the API and agents identities |
-| `modules/eventhubs.bicep` | Event Hubs namespace, hub `match-events` (4 partitions), checkpoint storage account and `checkpoints` container (the apps also create `recaps` there for the spoken recap); Data Sender, Data Receiver and Storage Blob Data Contributor |
+| `modules/eventhubs.bicep` | Event Hubs namespace, hub `match-events` (4 partitions), checkpoint storage account and `checkpoints` container (the apps also create `recaps` there for the spoken recap); Data Sender, Data Receiver and Storage Blob Data Contributor; on Standard the `api`, `agents` and `fabric` consumer groups, and Data Receiver on the hub for the Fabric workspace identity when its id is given |
 | `modules/keyvault.bicep` | Key Vault, RBAC mode; Secrets User for the API identity. Holds only the optional MCP key |
 | `modules/speech.bicep` | Azure AI Speech with a custom subdomain (needed for Entra ID); Speech User for the API and agents identities |
 | `modules/ai.bicep` | Foundry: role assignment only (Cognitive Services OpenAI User) on an account created outside this template |
@@ -29,8 +29,13 @@ The apps authenticate with `DefaultAzureCredential` and their user-assigned iden
 | `modules/app-agents.bicep` | `pitchside-agents`: no ingress (a worker), 0 to 2 replicas on the KEDA `azure-eventhub` scaler with its identity |
 | `modules/app-web.bicep` | `pitchside-web`: nginx with the Angular build, proxies `/api`, `/hubs`, `/mcp` to the API, external, 0 to 2 replicas |
 | `modules/alerts.bicep` | API availability test on `/health` with its alert, and the narratives fallback-rate log alert |
+| `modules/fabric.bicep` | Optional F2 Fabric capacity (`PITCHSIDE_FABRIC_CAPACITY=true`), off by default (WP-12) |
+| `scripts/fabric-apply.sh` | Creates or updates the Fabric Eventhouse, KQL database, queryset and dashboard from `fabric/` (WP-12) |
+| `scripts/fabric-capacity.sh` | Resumes, pauses or reports the F2 capacity |
 
-Fabric (WP-12) is not part of this template.
+Fabric (WP-12) lives in its own workspace, outside Azure Resource Manager: [docs/FABRIC.md](../docs/FABRIC.md) has the design, the
+portal steps and the run order. This template holds only its Azure side: the `fabric` consumer group, the workspace
+identity's read access to the hub, and the optional capacity.
 
 ### Cosmos DB containers
 
@@ -46,6 +51,7 @@ only checks they exist.
 | deploy workflow (`PITCHSIDE_DEPLOYER_PRINCIPAL_ID`, default `id-pitchside-github`) | AcrPush | registry |
 | api, agents | Cosmos DB Built-in Data Contributor (`00000000-0000-0000-0000-000000000002`, data plane) | Cosmos DB account |
 | api, agents | Azure Event Hubs Data Sender, Azure Event Hubs Data Receiver | Event Hubs namespace |
+| Fabric workspace identity (`FABRIC_WORKSPACE_PRINCIPAL_ID`, only when set) | Azure Event Hubs Data Receiver | the `match-events` hub |
 | api, agents | Storage Blob Data Contributor | checkpoint storage account (checkpoints and recaps) |
 | api, agents | Cognitive Services Speech User | Speech account |
 | api, agents | Cognitive Services OpenAI User | Foundry account (only when `FOUNDRY_RESOURCE_ID` is set) |
@@ -82,6 +88,9 @@ the environment, so `azd env set NAME value` (or `export NAME=value` for a hand 
 | `FOUNDRY_RESOURCE_ID` | `foundryResourceId` | the id of `ais-pitchside-dev`, so the app identities get Cognitive Services OpenAI User on it; set it empty to grant no role |
 | `PITCHSIDE_ALERT_EMAILS` | `alertEmails`, comma-separated | empty: no action group, alerts show in the portal only |
 | `PITCHSIDE_MCP_KEY_FROM_VAULT` | `mcpApiKeyFromKeyVault` | `false` |
+| `FABRIC_WORKSPACE_PRINCIPAL_ID` | `fabricWorkspacePrincipalId` | empty: no role. The object id of the Fabric workspace identity, so the Eventstream reads the hub without a key |
+| `PITCHSIDE_FABRIC_CAPACITY` | `fabricCapacity` | `false`. `true` creates the F2 capacity, which starts running: pause it at once |
+| `PITCHSIDE_FABRIC_ADMINS` | `fabricCapacityAdministrators`, comma-separated | empty; at least one is required when the capacity is created |
 | `SERVICE_{API,AGENTS,WEB}_RESOURCE_EXISTS` | `{api,agents,web}Exists` | set by azd |
 
 To run an environment with no Foundry calls and no role on the Foundry account, set both `FOUNDRY_ENDPOINT` and
@@ -220,7 +229,8 @@ Management after the first full week of each environment, not estimated here.
 | Container Apps environment and apps | Consumption; API 1 vCPU, 2 GiB, always one replica; agents 0.5 vCPU, 1 GiB, 0 to 2; web 0.25 vCPU, 0.5 GiB, 0 to 2 (demo keeps 1) | to measure | to measure |
 | Container Registry | Basic | to measure | to measure |
 | Cosmos DB | serverless, continuous backup 7 days | to measure | to measure |
-| Event Hubs | Basic, 1 throughput unit | to measure | to measure |
+| Event Hubs | Standard (dev), Basic (demo), 1 throughput unit | to measure | to measure |
+| Fabric capacity (optional) | F2, paused unless demonstrating; dev uses the trial capacity | not created | not created |
 | Storage account (checkpoints) | Standard LRS | to measure | to measure |
 | Key Vault | Standard | to measure | to measure |
 | Log Analytics and Application Insights | pay as you go, 30-day retention, 1 GB daily cap | to measure | to measure |

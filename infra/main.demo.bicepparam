@@ -10,6 +10,7 @@ param location = readEnvironmentVariable('AZURE_LOCATION', 'southafricanorth')
 param owner = readEnvironmentVariable('PITCHSIDE_OWNER', 'maribodevs')
 
 param speechSku = 'S0'
+// Basic: demo has no `fabric` consumer group, so no Eventstream reads it (WP-12, docs/FABRIC.md).
 param eventHubsSku = 'Basic'
 param webMinReplicas = 1
 param runAgentsInApi = true
@@ -28,6 +29,14 @@ param alertEmails = empty(readEnvironmentVariable('PITCHSIDE_ALERT_EMAILS', ''))
   : split(readEnvironmentVariable('PITCHSIDE_ALERT_EMAILS', ''), ',')
 
 param mcpApiKeyFromKeyVault = bool(readEnvironmentVariable('PITCHSIDE_MCP_KEY_FROM_VAULT', 'false'))
+
+// WP-12. The Fabric workspace identity's object id, once workspace identity is on (docs/FABRIC.md); empty grants
+// nothing. The F2 capacity is off: the workspace runs on the trial capacity in docs/ENVIRONMENT.md.
+param fabricWorkspacePrincipalId = readEnvironmentVariable('FABRIC_WORKSPACE_PRINCIPAL_ID', '')
+param fabricCapacity = bool(readEnvironmentVariable('PITCHSIDE_FABRIC_CAPACITY', 'false'))
+param fabricCapacityAdministrators = empty(readEnvironmentVariable('PITCHSIDE_FABRIC_ADMINS', ''))
+  ? []
+  : split(readEnvironmentVariable('PITCHSIDE_FABRIC_ADMINS', ''), ',')
 
 // azd sets these before it provisions, so a provision after a deploy keeps the deployed images.
 param apiExists = bool(readEnvironmentVariable('SERVICE_API_RESOURCE_EXISTS', 'false'))
