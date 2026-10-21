@@ -59,6 +59,11 @@ server {
     # read timeout well above the hub's keep-alive.
     location /hubs/ {
         proxy_pass https://${API_HOST};
+        # A location that sets any proxy_set_header inherits none from the server block, so the common ones are repeated.
+        proxy_set_header Host ${API_HOST};
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id $http_x_request_id;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
         proxy_buffering off;
