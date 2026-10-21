@@ -20,6 +20,9 @@ param foundryFastDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_FAST',
 param foundryQualityDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_QUALITY', 'pitchside-quality')
 param foundryResourceId = readEnvironmentVariable('FOUNDRY_RESOURCE_ID', '/subscriptions/1641c920-b05d-4921-8a24-029ca939893a/resourceGroups/rg-pitchside-dev/providers/Microsoft.CognitiveServices/accounts/ais-pitchside-dev')
 
+// The deploy workflow's identity, id-pitchside-github in docs/ENVIRONMENT.md: AcrPush so it can push images.
+param deployerPrincipalId = readEnvironmentVariable('PITCHSIDE_DEPLOYER_PRINCIPAL_ID', '06983e89-3126-499b-ac88-193588a256e9')
+
 // Comma-separated, set with `azd env set PITCHSIDE_ALERT_EMAILS ...`; empty means no action group.
 param alertEmails = empty(readEnvironmentVariable('PITCHSIDE_ALERT_EMAILS', ''))
   ? []

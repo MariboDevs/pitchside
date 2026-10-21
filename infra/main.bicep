@@ -55,6 +55,9 @@ param foundryQualityDeployment string = ''
 @description('Resource id of the Foundry account, for the Cognitive Services OpenAI User role. Empty skips it.')
 param foundryResourceId string = ''
 
+@description('Principal id of the deploy workflow\'s identity, for AcrPush on the registry. Empty skips it.')
+param deployerPrincipalId string = ''
+
 @description('Addresses the alerts email. Empty creates no action group; nothing real is committed.')
 param alertEmails array = []
 
@@ -134,6 +137,7 @@ module registry 'modules/registry.bicep' = {
       identity.outputs.agentsPrincipalId
       identity.outputs.webPrincipalId
     ]
+    pushPrincipalId: deployerPrincipalId
   }
 }
 
