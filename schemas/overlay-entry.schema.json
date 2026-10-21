@@ -7,9 +7,9 @@
   "required": ["id", "matchId", "momentId", "layer", "slot", "priority", "inAtMs", "outAtMs", "period", "narrativeId", "chips", "state", "fullWidth"],
   "additionalProperties": false,
   "properties": {
-    "id": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+:(score_bug|lower_third|stat_chip|ribbon)$" },
-    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
-    "momentId": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+$" },
+    "id": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?:M:[0-9]{4,}:[a-z_]+:(score_bug|lower_third|stat_chip|ribbon)$" },
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?$" },
+    "momentId": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?:M:[0-9]{4,}:[a-z_]+$" },
     "layer": { "type": "string", "enum": ["score_bug", "lower_third", "stat_chip", "ribbon"] },
     "slot": { "type": "string", "enum": ["top_left", "bottom", "right_rail"] },
     "priority": { "type": "integer", "minimum": 0, "maximum": 100 },

@@ -174,3 +174,10 @@ register with the screenshot paths.
   API mid-replay.
 - Every number on screen comes from a fact or an event; the frontend computes nothing but layout.
 - Transparent background means `html, body { background: transparent }` on the overlay route only.
+
+## Contract change: loop match ids
+
+Added by the WP-11 demo loop. A match id is `MER-<seed>` or, for a later replay of the same seed under a new id,
+`MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26`, then `MER-26-2`, `MER-26-3`).
+`schemas/overlay-entry.schema.json` (`matchId`, and the entry `id` and `momentId`, which start with it) accepts both
+forms. Every id that was valid stays valid, and `MatchSimulator` still names a simulated match `MER-<seed>`.

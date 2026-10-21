@@ -105,3 +105,10 @@ dotnet run --project src/Pitchside.Cli -- moments --seed 7 | wc -l   # between 1
   explainer unless the scripted provider is in use.
 - When a goal arrives inside a `sustained_pressure` window, the pressure moment is still valid history; do not
   retract it.
+
+## Contract change: loop match ids
+
+Added by the WP-11 demo loop. A match id is `MER-<seed>` or, for a later replay of the same seed under a new id,
+`MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26`, then `MER-26-2`, `MER-26-3`).
+`schemas/moment.schema.json` (`matchId`, and the moment `id`, which starts with it) accepts both forms. Every id that
+was valid stays valid, and `MatchSimulator` still names a simulated match `MER-<seed>`.

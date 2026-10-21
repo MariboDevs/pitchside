@@ -117,10 +117,10 @@ public static partial class McpServerSetup
             ? text
             : string.Empty;
 
-    [GeneratedRegex(@"^MER-[0-9]+\z", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^MER-[0-9]+(-[0-9]+)?\z", RegexOptions.CultureInvariant)]
     private static partial Regex MatchId();
 
-    [GeneratedRegex(@"^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+\z", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^MER-[0-9]+(-[0-9]+)?:M:[0-9]{4,}:[a-z_]+\z", RegexOptions.CultureInvariant)]
     private static partial Regex MomentId();
 
     [GeneratedRegex(@"^[a-z]+(_[a-z]+)*\z", RegexOptions.CultureInvariant)]

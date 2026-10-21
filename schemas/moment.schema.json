@@ -7,8 +7,8 @@
   "required": ["id", "matchId", "type", "priority", "period", "clockMs", "triggerSeq", "window", "sideId", "playerIds", "evidence", "headline", "factSheetSeq"],
   "additionalProperties": false,
   "properties": {
-    "id": { "type": "string", "pattern": "^MER-[0-9]+:M:[0-9]{4,}:[a-z_]+$" },
-    "matchId": { "type": "string", "pattern": "^MER-[0-9]+$" },
+    "id": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?:M:[0-9]{4,}:[a-z_]+$" },
+    "matchId": { "type": "string", "pattern": "^MER-[0-9]+(-[0-9]+)?$" },
     "type": {
       "type": "string",
       "enum": ["goal", "red_card", "penalty", "big_chance_missed", "momentum_swing", "sustained_pressure", "milestone", "speed_tag", "pass_tag", "kick_off", "half_time", "full_time"]

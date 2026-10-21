@@ -38,6 +38,10 @@ team's frame, so a renderer flips them for the away team.
 Every event carries `id`, `matchId`, `seq`, `period`, `clockMs`, `wallTimeUtc`, `type`, `teamId`, `playerId`,
 `location`, `possessionId`. Qualifiers are nullable and only present where the type defines them.
 
+A match id is `MER-<seed>`. A later replay of the same seed under its own id, as the demo loop plays it, is
+`MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26-2`); its events, moments and narratives are the seed's with
+that id, and an event's `id` is `{matchId}-{seq:00000}` either way.
+
 ## Passes, penalties and tracking (schema 0.2)
 
 - `completed` on a `pass` may be `false`. An incomplete pass has no `receiverId` and is always followed by a
