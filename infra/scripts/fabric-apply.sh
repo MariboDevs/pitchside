@@ -126,8 +126,19 @@ wait_for_operation() {
 }
 
 # The id of the item of a kind (eventhouses, kqlDatabases, ...) with this display name, or nothing.
+# Follows continuationToken through every page of the listing.
 find_item() {
-  fabric GET "/workspaces/$WORKSPACE_ID/$1" | jq -r --arg name "$2" '.value[] | select(.displayName == $name) | .id' | head -n 1
+  local path="/workspaces/$WORKSPACE_ID/$1" page="$WORK/listing.json" id token=""
+  while :; do
+    fabric GET "$path${token:+?continuationToken=$token}" >"$page" || fail "listing $1 failed"
+    id="$(jq -r --arg name "$2" '[.value[] | select(.displayName == $name) | .id][0] // empty' "$page")"
+    if [[ -n "$id" ]]; then
+      echo "$id"
+      return 0
+    fi
+    token="$(jq -r '.continuationToken // empty | @uri' "$page")"
+    [[ -n "$token" ]] || return 0
+  done
 }
 
 # Creates the item with the definition, or replaces the definition of the existing one. Prints the item id.
