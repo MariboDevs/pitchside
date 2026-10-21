@@ -20,6 +20,8 @@
 #
 # Optional environment: PITCHSIDE_EVENTHOUSE (default pitchside), PITCHSIDE_KQL_DATABASE (default pitchside).
 set -euo pipefail
+# Without this, `set -e` is off inside $(...), so a failed call there would carry on with an empty value.
+shopt -s inherit_errexit
 
 # PITCHSIDE_FABRIC_API points the script at a stand-in API for testing; leave it unset.
 API="${PITCHSIDE_FABRIC_API:-https://api.fabric.microsoft.com/v1}"
@@ -125,10 +127,10 @@ find_item() {
 # Creates the item with the definition, or replaces the definition of the existing one. Prints the item id.
 upsert_item() {
   local kind="$1" name="$2" body="$3" id request="$WORK/request.json"
-  id="$(find_item "$kind" "$name")"
+  id="$(find_item "$kind" "$name")" || fail "listing $kind failed"
   if [[ -z "$id" ]]; then
     jq --arg name "$name" '. + {displayName: $name}' "$body" >"$request"
-    id="$(fabric POST "/workspaces/$WORKSPACE_ID/$kind" "$request" | jq -r '.id')"
+    id="$(fabric POST "/workspaces/$WORKSPACE_ID/$kind" "$request" | jq -r '.id')" || fail "creating $kind '$name' failed"
     [[ -n "$id" && "$id" != null ]] || fail "creating $kind '$name' returned no id"
     info "created $kind '$name' ($id)"
   else
@@ -203,7 +205,7 @@ info "capacity: $capacity"
 
 if [[ "$MODE" == "--export-activator" ]]; then
   step "Exporting the Activator '$ACTIVATOR_NAME'"
-  id="$(find_item reflexes "$ACTIVATOR_NAME")"
+  id="$(find_item reflexes "$ACTIVATOR_NAME")" || fail "listing reflexes failed"
   [[ -n "$id" ]] || fail "no Activator named '$ACTIVATOR_NAME' in the workspace; create it first (fabric/activator/README.md)"
   fabric POST "/workspaces/$WORKSPACE_ID/reflexes/$id/getDefinition" >"$WORK/reflex.json"
   jq -r '.definition.parts[] | select(.path == "ReflexEntities.json") | .payload' "$WORK/reflex.json" | base64 -d \
@@ -213,7 +215,7 @@ if [[ "$MODE" == "--export-activator" ]]; then
 fi
 
 step "Eventhouse '$EVENTHOUSE_NAME'"
-eventhouse="$(find_item eventhouses "$EVENTHOUSE_NAME")"
+eventhouse="$(find_item eventhouses "$EVENTHOUSE_NAME")" || fail "listing eventhouses failed"
 if [[ -z "$eventhouse" ]]; then
   jq -n --arg name "$EVENTHOUSE_NAME" '{displayName: $name, description: "Pitchside live match events (WP-12)"}' >"$WORK/eventhouse.json"
   eventhouse="$(fabric POST "/workspaces/$WORKSPACE_ID/eventhouses" "$WORK/eventhouse.json" | jq -r '.id')"
@@ -230,7 +232,7 @@ step "KQL database '$DATABASE_NAME': tables, mapping, update policy and function
 schema="$(build_schema)"
 jq -n --arg eventhouse "$eventhouse" '{databaseType: "ReadWrite", parentEventhouseItemId: $eventhouse}' >"$WORK/DatabaseProperties.json"
 definition DatabaseProperties.json "$WORK/DatabaseProperties.json" DatabaseSchema.kql "$schema" >"$WORK/kql-database.json"
-database="$(upsert_item kqlDatabases "$DATABASE_NAME" "$WORK/kql-database.json")"
+database="$(upsert_item kqlDatabases "$DATABASE_NAME" "$WORK/kql-database.json")" || fail "applying the KQL database failed"
 
 step "Checking the database definition reads back"
 fabric POST "/workspaces/$WORKSPACE_ID/kqlDatabases/$database/getDefinition" >"$WORK/database-definition.json"

@@ -11,6 +11,7 @@
         | project playerId = tostring(entry.playerId), teamId, speedKph = toreal(entry.topSpeedKph);
     union carries, tracked
     | summarize topSpeedKph = max(speedKph) by playerId, teamId
-    | top 10 by topSpeedKph desc, playerId asc
+    | order by topSpeedKph desc, playerId asc
+    | take 10
     | extend topSpeedKph = round(topSpeedKph, 1)
 }
