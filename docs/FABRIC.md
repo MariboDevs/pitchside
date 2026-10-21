@@ -40,9 +40,10 @@ with its own consumer group, `fabric`.
 **dev runs Event Hubs Standard.** Basic holds only `$Default`, and the API's ingest reads `$Default` with an
 `EventProcessorClient`, which holds every partition with an exclusive (epoch) receiver. A second reader in the same
 group is disconnected, so Fabric cannot share it. Standard holds the `api`, `agents` and `fabric` groups that
-`eventhubs.bicep` already declares. Moving dev from Basic to Standard is an in-place upgrade of the namespace; it also
-gives the separate agent host its own `agents` group, as `main.bicep` already selects on Standard. demo stays on Basic
-and has no Fabric feed (see the pull request's decisions).
+`eventhubs.bicep` already declares. Moving dev from Basic to Standard is an in-place upgrade of the namespace. The
+agent host's scaler keeps following `$Default` while the crew runs in the API (`runAgentsInApi`), because nothing
+reads the `agents` group then and its lag would never drain. demo stays on Basic and has no Fabric feed (see the pull
+request's decisions).
 
 **No key.** The namespace keeps local auth disabled. The Eventstream's Event Hubs source authenticates with the Fabric
 **workspace identity**, which `eventhubs.bicep` grants Azure Event Hubs Data Receiver on the hub only, once its

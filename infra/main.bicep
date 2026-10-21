@@ -299,8 +299,10 @@ module agents 'modules/app-agents.bicep' = {
     eventHubsNamespaceName: eventHubs.outputs.namespaceName
     eventHubsNamespace: eventHubs.outputs.fullyQualifiedNamespace
     eventHubName: eventHubs.outputs.hubName
-    // Basic has only $Default, which the API's ingest also reads; Standard gives the agent host its own group.
-    consumerGroup: eventHubsSku == 'Basic' ? '$Default' : 'agents'
+    // The scaler measures lag in this group from its checkpoints. While the crew runs in the API, nothing reads the
+    // agents group, so its lag would never drain and the idle host would stay scaled out: it follows $Default, which
+    // the API checkpoints. The agents group is used only on Standard with the crew in its own host.
+    consumerGroup: eventHubsSku == 'Basic' || runAgentsInApi ? '$Default' : 'agents'
     checkpointStorageAccountName: eventHubs.outputs.storageAccountName
     checkpointContainerName: eventHubs.outputs.checkpointContainerName
     checkpointBlobUri: eventHubs.outputs.checkpointBlobUri
