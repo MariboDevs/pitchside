@@ -1,0 +1,69 @@
+{
+  "queryset": {
+    "version": "1.0.0",
+    "dataSources": [
+      {
+        "id": "ce79c5e9-8283-5a2d-b329-883810f5457e",
+        "clusterUri": "{{QUERY_SERVICE_URI}}",
+        "type": "AzureDataExplorer",
+        "databaseName": "{{DATABASE_NAME}}"
+      }
+    ],
+    "tabs": [
+      {
+        "id": "d4eac8f9-9bf7-52e1-8c95-f55743e57a84",
+        "title": "Evidence: events per match",
+        "content": "Matches()",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "0dfb158f-7cbd-5f71-ad75-de2f5941492c",
+        "title": "Evidence: row count for the latest match",
+        "content": "let _matchId = toscalar(Matches() | take 1 | project matchId);\nMatchEventCount(_matchId)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "656362a6-13ff-55ce-a32c-0ff9f6351eed",
+        "title": "Shots by side per 5 minutes",
+        "content": "let _matchId = toscalar(Matches() | take 1 | project matchId);\nShotsBySide(_matchId)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "9a64cc47-c6c3-53f5-a894-57a6d1a1219b",
+        "title": "xG race",
+        "content": "let _matchId = toscalar(Matches() | take 1 | project matchId);\nXgRace(_matchId)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "4d74d154-d2f3-51fc-b960-f3683bc43bd0",
+        "title": "Pass completion by player",
+        "content": "let _matchId = toscalar(Matches() | take 1 | project matchId);\nPassCompletionByPlayer(_matchId)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "5a315053-6cf0-5a32-9ed3-0f26e95974c7",
+        "title": "Pressing intensity",
+        "content": "let _matchId = toscalar(Matches() | take 1 | project matchId);\nPressingIntensity(_matchId)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "10a1ecc0-dece-5aa6-ba4c-dbfc04543f9d",
+        "title": "Momentum",
+        "content": "let _matchId = toscalar(Matches() | take 1 | project matchId);\nMatchMomentum(_matchId)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "1beda0c3-7402-54ca-864b-e7175f8112a6",
+        "title": "Top speeds",
+        "content": "let _matchId = toscalar(Matches() | take 1 | project matchId);\nTopSpeeds(_matchId)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      },
+      {
+        "id": "235d1dd6-2988-5750-aca2-cd7adcb90464",
+        "title": "Pressure alerts (Activator source)",
+        "content": "PressureAlerts(2h)",
+        "dataSourceId": "ce79c5e9-8283-5a2d-b329-883810f5457e"
+      }
+    ]
+  }
+}

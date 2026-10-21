@@ -1,0 +1,24 @@
+// Helpers the saved queries and the dashboard build on.
+//
+// The Eventstream reads Event Hubs at least once, so a message can land twice. Every query reads a match through
+// MatchEvents, which keeps one row per sequence number.
+.create-or-alter function with (folder = "pitchside", docstring = "One match's events, one row per seq") MatchEvents(_match: string) {
+    events
+    | where matchId == _match
+    | summarize arg_max(publishedUtc, *) by seq
+}
+
+// The dashboard's match selector: every match in the table, most recently published first.
+.create-or-alter function with (folder = "pitchside", docstring = "Every match in the table, latest first") Matches() {
+    events
+    | summarize events = count_distinct(seq), firstPublishedUtc = min(publishedUtc), lastPublishedUtc = max(publishedUtc) by matchId
+    | order by lastPublishedUtc desc
+}
+
+// The evidence check: rows and distinct sequence numbers for a match, to set against
+// GET /api/v1/matches/{matchId}/events. count_distinct is exact; dcount would be an estimate.
+.create-or-alter function with (folder = "pitchside", docstring = "Rows and distinct events stored for a match") MatchEventCount(_match: string) {
+    events
+    | where matchId == _match
+    | summarize rows = count(), events = count_distinct(seq), lastSeq = max(seq), firstPublishedUtc = min(publishedUtc), lastPublishedUtc = max(publishedUtc)
+}

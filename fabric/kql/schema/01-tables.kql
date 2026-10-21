@@ -1,0 +1,18 @@
+// Pitchside KQL database `pitchside`: tables, the ingestion mapping and retention (WP-12).
+// fabric-apply.sh joins every file under fabric/kql in name order into the database's DatabaseSchema.kql, so each
+// command must be idempotent and must contain no empty line: an empty line ends a command in a schema script.
+//
+// events_raw is where the Eventstream lands the bus messages exactly as Pitchside.Runtime publishes them: the
+// EventEnvelope record (matchId, seq, type, payloadJson, publishedUtc) serialised by ContractJson (camelCase).
+.create-merge table events_raw (matchId: string, seq: long, type: string, payloadJson: string, publishedUtc: datetime)
+
+.create-or-alter table events_raw ingestion json mapping "envelope" '[{"column":"matchId","Properties":{"Path":"$.matchId"}},{"column":"seq","Properties":{"Path":"$.seq"}},{"column":"type","Properties":{"Path":"$.type"}},{"column":"payloadJson","Properties":{"Path":"$.payloadJson"}},{"column":"publishedUtc","Properties":{"Path":"$.publishedUtc"}}]'
+
+// The raw envelopes are a staging copy: the expanded table is the one every query reads.
+.alter-merge table events_raw policy retention softdelete = 3d recoverability = disabled
+
+// events: one row per match event, with the fields of schemas/event.schema.json as typed columns. The first fifteen
+// columns are the ones WP-12 names. The rest are the fields the six queries also need to agree with Pitchside.Stats:
+// the event id, wall time and possession, whether a pass was completed and a shot on target, where a pass or carry
+// ended (final-third entries), the tracking entries (top speeds), and the whole event as `payload` for anything else.
+.create-merge table events (matchId: string, seq: long, period: int, clockMs: long, type: string, teamId: string, playerId: string, x: real, y: real, xg: real, outcome: string, difficulty: real, lengthM: real, speedKph: real, publishedUtc: datetime, eventId: string, wallTimeUtc: datetime, possessionId: long, completed: bool, onTarget: bool, endX: real, endY: real, tracking: dynamic, payload: dynamic)

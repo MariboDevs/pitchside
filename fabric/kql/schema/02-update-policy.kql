@@ -1,0 +1,34 @@
+// The update policy that fills `events` from `events_raw`: payloadJson is the MatchEvent the envelope carries,
+// serialised by ContractJson (camelCase properties, snake_case enum values, nulls written). Field names are those of
+// schemas/event.schema.json; a field an event type does not carry comes out null (empty for strings).
+.create-or-alter function with (folder = "pitchside/ingest", docstring = "Expands each bus envelope in events_raw into one typed events row") ExpandEnvelope() {
+    events_raw
+    | extend e = parse_json(payloadJson)
+    | project
+        matchId = tostring(e.matchId),
+        seq = tolong(e.seq),
+        period = toint(e.period),
+        clockMs = tolong(e.clockMs),
+        type = tostring(e.type),
+        teamId = tostring(e.teamId),
+        playerId = tostring(e.playerId),
+        x = toreal(e.location.x),
+        y = toreal(e.location.y),
+        xg = toreal(e.xg),
+        outcome = tostring(e.outcome),
+        difficulty = toreal(e.difficulty),
+        lengthM = toreal(e.lengthM),
+        speedKph = toreal(e.speedKph),
+        publishedUtc,
+        eventId = tostring(e.id),
+        wallTimeUtc = todatetime(e.wallTimeUtc),
+        possessionId = tolong(e.possessionId),
+        completed = tobool(e.completed),
+        onTarget = tobool(e.onTarget),
+        endX = toreal(e.endLocation.x),
+        endY = toreal(e.endLocation.y),
+        tracking = e.tracking,
+        payload = e
+}
+
+.alter table events policy update @'[{"IsEnabled": true, "Source": "events_raw", "Query": "ExpandEnvelope()", "IsTransactional": true, "PropagateIngestionProperties": false}]'
