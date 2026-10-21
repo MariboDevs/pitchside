@@ -35,20 +35,24 @@ echo "==> $CAPACITY in $RESOURCE_GROUP: $current"
 
 case "$ACTION" in
   status) exit 0 ;;
-  resume) target="Active" ;;
-  pause) target="Paused" ;;
+  # The capacity API calls pausing "suspend".
+  resume) target="Active" operation="resume" ;;
+  pause) target="Paused" operation="suspend" ;;
 esac
 
-if [[ "$current" == "$target" ]]; then
+# A suspended capacity reports Paused or Suspended depending on the API version; both mean it is not billing.
+reached() { [[ "$1" == "$target" || ( "$target" == "Paused" && "$1" == "Suspended" ) ]]; }
+
+if reached "$current"; then
   echo "    already $target"
   exit 0
 fi
 
 echo "==> $ACTION"
-az rest --method post --url "https://management.azure.com$id/$ACTION?api-version=$API_VERSION" >/dev/null
+az rest --method post --url "https://management.azure.com$id/$operation?api-version=$API_VERSION" >/dev/null
 for _ in $(seq 1 60); do
   current="$(state)"
-  [[ "$current" == "$target" ]] && { echo "    $current"; exit 0; }
+  reached "$current" && { echo "    $current"; exit 0; }
   echo "    $current"
   sleep 10
 done

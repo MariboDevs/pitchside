@@ -34,6 +34,17 @@ public sealed partial class KqlScriptTests
 
     [Theory]
     [MemberData(nameof(Files))]
+    public void Top_sorts_by_a_single_expression(string file)
+    {
+        // KQL's top takes one sort expression; a tie-breaker needs order by and take.
+        foreach (Match top in MultiKeyTop().Matches(KqlFile.Read(file)))
+        {
+            top.Success.ShouldBeFalse($"{file}: {top.Value.Trim()}");
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Files))]
     public void Each_saved_query_file_creates_exactly_one_function(string file)
     {
         if (file.StartsWith("fabric/kql/schema/", StringComparison.Ordinal))
@@ -119,6 +130,9 @@ public sealed partial class KqlScriptTests
 
     [GeneratedRegex(@"^\s{8}(?<name>\w+)(?:\s*=|,|$)", RegexOptions.Multiline)]
     private static partial Regex ProjectedColumn();
+
+    [GeneratedRegex(@"\|\s*top\s+\d+\s+by\s+[^|\n]*,")]
+    private static partial Regex MultiKeyTop();
 
     [GeneratedRegex(@"\be\.(?<path>\w+(?:\.\w+)?)")]
     private static partial Regex PayloadPath();
