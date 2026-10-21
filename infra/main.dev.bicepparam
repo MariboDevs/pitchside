@@ -11,7 +11,9 @@ param owner = readEnvironmentVariable('PITCHSIDE_OWNER', 'maribodevs')
 param speechSku = 'F0'
 // The existing free-tier account in docs/ENVIRONMENT.md: a subscription may hold only one F0 Speech account.
 param speechName = 'spch-pitchside-dev'
-param eventHubsSku = 'Basic'
+// Standard, for the `fabric` consumer group the Fabric Eventstream reads (WP-12, docs/FABRIC.md): Basic holds only
+// $Default, which the API's processor holds exclusively. Basic to Standard is an in-place upgrade.
+param eventHubsSku = 'Standard'
 param webMinReplicas = 0
 param runAgentsInApi = true
 
@@ -29,6 +31,14 @@ param alertEmails = empty(readEnvironmentVariable('PITCHSIDE_ALERT_EMAILS', ''))
   : split(readEnvironmentVariable('PITCHSIDE_ALERT_EMAILS', ''), ',')
 
 param mcpApiKeyFromKeyVault = bool(readEnvironmentVariable('PITCHSIDE_MCP_KEY_FROM_VAULT', 'false'))
+
+// WP-12. The Fabric workspace identity's object id, once workspace identity is on (docs/FABRIC.md); empty grants
+// nothing. The F2 capacity is off: the workspace runs on the trial capacity in docs/ENVIRONMENT.md.
+param fabricWorkspacePrincipalId = readEnvironmentVariable('FABRIC_WORKSPACE_PRINCIPAL_ID', '')
+param fabricCapacity = bool(readEnvironmentVariable('PITCHSIDE_FABRIC_CAPACITY', 'false'))
+param fabricCapacityAdministrators = empty(readEnvironmentVariable('PITCHSIDE_FABRIC_ADMINS', ''))
+  ? []
+  : split(readEnvironmentVariable('PITCHSIDE_FABRIC_ADMINS', ''), ',')
 
 // azd sets these before it provisions, so a provision after a deploy keeps the deployed images.
 param apiExists = bool(readEnvironmentVariable('SERVICE_API_RESOURCE_EXISTS', 'false'))
