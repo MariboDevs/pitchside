@@ -1,10 +1,19 @@
+using Pitchside.Engine;
+
 namespace Pitchside.Runtime.Replay;
 
 /// <summary>Replays seeded matches onto the bus as if they were live.</summary>
 public interface IReplayService
 {
     /// <summary>Simulates the seed, stores the document and starts publishing. Throws when the cap is reached.</summary>
-    Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken);
+    Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken) =>
+        StartAsync(seed, speed, MatchLoops.First, cancellationToken);
+
+    /// <summary>
+    /// As <see cref="StartAsync(long, double, CancellationToken)"/>, under the seed's id for <paramref name="loop"/>
+    /// (<c>MER-26</c> for loop 1, <c>MER-26-2</c> for loop 2): the demo loop replays one seed again under a new id.
+    /// </summary>
+    Task<ReplayStarted> StartAsync(long seed, double speed, int loop, CancellationToken cancellationToken);
 
     bool Stop(string matchId);
 

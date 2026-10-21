@@ -30,6 +30,32 @@ public sealed class DemoTests
     }
 
     [Fact]
+    public async Task With_the_loop_on_the_demo_seed_is_played_again_under_the_next_loop_id()
+    {
+        await using var factory = new ConfiguredApiFactory(new Dictionary<string, string?>
+        {
+            ["Demo:AutoStart"] = "true",
+            ["Demo:Seed"] = "27",
+            ["Demo:Speed"] = "0",
+            ["Demo:Loop"] = "true",
+            ["Demo:LoopPauseSeconds"] = "0",
+            ["Demo:MaxLoops"] = "2",
+        });
+        using var client = factory.CreateClient();
+
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        HttpResponseMessage match;
+        while ((match = await client.GetAsync("/api/v1/matches/MER-27-2")).StatusCode != HttpStatusCode.OK)
+        {
+            DateTime.UtcNow.ShouldBeLessThan(deadline, "the second loop did not start within 60 s");
+            await Task.Delay(200);
+        }
+
+        (await match.ReadAsync<StoredMatch>()).Document.MatchId.ShouldBe("MER-27-2");
+        (await (await client.GetAsync("/api/v1/matches/MER-27")).ReadAsync<StoredMatch>()).Status.ShouldBe(MatchStatus.Completed);
+    }
+
+    [Fact]
     public async Task A_jump_names_the_next_moment_and_only_a_running_replay_can_jump()
     {
         await using var factory = new PitchsideApiFactory();
