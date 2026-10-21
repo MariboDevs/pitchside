@@ -29,7 +29,14 @@ server {
     proxy_ssl_verify_depth 3;
     proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
     proxy_set_header Host ${API_HOST};
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    # The viewer's address for the API's usage guard. This app's ingress is the only way in, and it appends the address
+    # it saw to X-Forwarded-For; the last entry is that one, anything before it is whatever the client wrote. So the
+    # real address is taken from the last entry only, and the API gets that address alone, never the client's list.
+    set_real_ip_from 0.0.0.0/0;
+    set_real_ip_from ::/0;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive off;
+    proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Request-Id $http_x_request_id;
 
@@ -37,6 +44,11 @@ server {
         access_log off;
         default_type text/plain;
         return 200 "ok\n";
+    }
+
+    # The API's readiness, for the availability test: the API's ingress is internal, so it is reached through here.
+    location = /health {
+        proxy_pass https://${API_HOST}/health;
     }
 
     location /api/ {

@@ -158,12 +158,12 @@ infra/scripts/fabric-apply.sh $WS
 #    replays once per store, and the alert only looks back over its lookback, so a rule set up afterwards sees nothing.
 
 # 5. Replay the match and compare counts.
-API=$(azd env get-value API_URL)
-curl -s -X POST "$API/api/v1/replays" -H 'Content-Type: application/json' -d '{"seed": 13, "speed": 1}'
+WEB=$(azd env get-value WEB_URL)   # the API is internal; the web app proxies /api
+curl -s -X POST "$WEB/api/v1/replays" -H 'Content-Type: application/json' -d '{"seed": 13, "speed": 1}'
 #    within 30 s, in the queryset tab "Evidence: row count for the latest match", or:
 #    MatchEventCount("MER-13")
 #    at full time, the API's count:
-curl -s "$API/api/v1/matches/MER-13/events?fromSeq=1&toSeq=2000" | jq length
+curl -s "$WEB/api/v1/matches/MER-13/events?fromSeq=1&toSeq=2000" | jq length
 
 # 6. Save the Activator's definition and commit it.
 infra/scripts/fabric-apply.sh $WS --export-activator
