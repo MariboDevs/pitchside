@@ -29,12 +29,13 @@
       "kind": "string",
       "id": "f94a08f2-e186-5cef-a90d-8da1293c6729",
       "displayName": "Match",
-      "description": "The match to show; the latest one by default",
+      "description": "The match to show; MER-13, the alert demonstration, by default",
       "variableName": "_matchId",
-      "selectionType": "single",
+      "selectionType": "scalar",
       "includeAllOption": false,
       "defaultValue": {
-        "kind": "query-default"
+        "kind": "value",
+        "value": "MER-13"
       },
       "dataSource": {
         "kind": "query",
@@ -149,32 +150,19 @@
       "visualOptions": {
         "hideTileTitle": false,
         "hideLegend": false,
-        "xColumn": {
-          "type": "specified",
-          "value": "wallTimeUtc"
-        },
-        "yColumns": {
-          "type": "specified",
-          "value": [
-            "momentum"
-          ]
-        },
-        "seriesColumns": {
-          "type": "specified",
-          "value": [
-            "teamId"
-          ]
-        },
+        "xColumn": "wallTimeUtc",
+        "yColumns": [
+          "momentum"
+        ],
+        "seriesColumns": [
+          "teamId"
+        ],
         "xColumnTitle": "match time",
         "yColumnTitle": "share",
         "xAxisScale": "linear",
         "yAxisScale": "linear",
-        "yAxisMinimumValue": {
-          "type": "infer"
-        },
-        "yAxisMaximumValue": {
-          "type": "infer"
-        },
+        "yAxisMinimumValue": null,
+        "yAxisMaximumValue": null,
         "horizontalLine": "",
         "verticalLine": "",
         "crossFilterDisabled": false,
@@ -211,32 +199,19 @@
       "visualOptions": {
         "hideTileTitle": false,
         "hideLegend": false,
-        "xColumn": {
-          "type": "specified",
-          "value": "wallTimeUtc"
-        },
-        "yColumns": {
-          "type": "specified",
-          "value": [
-            "cumulativeXg"
-          ]
-        },
-        "seriesColumns": {
-          "type": "specified",
-          "value": [
-            "teamId"
-          ]
-        },
+        "xColumn": "wallTimeUtc",
+        "yColumns": [
+          "cumulativeXg"
+        ],
+        "seriesColumns": [
+          "teamId"
+        ],
         "xColumnTitle": "match time",
         "yColumnTitle": "xG",
         "xAxisScale": "linear",
         "yAxisScale": "linear",
-        "yAxisMinimumValue": {
-          "type": "infer"
-        },
-        "yAxisMaximumValue": {
-          "type": "infer"
-        },
+        "yAxisMinimumValue": null,
+        "yAxisMaximumValue": null,
         "horizontalLine": "",
         "verticalLine": "",
         "crossFilterDisabled": false,
@@ -273,32 +248,19 @@
       "visualOptions": {
         "hideTileTitle": false,
         "hideLegend": false,
-        "xColumn": {
-          "type": "specified",
-          "value": "window"
-        },
-        "yColumns": {
-          "type": "specified",
-          "value": [
-            "shots"
-          ]
-        },
-        "seriesColumns": {
-          "type": "specified",
-          "value": [
-            "teamId"
-          ]
-        },
+        "xColumn": "window",
+        "yColumns": [
+          "shots"
+        ],
+        "seriesColumns": [
+          "teamId"
+        ],
         "xColumnTitle": "match minutes",
         "yColumnTitle": "shots",
         "xAxisScale": "linear",
         "yAxisScale": "linear",
-        "yAxisMinimumValue": {
-          "type": "infer"
-        },
-        "yAxisMaximumValue": {
-          "type": "infer"
-        },
+        "yAxisMinimumValue": null,
+        "yAxisMaximumValue": null,
         "horizontalLine": "",
         "verticalLine": "",
         "crossFilterDisabled": false,
@@ -335,32 +297,19 @@
       "visualOptions": {
         "hideTileTitle": false,
         "hideLegend": false,
-        "xColumn": {
-          "type": "specified",
-          "value": "wallTimeUtc"
-        },
-        "yColumns": {
-          "type": "specified",
-          "value": [
-            "pressingIntensity"
-          ]
-        },
-        "seriesColumns": {
-          "type": "specified",
-          "value": [
-            "teamId"
-          ]
-        },
+        "xColumn": "wallTimeUtc",
+        "yColumns": [
+          "pressingIntensity"
+        ],
+        "seriesColumns": [
+          "teamId"
+        ],
         "xColumnTitle": "match time",
         "yColumnTitle": "per pass",
         "xAxisScale": "linear",
         "yAxisScale": "linear",
-        "yAxisMinimumValue": {
-          "type": "infer"
-        },
-        "yAxisMaximumValue": {
-          "type": "infer"
-        },
+        "yAxisMinimumValue": null,
+        "yAxisMaximumValue": null,
         "horizontalLine": "",
         "verticalLine": "",
         "crossFilterDisabled": false,
@@ -418,29 +367,17 @@
       "visualOptions": {
         "hideTileTitle": false,
         "hideLegend": false,
-        "xColumn": {
-          "type": "specified",
-          "value": "playerId"
-        },
-        "yColumns": {
-          "type": "specified",
-          "value": [
-            "topSpeedKph"
-          ]
-        },
-        "seriesColumns": {
-          "type": "infer"
-        },
+        "xColumn": "playerId",
+        "yColumns": [
+          "topSpeedKph"
+        ],
+        "seriesColumns": null,
         "xColumnTitle": "player",
         "yColumnTitle": "kph",
         "xAxisScale": "linear",
         "yAxisScale": "linear",
-        "yAxisMinimumValue": {
-          "type": "infer"
-        },
-        "yAxisMaximumValue": {
-          "type": "infer"
-        },
+        "yAxisMinimumValue": null,
+        "yAxisMaximumValue": null,
         "horizontalLine": "",
         "verticalLine": "",
         "crossFilterDisabled": false,

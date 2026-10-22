@@ -1,0 +1,70 @@
+[
+  {
+    "uniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f",
+    "payload": {
+      "name": "match-analysis",
+      "description": "Container Description",
+      "type": "kqlQueries"
+    },
+    "type": "container-v1"
+  },
+  {
+    "uniqueIdentifier": "c8ba254c-5c74-493e-8959-567ed69692cf",
+    "payload": {
+      "name": "pitchside event",
+      "runSettings": {
+        "isStopped": false,
+        "executionIntervalInSeconds": 60
+      },
+      "query": {
+        "queryString": "PressureAlerts(10m)"
+      },
+      "eventhouseItem": {
+        "databaseName": "e7c4ed43-45ec-4a78-979c-db5dd2804a57",
+        "clusterHostName": "https://trd-8uvqtqarkk9r193rgn.z6.kusto.fabric.microsoft.com"
+      },
+      "queryParameters": [],
+      "metadata": {
+        "workspaceId": "74e1627c-0077-4c79-a543-84c9af743169",
+        "querySetId": "c3077aee-4879-4c29-975d-b8c0c3119a5b",
+        "queryId": "235d1dd6-2988-5750-aca2-cd7adcb90464"
+      },
+      "parentContainer": {
+        "targetUniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f"
+      }
+    },
+    "type": "kqlSource-v1"
+  },
+  {
+    "uniqueIdentifier": "f6681128-52e2-4131-a79a-bed8aa497d23",
+    "payload": {
+      "name": "pitchside event",
+      "parentContainer": {
+        "targetUniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f"
+      },
+      "definition": {
+        "type": "Event",
+        "instance": "{\"steps\":[{\"id\":\"e6fbd310-ef4a-40b6-a1bb-9bfb666dc0e5\",\"name\":\"SourceEventStep\",\"rows\":[{\"arguments\":[{\"name\":\"entityId\",\"type\":\"string\",\"value\":\"c8ba254c-5c74-493e-8959-567ed69692cf\"}],\"kind\":\"SourceReference\",\"name\":\"SourceSelector\"}]}],\"templateId\":\"SourceEvent\",\"templateVersion\":\"1.3.0\"}"
+      }
+    },
+    "type": "timeSeriesView-v1"
+  },
+  {
+    "uniqueIdentifier": "a168eea7-28b4-4140-90b5-34e4e56c4851",
+    "payload": {
+      "name": "Pressure alert",
+      "parentContainer": {
+        "targetUniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f"
+      },
+      "definition": {
+        "type": "Rule",
+        "instance": "{\"templateId\":\"EventTrigger\",\"templateVersion\":\"1.3.0\",\"steps\":[{\"name\":\"FieldsDefaultsStep\",\"id\":\"30791ecd-4b36-4438-8cad-5549ad34b646\",\"rows\":[{\"name\":\"EventSelector\",\"kind\":\"Event\",\"arguments\":[{\"kind\":\"EventReference\",\"type\":\"complex\",\"arguments\":[{\"name\":\"entityId\",\"type\":\"string\",\"value\":\"f6681128-52e2-4131-a79a-bed8aa497d23\"}],\"name\":\"event\"}]}]},{\"name\":\"EventDetectStep\",\"id\":\"d63b92b7-ae7d-4125-ab7e-db27220b96c0\",\"rows\":[{\"name\":\"OnEveryValue\",\"kind\":\"OnEveryValue\",\"arguments\":[]}]},{\"name\":\"ActStep\",\"id\":\"c9e53c8b-e62f-44de-9c44-48c4d6765009\",\"rows\":[{\"name\":\"EmailBinding\",\"kind\":\"EmailMessage\",\"arguments\":[{\"name\":\"messageLocale\",\"type\":\"string\",\"value\":\"en-us\"},{\"name\":\"sentTo\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"sipho@maribodevs.com\"}]},{\"name\":\"copyTo\",\"type\":\"array\",\"values\":[]},{\"name\":\"bCCTo\",\"type\":\"array\",\"values\":[]},{\"name\":\"subject\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"Pressure alert\"}]},{\"name\":\"headline\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"Pressure alert\"}]},{\"name\":\"optionalMessage\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"A side has 4 or more shots in 3 minutes\"}]},{\"name\":\"additionalInformation\",\"type\":\"array\",\"values\":[{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"matchId\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"matchId\"}],\"name\":\"reference\"}]},{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"teamId\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"teamId\"}],\"name\":\"reference\"}]},{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"shotsInWindow\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"shotsInWindow\"}],\"name\":\"reference\"}]},{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"matchMinute\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"matchMinute\"}],\"name\":\"reference\"}]}]}]}]}]}",
+        "settings": {
+          "shouldRun": true,
+          "shouldApplyRuleOnUpdate": false
+        }
+      }
+    },
+    "type": "timeSeriesView-v1"
+  }
+]

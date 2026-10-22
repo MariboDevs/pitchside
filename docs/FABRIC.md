@@ -94,8 +94,8 @@ check), `MatchEvents(matchId)`.
 
 ### Dashboard
 
-`Pitchside Live`, one page, auto-refresh every 30 s, a **Match** selector (`_matchId`, defaulting to the most recent
-match) and six tiles: momentum and xG race (lines over match time), shots per 5 minutes (columns), pressing intensity
+`Pitchside Live`, one page, auto-refresh every 30 s, a **Match** selector (`_matchId`, listing every match latest
+first and defaulting to `MER-13`, the alert demonstration: the dashboard loader takes only a fixed default) and six tiles: momentum and xG race (lines over match time), shots per 5 minutes (columns), pressing intensity
 (line), pass completion by player (table), top speeds (bars). The committed file holds three placeholders the apply
 script fills: `{{WORKSPACE_ID}}`, `{{DATABASE_ID}}` (the KQL database item) and `{{QUERY_SERVICE_URI}}` (the
 Eventhouse's query URI). `DashboardDefinitionTests` checks the load rules Fabric enforces: RFC 4122 ids, each query
