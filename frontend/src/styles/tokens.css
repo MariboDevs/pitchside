@@ -104,13 +104,13 @@
 
 /*
  * Broadcast graphics over the programme feed: panels are near-black at 78% with a 1px inner highlight and text
- * is off-white (WP-05 overlay rule 8). Every text colour holds at least 9.8:1 on the panel's near-black, chip
- * tint included.
+ * is off-white (WP-05 overlay rule 8). Measured over the worst frame behind them, a white one, all panel text
+ * holds at least 7:1, and chip labels and figures hold it on the chip's tint too.
  */
 html.overlay-route {
   --color-panel: color-mix(in srgb, var(--neutral-950) 78%, transparent);
   --color-panel-highlight: color-mix(in srgb, var(--neutral-50) 14%, transparent);
   --color-on-panel-strong: var(--neutral-50);
   --color-on-panel: var(--inverse-text);
-  --color-on-panel-muted: var(--neutral-300);
+  --color-on-panel-muted: var(--neutral-50);
 }

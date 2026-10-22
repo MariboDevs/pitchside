@@ -53,6 +53,7 @@ html.overlay-route body {
 
 ::selection {
   background: var(--color-selection);
+  color: var(--color-text-strong);
 }
 
 /* Every number from code is set in Plex Mono with tabular figures: the score, the clock, a stat. */
@@ -190,6 +191,10 @@ html.overlay-route body {
   font-family: var(--font-text);
   font-size: 1.0625rem;
   min-width: 0;
+}
+
+.input.tabular {
+  font-family: var(--font-mono);
 }
 
 .input:focus {
