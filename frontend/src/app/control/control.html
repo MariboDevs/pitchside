@@ -10,7 +10,7 @@
     }
     <span
       class="pill"
-      [class.pill--live]="session.connection() === 'live'"
+      [class.pill--ok]="session.connection() === 'live'"
       [class.pill--waiting]="session.connection() !== 'live'"
     >
       {{ session.connection() }}

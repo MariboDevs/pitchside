@@ -30,7 +30,6 @@
   --brand-300: #8fb0e0;
   --brand-600: #1d4a86;
   --brand-700: #163a6b;
-  --live-400: #e0644a;
   --live-600: #a33a26;
 
   /* Primitive: status */
@@ -77,7 +76,6 @@
   --color-on-panel-strong: var(--neutral-0);
   --color-on-panel: var(--inverse-text);
   --color-on-panel-muted: var(--neutral-400);
-  --color-live-on-panel: var(--live-400);
 
   --font-display: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
   --font-text: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
@@ -106,12 +104,13 @@
 
 /*
  * Broadcast graphics over the programme feed: panels are near-black at 78% with a 1px inner highlight and text
- * is off-white (WP-05 overlay rule 8). Every text colour holds at least 8:1 on the panel's near-black.
+ * is off-white (WP-05 overlay rule 8). Every text colour holds at least 9.8:1 on the panel's near-black, chip
+ * tint included.
  */
 html.overlay-route {
   --color-panel: color-mix(in srgb, var(--neutral-950) 78%, transparent);
   --color-panel-highlight: color-mix(in srgb, var(--neutral-50) 14%, transparent);
   --color-on-panel-strong: var(--neutral-50);
   --color-on-panel: var(--inverse-text);
-  --color-on-panel-muted: var(--neutral-400);
+  --color-on-panel-muted: var(--neutral-300);
 }
