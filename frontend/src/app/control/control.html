@@ -1,6 +1,6 @@
 <main class="room">
   <header class="bar">
-    <h1 class="title">Control room</h1>
+    <h1 class="title page-title">Control room</h1>
     @if (session.document(); as doc) {
       <span class="fixture">{{ doc.home.club.name }} v {{ doc.away.club.name }}</span>
       <span class="clock tabular">{{
@@ -37,8 +37,8 @@
   </header>
 
   <div class="columns">
-    <section class="column" aria-labelledby="feed-heading">
-      <h2 id="feed-heading" class="column-title">Feed</h2>
+    <section class="sheet" aria-labelledby="feed-heading">
+      <h2 id="feed-heading" class="sheet-title">Feed</h2>
       <div class="filters">
         <input
           #filter
@@ -96,8 +96,8 @@
       </ol>
     </section>
 
-    <section class="column" aria-labelledby="intel-heading">
-      <h2 id="intel-heading" class="column-title">Intelligence</h2>
+    <section class="sheet" aria-labelledby="intel-heading">
+      <h2 id="intel-heading" class="sheet-title">Intelligence</h2>
       <ol class="moments" data-testid="moments">
         @for (moment of moments(); track moment.id; let i = $index) {
           <li class="moment" [class.moment--selected]="selected() === i">
@@ -148,27 +148,27 @@
                   </p>
                   <dl class="verdict">
                     <div>
-                      <dt>Verdict</dt>
+                      <dt class="label-caps">Verdict</dt>
                       <dd>{{ n.status }}</dd>
                     </div>
                     <div>
-                      <dt>Attempts</dt>
+                      <dt class="label-caps">Attempts</dt>
                       <dd>{{ n.provenance.attempts }}</dd>
                     </div>
                     <div>
-                      <dt>Provider</dt>
+                      <dt class="label-caps">Provider</dt>
                       <dd>{{ n.provenance.provider }}</dd>
                     </div>
                     <div>
-                      <dt>Model</dt>
+                      <dt class="label-caps">Model</dt>
                       <dd>{{ n.provenance.model }}</dd>
                     </div>
                     <div>
-                      <dt>Prompt</dt>
+                      <dt class="label-caps">Prompt</dt>
                       <dd>{{ n.provenance.promptVersion }}</dd>
                     </div>
                     <div>
-                      <dt>Groundedness</dt>
+                      <dt class="label-caps">Groundedness</dt>
                       <dd class="tabular">{{ groundedness(n) }}</dd>
                     </div>
                   </dl>
@@ -184,7 +184,7 @@
                           @for (v of variants; track v.id) {
                             <li [attr.lang]="langOf(v)">
                               <span class="variant-label">{{ variantLabel(v) }}</span>
-                              <span class="variant-status">{{ v.status }}</span>
+                              <span class="variant-status label-caps">{{ v.status }}</span>
                               <span class="variant-text">{{ v.renderedText }}</span>
                             </li>
                           }
@@ -222,8 +222,8 @@
       </ol>
     </section>
 
-    <section class="column" aria-labelledby="state-heading">
-      <h2 id="state-heading" class="column-title">State</h2>
+    <section class="sheet" aria-labelledby="state-heading">
+      <h2 id="state-heading" class="sheet-title">State</h2>
       <app-usage-panel />
       @for (g of groupedFacts(); track g.group) {
         <details class="facts" [open]="g.group !== 'player'">

@@ -19,7 +19,7 @@
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-chip);
   background: var(--color-surface-raised);
-  border-left: 3px solid var(--color-accent);
+  border-left: 3px solid var(--color-brand);
   font-size: 0.75rem;
 }
 
@@ -28,7 +28,7 @@
 }
 
 .name {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-strong);
 }
 

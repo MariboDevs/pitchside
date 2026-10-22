@@ -1,7 +1,7 @@
 <main class="page">
   <header class="masthead">
-    <p class="eyebrow">Meridian League</p>
-    <h1 class="title">Pitchside</h1>
+    <p class="eyebrow label-caps">Meridian League</p>
+    <h1 class="title page-title">Pitchside</h1>
     <p class="lede">
       Live match intelligence where every number comes from code and every sentence cites it.
     </p>
@@ -18,7 +18,7 @@
         <span>Speed</span>
         <input class="input tabular" type="number" min="0" step="0.5" formControlName="speed" />
       </label>
-      <button class="btn btn--primary" type="submit" [disabled]="starting() || form.invalid">
+      <button class="btn btn--ink" type="submit" [disabled]="starting() || form.invalid">
         Start replay
       </button>
     </form>

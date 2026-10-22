@@ -75,7 +75,7 @@ export class Home implements OnInit, OnDestroy {
 
   statusTone(status: string): string {
     return status === 'live'
-      ? 'pill pill--ok'
+      ? 'pill pill--live'
       : status === 'paused' || status === 'scheduled'
         ? 'pill pill--waiting'
         : 'pill';

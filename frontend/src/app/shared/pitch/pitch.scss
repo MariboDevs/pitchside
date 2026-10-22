@@ -16,12 +16,12 @@
 }
 
 .turf {
-  fill: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  fill: var(--color-panel);
 }
 
 .lines {
   fill: none;
-  stroke: color-mix(in srgb, var(--color-text-strong) 35%, transparent);
+  stroke: color-mix(in srgb, var(--color-on-panel) 40%, transparent);
   stroke-width: 0.3;
 }
 
@@ -34,7 +34,7 @@
 }
 
 .ball {
-  fill: var(--color-text-strong);
-  stroke: var(--color-canvas);
+  fill: var(--color-on-panel-strong);
+  stroke: var(--color-panel);
   stroke-width: 0.3;
 }

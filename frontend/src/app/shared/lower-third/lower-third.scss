@@ -13,10 +13,10 @@
   gap: 0.5em 0.6em;
   min-height: 4em;
   padding: 0.5em 0.75em 0.5em 1em;
-  border-radius: 0.35em;
+  border-radius: var(--radius-card);
   background: var(--color-panel);
   box-shadow: inset 0 0 0 1px var(--color-panel-highlight);
-  color: var(--color-text-strong);
+  color: var(--color-on-panel-strong);
   overflow: hidden;
 }
 
@@ -47,14 +47,14 @@
 }
 
 .text.text--pending {
-  color: var(--color-text-muted);
+  color: var(--color-on-panel-muted);
   font-style: italic;
 }
 
 .note {
   margin: 0.2em 0 0;
   font-size: 0.7em;
-  color: var(--color-text-muted);
+  color: var(--color-on-panel-muted);
 }
 
 .text {
@@ -62,7 +62,7 @@
   font-weight: 400;
   font-size: var(--lower-third-text-size, 0.82em);
   line-height: 1.25;
-  color: var(--color-text);
+  color: var(--color-on-panel);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

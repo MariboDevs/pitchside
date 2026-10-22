@@ -8,16 +8,6 @@
   flex-direction: column;
   gap: var(--space-2);
   margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-  border: 1px solid var(--color-edge);
-}
-
-.recap-title {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  color: var(--color-text-strong);
 }
 
 .recap-audio {
@@ -29,4 +19,8 @@
   margin: 0;
   font-size: 0.85rem;
   color: var(--color-text-muted);
+}
+
+.recap .sheet-title {
+  margin: 0;
 }
