@@ -73,11 +73,11 @@
 
       @if (strip(); as s) {
         <section
-          class="strip"
+          class="sheet"
           [attr.aria-label]="s.player.name + ' in numbers'"
           data-testid="player-strip"
         >
-          <h2 class="strip-name">{{ s.player.name }}</h2>
+          <h2 class="sheet-title">{{ s.player.name }}</h2>
           <dl class="strip-stats">
             @for (stat of s.stats; track stat.label) {
               <div class="stat">

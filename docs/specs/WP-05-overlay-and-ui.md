@@ -30,9 +30,13 @@ animate with the clock.
 
 ## Design
 
-Apply the `maribo-design` skill to the control room, viewer and home routes: it is the house language and the
-judges will see consistency across every screen. The overlay has its own rules below, because broadcast
-graphics are a different medium.
+The control room, viewer and home routes wear the SleshVoice design system (the Black Matter Labs house):
+paper and ink, Newsreader for headings and narrative, IBM Plex Sans for the interface, IBM Plex Mono for every
+number, research blue for actions, square corners. Live match graphics on those routes (score bug, lower
+third, pitch) sit on an ink panel, the system's instrument strip. A live match is marked in recording red,
+which means live and nothing else. One set of tokens (`frontend/src/styles/tokens.css`) drives every screen, so
+the judges see one language throughout. The overlay has its own rules below, because broadcast graphics are a
+different medium; it shares the system's type and square corners.
 
 ### Overlay graphics rules
 
@@ -50,9 +54,9 @@ graphics are a different medium.
 6. **Motion.** Enter: translate 24 px with opacity over 320 ms, cubic-bezier(0.2, 0.8, 0.2, 1). Exit: 200 ms
    opacity. Never two cards animating at once; the scheduler guarantees it, the renderer asserts it.
    `prefers-reduced-motion` disables translation and keeps opacity.
-7. **Typography.** Display: a geometric sans from Google Fonts with tabular numerals enabled
-   (`font-variant-numeric: tabular-nums`); text: a humanist sans. Minimum 28 px for any text at 1080p, so it
-   survives a 720p downscale and a phone.
+7. **Typography.** Headlines in Newsreader (600), text in IBM Plex Sans, scores, clocks, monograms and chip
+   figures in IBM Plex Mono with tabular numerals (`font-variant-numeric: tabular-nums`); all self-hosted.
+   Minimum 28 px for any text at 1080p, so it survives a 720p downscale and a phone.
 8. **Colour.** Panels are near-black at 78% with a 1 px inner highlight; text is off-white; the only
    saturated colour on screen is the clubs'. Contrast of text on panel at least 7:1.
 9. **Aspect ratios.** `16x9` is the default. `9x16` lays the same elements out for vertical video: score bug

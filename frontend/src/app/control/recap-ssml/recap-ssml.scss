@@ -8,6 +8,7 @@
   font-size: 0.85em;
 
   summary {
+    cursor: pointer;
     color: var(--color-text-muted);
   }
 
@@ -29,6 +30,8 @@
 }
 
 .label {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
   color: var(--color-text-strong);
 }
 
@@ -39,7 +42,8 @@
   padding: var(--space-2);
   overflow-x: auto;
   border-radius: var(--radius-chip);
-  background: color-mix(in srgb, var(--color-text-strong) 7%, transparent);
+  background: var(--color-surface-raised);
+  font-family: var(--font-mono);
   font-size: 0.8em;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

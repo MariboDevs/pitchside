@@ -5,12 +5,12 @@
 .monogram {
   display: inline-grid;
   place-items: center;
-  border-radius: 0.4em;
+  border-radius: var(--radius-chip);
   background: var(--club-primary);
   color: var(--club-secondary);
   box-shadow: inset 0 0 0 0.12em color-mix(in srgb, var(--club-secondary) 55%, transparent);
-  font-family: var(--font-display);
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1;
 }

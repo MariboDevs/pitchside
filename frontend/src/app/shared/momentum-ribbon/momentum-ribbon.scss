@@ -5,7 +5,7 @@
 .ribbon {
   display: flex;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-card);
   overflow: hidden;
   background: var(--color-panel);
 }

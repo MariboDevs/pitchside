@@ -7,12 +7,12 @@
   align-items: center;
   gap: 0.45em;
   padding: 0.3em 0.55em;
-  border-radius: 0.35em;
+  border-radius: var(--radius-card);
   background: var(--color-panel);
   box-shadow: inset 0 0 0 1px var(--color-panel-highlight);
-  color: var(--color-text-strong);
-  font-family: var(--font-display);
-  font-weight: 700;
+  color: var(--color-on-panel-strong);
+  font-family: var(--font-mono);
+  font-weight: 500;
 }
 
 .score {
@@ -21,14 +21,15 @@
 }
 
 .dash {
-  color: var(--color-text-muted);
+  color: var(--color-on-panel-muted);
 }
 
 .clock {
   padding-left: 0.5em;
   margin-left: 0.15em;
   border-left: 1px solid var(--color-panel-highlight);
-  font-weight: 600;
+  color: var(--color-on-panel);
+  font-weight: 400;
 }
 
 .bug--app {

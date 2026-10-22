@@ -8,25 +8,35 @@
   flex-wrap: wrap;
   gap: 2px;
   padding: 2px;
+  border: 1px solid var(--color-edge);
   border-radius: var(--radius-chip);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
 }
 
 .segment {
   position: relative;
   flex: 1 1 auto;
-  min-height: 2rem;
+  min-height: 2.5rem;
   padding: 0 var(--space-3);
   border: 0;
-  border-radius: calc(var(--radius-chip) - 2px);
+  border-radius: 0;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font: inherit;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background-color var(--duration-control),
+    color var(--duration-control);
+}
+
+.segment:hover:not(.segment--on) {
+  background: var(--color-surface-raised);
+  color: var(--color-text-strong);
 }
 
 .segment--on {
-  background: var(--color-accent);
-  color: var(--color-canvas);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
 }

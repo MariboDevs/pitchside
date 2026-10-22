@@ -1,4 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Source+Sans+3:wght@400;600&display=swap');
+/* Self-hosted faces: the app loads nothing from a font CDN. */
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/400-italic.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource-variable/newsreader/opsz.css';
 @import 'tailwindcss';
 @import './styles/tokens.css';
 
@@ -6,15 +13,23 @@
   --color-canvas: var(--color-canvas);
   --color-surface: var(--color-surface);
   --color-surface-raised: var(--color-surface-raised);
+  --color-edge-subtle: var(--color-edge-subtle);
   --color-edge: var(--color-edge);
+  --color-edge-strong: var(--color-edge-strong);
   --color-strong: var(--color-text-strong);
   --color-body: var(--color-text);
   --color-muted: var(--color-text-muted);
-  --color-accent: var(--color-accent);
+  --color-brand: var(--color-brand);
+  --color-link: var(--color-link);
+  --color-ink: var(--color-ink);
+  --color-live: var(--color-live);
+  --color-success: var(--color-success);
   --color-alert: var(--color-alert);
   --color-warning: var(--color-warning);
+  --color-panel: var(--color-panel);
   --font-display: var(--font-display);
   --font-text: var(--font-text);
+  --font-mono: var(--font-mono);
   --radius-card: var(--radius-card);
   --radius-chip: var(--radius-chip);
 }
@@ -27,6 +42,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-text);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* The overlay route draws graphics only, over the programme feed. */
@@ -35,8 +51,53 @@ html.overlay-route body {
   background: transparent;
 }
 
+::selection {
+  background: var(--color-selection);
+}
+
+/* Every number from code is set in Plex Mono with tabular figures: the score, the clock, a stat. */
 .tabular {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* Headings: Newsreader, light at page size, regular on a sheet. */
+.page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-text-strong);
+}
+
+/* A sheet: field paper on the page, a hairline edge, square corners. */
+.sheet {
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  border: 1px solid var(--color-edge-subtle);
+}
+
+.sheet-title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-text-strong);
+}
+
+/* A small uppercase mono label: section names, captions of figures, states. */
+.label-caps {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 :focus-visible {
@@ -44,30 +105,59 @@ html.overlay-route body {
   outline-offset: 2px;
 }
 
+/* Buttons: square, quiet, 44px tall. Ink starts things; primary (research blue) commits; ghost links. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  min-height: 2.25rem;
-  padding: 0 var(--space-4);
+  gap: 0.625rem;
+  min-height: var(--control-h);
+  padding: 0 1.125rem;
   border-radius: var(--radius-chip);
   border: 1px solid var(--color-edge);
-  background: var(--color-surface-raised);
+  background: transparent;
   color: var(--color-text-strong);
-  font-weight: 600;
+  font-family: var(--font-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
   position: relative;
+  transition:
+    background-color var(--duration-control),
+    border-color var(--duration-control),
+    color var(--duration-control);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-surface-raised);
+}
+
+.btn--ink {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-ink);
+}
+
+.btn--ink:hover:not(:disabled) {
+  background: var(--color-ink-hover);
 }
 
 .btn--primary {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-canvas);
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-brand-hover);
 }
 
 .btn--ghost {
-  background: transparent;
+  border-color: transparent;
+  color: var(--color-link);
 }
 
 .btn:disabled {
@@ -88,38 +178,80 @@ html.overlay-route body {
   }
 }
 
+/* Fields: paper, a 3:1 edge, the brand line when focused. */
 .input {
-  min-height: 2.25rem;
-  padding: 0 var(--space-3);
+  box-sizing: border-box;
+  min-height: var(--field-h);
+  padding: 0 0.875rem;
   border-radius: var(--radius-chip);
-  border: 1px solid var(--color-edge);
+  border: 1px solid var(--color-edge-strong);
   background: var(--color-surface);
   color: var(--color-text-strong);
+  font-family: var(--font-text);
+  font-size: 1.0625rem;
   min-width: 0;
 }
 
+.input:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -1px;
+  border-color: var(--color-focus-ring);
+}
+
+/* An error notice: what happened and what to do, on the danger roles. */
+.alert {
+  padding: 0.875rem var(--space-4);
+  border: 1px solid var(--color-alert-line);
+  border-left-width: 3px;
+  border-left-color: var(--color-alert);
+  background: var(--color-alert-soft);
+  color: var(--color-alert);
+  font-size: 0.9375rem;
+}
+
+/* Status tags: square, mono, a word always (never colour alone). */
 .pill {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem var(--space-2);
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  gap: 0.4rem;
+  min-height: 1.625rem;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-chip);
   border: 1px solid var(--color-edge);
   color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .pill--ok {
-  color: var(--color-accent);
-  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
+  color: var(--color-success);
+  border-color: var(--color-success-line);
 }
 
 .pill--alert {
   color: var(--color-alert);
-  border-color: color-mix(in srgb, var(--color-alert) 50%, transparent);
+  border-color: var(--color-alert-line);
 }
 
 .pill--waiting {
   color: var(--color-warning);
-  border-color: color-mix(in srgb, var(--color-warning) 50%, transparent);
+  border-color: var(--color-warning-line);
+}
+
+/* Live is SleshVoice's recording red: a match on air, and nothing else. */
+.pill--live {
+  color: var(--color-live);
+  border-color: var(--color-live);
+}
+
+.pill--live::before {
+  content: '';
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: var(--radius-dot);
+  background: currentColor;
 }
