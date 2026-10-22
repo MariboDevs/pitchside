@@ -10,7 +10,7 @@ the Official Rules win.
 | --- | --- |
 | Registration closes | 20 October 2026, 12:00 |
 | Submissions close | 27 October 2026, 23:59 |
-| Our internal submission target | 25 October 2026 (two days of buffer) |
+| Our internal submission target | 26 October 2026 (one day of buffer; the video is recorded on 25 October) |
 | Judging | 27 October to 10 November 2026 |
 | Winners announced | by 20 November 2026 |
 
