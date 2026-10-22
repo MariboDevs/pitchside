@@ -8,8 +8,9 @@
 
 .create-or-alter table events_raw ingestion json mapping "envelope" '[{"column":"matchId","Properties":{"Path":"$.matchId"}},{"column":"seq","Properties":{"Path":"$.seq"}},{"column":"type","Properties":{"Path":"$.type"}},{"column":"payloadJson","Properties":{"Path":"$.payloadJson"}},{"column":"publishedUtc","Properties":{"Path":"$.publishedUtc"}}]'
 
-// The raw envelopes are a staging copy: the expanded table is the one every query reads.
-.alter-merge table events_raw policy retention softdelete = 3d recoverability = disabled
+// The raw envelopes are a staging copy: the expanded table is the one every query reads. A database definition takes
+// only .alter, not .alter-merge, for a policy, so the whole retention policy is given.
+.alter table events_raw policy retention @'{"SoftDeletePeriod": "3.00:00:00", "Recoverability": "Disabled"}'
 
 // events: one row per match event, with the fields of schemas/event.schema.json as typed columns. The first fifteen
 // columns are the ones WP-12 names. The rest are the fields the six queries also need to agree with Pitchside.Stats:
