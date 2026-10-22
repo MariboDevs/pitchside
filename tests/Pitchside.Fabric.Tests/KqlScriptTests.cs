@@ -34,6 +34,18 @@ public sealed partial class KqlScriptTests
 
     [Theory]
     [MemberData(nameof(Files))]
+    public void Every_command_is_one_a_Fabric_database_definition_accepts(string file)
+    {
+        // Fabric refuses the whole DatabaseSchema.kql (ScriptContainsUnsupportedCommand) when any command starts
+        // otherwise; the list is the one its error names.
+        foreach (var command in KqlFile.Commands(file))
+        {
+            DefinitionCommand().IsMatch(command).ShouldBeTrue($"{file}: Fabric does not accept this command in a database definition:\n{command}");
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Files))]
     public void Top_sorts_by_a_single_expression(string file)
     {
         // KQL's top takes one sort expression; a tie-breaker needs order by and take.
@@ -130,6 +142,9 @@ public sealed partial class KqlScriptTests
 
     [GeneratedRegex(@"^\s{8}(?<name>\w+)(?:\s*=|,|$)", RegexOptions.Multiline)]
     private static partial Regex ProjectedColumn();
+
+    [GeneratedRegex(@"^\.(create-merge table|create-or-alter function|create-or-alter materialized-view|alter materialized-view|alter table \S+ policy (update|retention|caching|streamingingestion|ingestionbatching|encoding)|alter column \S+ policy encoding type|create-or-alter table \S+ ingestion \w+ mapping|create table \S+ ingestion \w+ mapping)\b")]
+    private static partial Regex DefinitionCommand();
 
     [GeneratedRegex(@"\|\s*top\s+\d+\s+by\s+[^|\n]*,")]
     private static partial Regex MultiKeyTop();
