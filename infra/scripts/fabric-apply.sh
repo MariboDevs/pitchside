@@ -87,7 +87,8 @@ fabric() {
   local method="$1" path="$2" body="${3:-}"
   local out="$WORK/response.json" headers="$WORK/response.headers" code
   local args=(-sS -X "$method" -H @"$AUTH" -H "Content-Type: application/json" -D "$headers" -o "$out" -w '%{http_code}')
-  [[ -n "$body" ]] && args+=(--data-binary @"$body")
+  # A POST with no body still sends Content-Length: 0; without it Fabric's front end answers 411 (getDefinition).
+  if [[ -n "$body" ]]; then args+=(--data-binary @"$body"); elif [[ "$method" == POST ]]; then args+=(-H "Content-Length: 0"); fi
   code="$(curl "${args[@]}" "$API$path")" || fail "$method $path did not complete"
   case "$code" in
     200 | 201) cat "$out" ;;
