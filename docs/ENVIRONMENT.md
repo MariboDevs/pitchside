@@ -73,34 +73,44 @@ default has been observed to switch to it between sessions. Every provisioning c
 | --- | --- | --- |
 | sipho@maribodevs.com (object id `727d691c-2de9-492d-a52c-31be862bc912`) | Cognitive Services OpenAI User | `ais-pitchside-dev` |
 | `id-pitchside-github` | Cognitive Services Speech User | `spch-pitchside-dev` |
-| `id-pitchside-github` | Contributor | `rg-pitchside-dev`, `rg-pitchside-demo` |
-| `id-pitchside-github` | User Access Administrator | `rg-pitchside-dev`, `rg-pitchside-demo` |
-| `id-pitchside-github` | Reader | the subscription (`azd env refresh` reads the subscription-scope deployment) |
-| `id-pitchside-github` | AcrPush | each environment's registry, granted by `infra/modules/registry.bicep` |
+| `id-pitchside-github` (dev) | Contributor, User Access Administrator | `rg-pitchside-dev` |
+| `id-pitchside-github` (dev) | AcrPush | the dev registry, granted by `infra/modules/registry.bicep` |
+| `id-pitchside-github-demo` (demo) | Contributor | `rg-pitchside-demo` |
+| `id-pitchside-github-demo` (demo) | AcrPush | the demo registry, granted by `infra/modules/registry.bicep` when `PITCHSIDE_DEPLOYER_PRINCIPAL_ID` names it |
+| both deploy identities | Reader | the subscription (`azd env refresh` reads the subscription-scope deployment) |
+| `pitchside-dev` Fabric workspace identity | Azure Event Hubs Data Receiver | hub `match-events` in the dev namespace, granted by `infra/modules/eventhubs.bicep` |
 
 Pretty Kunene and Hlumela Tshazibana have no identity in this tenant yet; the tenant holds one member
 account and three guests, none of them identifiable as either. Their OpenAI User assignments are added when
 they are invited as guests.
 
-### Deployment identity for GitHub Actions
+### Deployment identities for GitHub Actions
+
+One identity per environment since 22 October 2026; neither can write to the other environment.
 
 | Item | Value |
 | --- | --- |
-| Name | `id-pitchside-github`, user-assigned managed identity in `rg-pitchside-dev` |
+| Name | `id-pitchside-github`, user-assigned managed identity in `rg-pitchside-dev`, deploys dev |
 | Resource id | `/subscriptions/1641c920-b05d-4921-8a24-029ca939893a/resourcegroups/rg-pitchside-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-pitchside-github` |
 | Client id | `89e3ce3e-6e8a-4ac7-95bc-0e3a63a30052` |
 | Principal id | `06983e89-3126-499b-ac88-193588a256e9` |
-| Federated credential `github-env-dev` | subject `repo:MariboDevs/pitchside:environment:dev` |
-| Federated credential `github-env-demo` | subject `repo:MariboDevs/pitchside:environment:demo` |
-| Federated credential `github-branch-main` | subject `repo:MariboDevs/pitchside:ref:refs/heads/main` |
-| Federated credentials `github-env-dev-id`, `github-env-demo-id`, `github-branch-main-id` | the same three subjects with GitHub's numeric ids, `repo:MariboDevs@212003298/pitchside@1409706237:...`, which is the form GitHub presented on 16 October and the one Entra matched |
-| Issuer, audience | `https://token.actions.githubusercontent.com`, `api://AzureADTokenExchange` |
+| Federated credentials | `github-env-dev`, subject `repo:MariboDevs/pitchside:environment:dev`, and `github-env-dev-id`, the same subject with GitHub's numeric ids, `repo:MariboDevs@212003298/pitchside@1409706237:environment:dev`, which is the form GitHub presented on 16 October and the one Entra matched |
 
-GitHub Actions repository variables (not secrets; none of these values is secret): `AZURE_CLIENT_ID`,
-`AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`. GitHub environments `dev` and `demo` exist for the workflow to
-target; WP-09 adds the required-reviewer rule on `demo`. The identity holds User Access Administrator on
-both resource groups because WP-09 step 4 creates role assignments from the pipeline; it is scoped to the two
-groups and nothing wider, and is accepted for the hackathon's lifetime.
+| Item | Value |
+| --- | --- |
+| Name | `id-pitchside-github-demo`, user-assigned managed identity in `rg-pitchside-demo`, deploys demo |
+| Resource id | `/subscriptions/1641c920-b05d-4921-8a24-029ca939893a/resourcegroups/rg-pitchside-demo/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-pitchside-github-demo` |
+| Client id | `dbb5d511-d79f-46b0-95fe-abac65e197a2` |
+| Principal id | `6194085b-f412-4d24-be66-27653eb132ba` |
+| Federated credentials | `github-env-demo`, subject `repo:MariboDevs/pitchside:environment:demo`, and `github-env-demo-id`, `repo:MariboDevs@212003298/pitchside@1409706237:environment:demo` |
+
+Both identities use issuer `https://token.actions.githubusercontent.com` and audience `api://AzureADTokenExchange`.
+
+GitHub Actions repository variables (not secrets; none of these values is secret): `AZURE_CLIENT_ID_DEV`,
+`AZURE_CLIENT_ID_DEMO` (which take precedence over the older `AZURE_CLIENT_ID`), `AZURE_TENANT_ID`,
+`AZURE_SUBSCRIPTION_ID`, `AZURE_LOCATION`. GitHub environments `dev` and `demo` exist for the workflow to
+target; WP-09 adds the required-reviewer rule on `demo`. The dev identity still holds User Access Administrator on
+`rg-pitchside-dev` from WP-09 step 4; the deploy workflow does not provision, so it is not needed by the workflow.
 
 ### Speech
 
@@ -155,11 +165,11 @@ renamed in the same branch. Build images from a checkout where `src/Pitchside.Ag
 | Capacity id | `2f03905a-f931-496e-8e8c-49485a21c5a5` |
 | Capacity administrator | mario@siphomaribodevs.onmicrosoft.com (the tenant's native member account); sipho@maribodevs.com has Admin through the Fabric administrator role |
 | Workspace | `pitchside-dev`, id `74e1627c-0077-4c79-a543-84c9af743169`, assigned to the trial capacity |
+| Workspace identity | created 22 October 2026; application id `686f8e13-f578-44b9-9f43-7576a7d3da8c`, service principal object id `93cc21dd-af55-4754-9f08-55c351f22b7d` (the dev azd environment's `FABRIC_WORKSPACE_PRINCIPAL_ID`) |
 
 The trial had to be started from the native account because sipho@maribodevs.com exists in the tenant as an
-external identity and Fabric reports it ineligible for a capacity trial. The trial ends around 13 December,
-after judging. WP-12 creates the paid F2 capacity (`fabric.bicep`) and moves the workspace to it; the trial
-is the dev capacity until then.
+external identity and Fabric reports it ineligible for a capacity trial. The trial stays the dev capacity until it ends
+around 13 December, after judging. `infra/modules/fabric.bicep` can add an F2 capacity, off by default.
 
 ## GitHub (MariboDevs/pitchside, internal repository, organisation on the Enterprise plan)
 
