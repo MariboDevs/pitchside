@@ -1,6 +1,7 @@
 # Plan
 
-Hacking period 6 to 27 October 2026. Internal submission target 25 October. Owners: Sipho (architecture and
+Hacking period 6 to 27 October 2026. Internal submission target 26 October (moved from 25 October on 22 October: the video can only be recorded
+on Sunday 25 October, in the afternoon). Owners: Sipho (architecture and
 build), Pretty (quality and evidence), Hlumela (product, pitch and submission).
 
 ## Week 1: 8 to 14 October. Engine, stats, skeleton
@@ -27,20 +28,23 @@ build), Pretty (quality and evidence), Hlumela (product, pitch and submission).
 | 20 Oct | Registration deadline. Cosmos DB, Speech recap | Deployed demo regression | Confirm registration complete for all three |
 | 21 Oct | Hardening, scale-to-zero, cost caps | Full regression on deployed demo | Video shot list final |
 
-## Week 3: 22 to 25 October. Polish, evidence, submit
+## Week 3: 22 to 26 October. Polish, evidence, submit
 
 | Day | Sipho | Pretty | Hlumela |
 | --- | --- | --- | --- |
-| 22 Oct | Bug fixes only | Calibration report and evaluation numbers into README | Record video takes |
-| 23 Oct | Bug fixes only | Final regression, judge-as-user walkthrough | Edit video, under two minutes |
-| 24 Oct | Freeze | Verify demo from a clean machine and a phone | Submission dry run |
-| 25 Oct | Repo public, submit | Confirm hosted demo up, credentials in form | Submit |
+| 22 Oct | Bug fixes only | Calibration report and evaluation numbers into README | Video script and shot list ([VIDEO.md](VIDEO.md)) |
+| 23 Oct | Bug fixes only; the WP-10 run against the real Speech resource | Final regression, judge-as-user walkthrough | Pitch text for the form |
+| 24 Oct | Freeze: the demo stays as filmed | Verify demo from a clean machine and a phone | Submission dry run |
+| 25 Oct | Restart the demo loop before recording; repo public | Confirm hosted demo up | Record the video in the afternoon |
+| 26 Oct | Fixes the judges would see only | Credentials in form | Edit the video, under two minutes, upload, submit |
 
-26 and 27 October are buffer. Nothing new lands after 25 October except a fix to something the judges would
+27 October is buffer; submissions close at 23:59 Pacific, 08:59 on 28 October in South Africa. Nothing new
+lands after 26 October except a fix to something the judges would
 see broken.
 
 ## Out of scope, decided
 
 - Auto-eventing from video. No footage, no time, and the rules do not require it.
-- Fabric Real-Time Intelligence, unless week 1 lands cleanly by 13 October.
+- Fabric Real-Time Intelligence, unless week 1 lands cleanly by 13 October. (It did: built as WP-12 and running
+  on dev since 22 October, see [FABRIC.md](FABRIC.md).)
 - Mobile apps. The overlay and control room are responsive web.
