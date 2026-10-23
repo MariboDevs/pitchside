@@ -45,10 +45,10 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Mcp:ApiKey` | | when set, the MCP tool `explain_moment` needs it in the `X-Pitchside-Key` header; user-secrets locally, a Key Vault reference in Azure, never in a file | WP-08 |
 | `Demo:AutoStart` | `false` | when on, the host starts the demo seed once it is up | WP-11 |
 | `Demo:Seed` | `26` | the demo seed, chosen by `demo-seed` and recorded in `docs/DEMO.md` | WP-11 |
-| `Demo:Speed` | `1.0` | the demo replay's speed; `1` is real time. The overlay scales its card timings (lead, airtime, the 45 s deadline) and its presentation clock by a replay's speed, so a card reads the same on screen at any speed (a replay's time scale is capped at 100, `StoredMatch.MaxTimeScale`). In Azure, `demoSpeed` in `main.demo.bicepparam` sets it (`3`) | WP-11 |
+| `Demo:Speed` | `1.0` | the demo replay's speed; `1` is real time. The overlay scales its card timings (lead, airtime, the 45 s deadline) and its presentation clock by a replay's speed, so a card reads the same on screen at any speed (a replay's time scale is capped at 100, `StoredMatch.MaxTimeScale`). In Azure, `demoSpeed` in `main.demo.bicepparam` sets it (`10`) | WP-11 |
 | `Demo:Loop` | `true` | with `Demo:AutoStart`, play the seed again under the next loop id (`MER-26-2`, `MER-26-3`) once a replay ends, however it ended; a loop id already stored (a restart) is skipped. `false` starts the seed once and leaves a stored match as it is | WP-11 |
 | `Demo:LoopPauseSeconds` | `120` | how long a finished demo match stays the latest one before the next loop starts | WP-11 |
-| `Demo:MaxLoops` | `1000` | the highest loop number tried | WP-11 |
+| `Demo:MaxLoops` | `1000` | the highest loop number tried; the loop stops there. In Azure, `demoMaxLoops` in `main.demo.bicepparam` sets it (`5000`: about 110 loops a day at speed 10 to 10 November) | WP-11 |
 | `Speech:Provider` | `None` | `None` (no recap; the recap endpoints answer 404 "Speech is off"), `Scripted` (one second of silent MP3, no network), `Azure` (Azure AI Speech, keyless) | WP-10 |
 | `Speech:Region` | | the Speech resource's region, such as `southafricanorth`; the REST endpoint is `https://{region}.tts.speech.microsoft.com` | WP-10 |
 | `Speech:ResourceId` | | the Speech resource's ARM id; the Entra ID token is sent as `aad#{resourceId}#{token}` | WP-10 |

@@ -61,6 +61,9 @@ param demoAutoStart bool
 @description('The demo replay\'s speed over real time; 1 is real time.')
 param demoSpeed string
 
+@description('The highest demo loop number started.')
+param demoMaxLoops int
+
 @description('Key Vault URI.')
 param keyVaultUri string
 
@@ -92,6 +95,7 @@ var baseSettings = [
   // WP-11: the demo loop. Kept here so a provision cannot drop it; the overlay scales its card timings by the speed.
   { name: 'Demo__AutoStart', value: string(demoAutoStart) }
   { name: 'Demo__Speed', value: demoSpeed }
+  { name: 'Demo__MaxLoops', value: string(demoMaxLoops) }
   { name: 'Agents__Provider', value: useFoundry ? 'Foundry' : 'Scripted' }
   // The app is public and calls paid services (Cosmos DB, Event Hubs) even with the scripted crew, so the usage
   // limits always apply here rather than following the crew's provider.
