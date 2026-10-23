@@ -42,8 +42,9 @@ The state of record, with the evidence for each row, is the
 - **Realism.** [The calibration report](docs/calibration/report.md) compares 5,000 simulated matches with the
   real league's averages: all 26 statistics are within tolerance. CI regenerates it and fails on drift.
 - **Every number cited.** [The evaluation report for MER-7](docs/evaluation/report-MER-7.md) is a run on the
-  Foundry deployments: 752 narratives from 34 moments and 1,412 model calls. The fact-checker verified 315, rejected
-  184, and 253 fell back to a template written by code, so no rejected sentence reaches a screen. Mean citation
+  Foundry deployments: 752 narratives from 34 moments and 1,412 model calls. The fact-checker verified 315 and rejected
+  184. The other 253 are fallbacks: a template written by code in place of a rejected text, or, for a translation
+  that could not be verified, the verified English. So no rejected sentence reaches a screen. Mean citation
   coverage is 0.994 and mean Foundry groundedness 0.702.
 - **The live demo.** Three consecutive demo loops on 23 October each had 1,537 events, the 29 moments in
   [docs/DEMO.md](docs/DEMO.md), 656 narratives written on Foundry (1 to 4 template fallbacks for the base card),
