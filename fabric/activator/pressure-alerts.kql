@@ -4,7 +4,9 @@
 // marks the stronger spells. Unlike the moment, it does not stand down when the side scores in the window.
 //
 // Each row is one shot, published within the lookback, that brought its side to 4 or more shots in the window.
-// Activator keys the rows on matchId and teamId and alerts on each new row. PressureAlertParityTests in
+// Activator polls every minute over a longer lookback, so it sees the same row on several polls: it keys its object
+// on alertId (one per qualifying shot) and alerts when the condition first becomes true for that object, so each
+// shot sends one alert, not one per poll. PressureAlertParityTests in
 // tests/Pitchside.Fabric.Tests fails if windowMs differs from SustainedPressureRule.WindowMs.
 .create-or-alter function with (folder = "pitchside/alerts", docstring = "Shots that bring a side to 4 shots in 3 minutes") PressureAlerts(lookback: timespan = 30m) {
     let windowMs = 180000;
@@ -25,6 +27,6 @@
     | where earlierSeq <= seq and earlierClockMs >= clockMs - windowMs
     | summarize shotsInWindow = count() by matchId, teamId, period, seq, clockMs, wallTimeUtc, publishedUtc
     | where shotsInWindow >= shotThreshold
-    | extend matchMinute = (period - 1) * 45 + clockMs / 60000 + 1
+    | extend matchMinute = (period - 1) * 45 + clockMs / 60000 + 1, alertId = strcat(matchId, ":", seq)
     | order by publishedUtc asc
 }

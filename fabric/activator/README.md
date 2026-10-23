@@ -31,11 +31,12 @@ then makes the rule rebuildable by Create Item with that definition.
    ```
 
 3. Run the query **every 1 minute**.
-4. Object: **Pressure spell**, keyed by `matchId` and `teamId` (Activator joins two columns into one key when you
-   choose both). Properties: `shotsInWindow`, `matchMinute`, `seq`.
-5. Rule **Pressure alert**: condition **on every new event** of the object where `shotsInWindow` is greater than or
-   equal to `4`. Every row the query returns already meets it; the condition repeats the threshold so the rule
-   reads on its own.
+4. Object: **Pressure spell**, keyed by **`alertId`** (`<matchId>:<seq>`, one per qualifying shot). Properties:
+   `shotsInWindow`, `matchMinute`, `matchId`, `teamId`.
+5. Rule **Pressure alert** on the object's `shotsInWindow`: condition **is greater than or equal to `4`**, firing
+   **when it becomes true** (not on every event). The query runs every minute over a 10-minute lookback, so one
+   shot comes back on up to ten polls; keyed on `alertId`, the condition becomes true once per shot, so each shot
+   sends one email. A rule on every event (the first version) sent one email per poll.
 6. Action: an email (or a Teams message) to the demo owner. Headline: `Pressure alert`. Message:
    `Side {teamId} has {shotsInWindow} shots in 3 minutes (match {matchId}, minute {matchMinute}).` Every value is a
    column of the query: numbers from code.
