@@ -8,5 +8,12 @@ namespace Pitchside.Contracts;
 /// </summary>
 public sealed record StoredMatch(MatchDocument Document, MatchStatus Status, int LastSeq, DateTimeOffset CreatedUtc, double TimeScale = 1)
 {
+    /// <summary>
+    /// The largest time scale stored: a replay faster than this plays a match in about a minute, so its cards gain
+    /// nothing from a longer scale, and the scaled 45 s expiry (4.5 million ms) keeps the int match clock far from
+    /// overflowing.
+    /// </summary>
+    public const double MaxTimeScale = 100;
+
     public string MatchId => Document.MatchId;
 }

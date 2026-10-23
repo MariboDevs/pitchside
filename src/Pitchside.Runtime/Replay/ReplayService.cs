@@ -80,7 +80,7 @@ public sealed partial class ReplayService(
             var match = MatchLoops.As(MatchSimulator.Simulate(seed), matchId);
             // The time scale is stored with the match, so the overlay reads it back after a restart; an instant replay's
             // cards are laid out as a record, at real-time lengths.
-            var stored = new StoredMatch(match.Document, MatchStatus.Scheduled, 0, time.GetUtcNow(), speed > 0 ? speed : 1);
+            var stored = new StoredMatch(match.Document, MatchStatus.Scheduled, 0, time.GetUtcNow(), speed > 0 ? Math.Min(speed, StoredMatch.MaxTimeScale) : 1);
             if (!await store.TryCreateMatchAsync(stored, cancellationToken).ConfigureAwait(false))
             {
                 throw new ReplayConflictException($"{matchId} is already stored; a match id is replayed once per store.");

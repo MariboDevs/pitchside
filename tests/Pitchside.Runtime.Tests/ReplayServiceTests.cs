@@ -217,6 +217,16 @@ public sealed class ReplayServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_replay_faster_than_the_largest_time_scale_stores_the_largest()
+    {
+        // The API accepts any finite speed; at 50,000 the scaled 45 s expiry alone would overflow the int match clock.
+        var started = await Replays.StartAsync(114, 50_000, CancellationToken.None);
+
+        (await Store.GetMatchAsync(started.MatchId, CancellationToken.None))!.TimeScale.ShouldBe(StoredMatch.MaxTimeScale);
+        Replays.Stop(started.MatchId);
+    }
+
+    [Fact]
     public void A_jump_at_half_time_skips_the_break_when_the_next_moment_follows_the_restart()
     {
         // Seed 4208's first second-half moment comes nine seconds after the restart, inside the jump's lead, so the

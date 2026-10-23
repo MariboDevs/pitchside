@@ -196,6 +196,19 @@ public sealed class OverlaySchedulerTests
     }
 
     [Fact]
+    public void At_the_largest_time_scale_a_late_card_still_fits_the_match_clock()
+    {
+        // A period's clock runs past 50 minutes with stoppage time; a deadline and a full-length card there must stay
+        // positive ints.
+        var late = Fixture.At(Goal.Moment, 3_000_000, Goal.Moment.Priority);
+        OverlayScheduler.DeadlineFor(late, StoredMatch.MaxTimeScale).ShouldBeGreaterThan(late.ClockMs);
+        var entry = OverlayScheduler.Schedule([], late, Fixture.NarrativeFor(late, 40), Goal.Sheet, Fixture.Document, ApprovalMode.Auto, scale: StoredMatch.MaxTimeScale)
+            .ShouldHaveSingleItem();
+        entry.OutAtMs.ShouldBeGreaterThan(entry.InAtMs);
+        entry.State.ShouldBe(OverlayState.Scheduled);
+    }
+
+    [Fact]
     public void At_three_times_real_time_a_card_ready_a_minute_after_its_moment_still_airs()
     {
         // Twenty real seconds to write the card are sixty seconds of match time at speed 3: past the real-time
