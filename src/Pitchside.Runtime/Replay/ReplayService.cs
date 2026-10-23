@@ -38,14 +38,9 @@ public sealed partial class ReplayService(
     // still being played from the bus after its run is gone. One entry per replay, and a match id replays once.
     private readonly ConcurrentDictionary<string, bool> _instant = new(StringComparer.Ordinal);
 
-    // Kept after a run ends for the same reason: a card can be written after the last event is out.
-    private readonly ConcurrentDictionary<string, double> _speeds = new(StringComparer.Ordinal);
-
     public IReadOnlyCollection<string> Running => [.. _runs.Keys];
 
     public bool IsInstant(string matchId) => _instant.TryGetValue(matchId, out var instant) && instant;
-
-    public double TimeScale(string matchId) => _speeds.TryGetValue(matchId, out var speed) && speed > 0 ? speed : 1;
 
     public Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken) =>
         StartAsync(seed, speed, MatchLoops.First, cancellationToken);
@@ -83,7 +78,9 @@ public sealed partial class ReplayService(
             }
 
             var match = MatchLoops.As(MatchSimulator.Simulate(seed), matchId);
-            var stored = new StoredMatch(match.Document, MatchStatus.Scheduled, 0, time.GetUtcNow());
+            // The time scale is stored with the match, so the overlay reads it back after a restart; an instant replay's
+            // cards are laid out as a record, at real-time lengths.
+            var stored = new StoredMatch(match.Document, MatchStatus.Scheduled, 0, time.GetUtcNow(), speed > 0 ? speed : 1);
             if (!await store.TryCreateMatchAsync(stored, cancellationToken).ConfigureAwait(false))
             {
                 throw new ReplayConflictException($"{matchId} is already stored; a match id is replayed once per store.");
@@ -92,7 +89,6 @@ public sealed partial class ReplayService(
             // The run learns its events and moments before it publishes, so a jump can find the next moment.
             run.Load(match.Events, MatchMoments.Detect(match.Document, match.Events));
             _instant[matchId] = speed == 0;
-            _speeds[matchId] = speed;
             run.Completion = Task.Run(() => PublishAsync(run, match.Events, speed), CancellationToken.None);
             LogStarted(matchId, seed, speed);
             return new ReplayStarted(matchId, seed, speed, match.Events.Count);

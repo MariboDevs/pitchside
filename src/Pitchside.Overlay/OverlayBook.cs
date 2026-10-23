@@ -38,8 +38,9 @@ public sealed class OverlayBook
     /// Restores a match's timeline from storage after a restart. Entries already in the book win, since they are newer.
     /// A restored card's deadline comes from its moment, never from its stored start, which may have moved; a card
     /// stored as scheduled past that deadline can only have been aired by the producer, so it keeps that override.
+    /// <paramref name="scale"/> is the match's stored time scale, the one its cards were laid out with.
     /// </summary>
-    public void Load(string matchId, IReadOnlyList<OverlayEntry> stored, IReadOnlyList<Moment> moments)
+    public void Load(string matchId, IReadOnlyList<OverlayEntry> stored, IReadOnlyList<Moment> moments, double scale = 1)
     {
         ArgumentNullException.ThrowIfNull(stored);
         ArgumentNullException.ThrowIfNull(moments);
@@ -55,8 +56,8 @@ public sealed class OverlayBook
                 }
 
                 var deadline = byId.TryGetValue(entry.MomentId, out var moment)
-                    ? OverlayScheduler.DeadlineFor(moment)
-                    : entry.InAtMs - OverlayScheduler.LeadMs + OverlayScheduler.MaxDelayMs;
+                    ? OverlayScheduler.DeadlineFor(moment, scale)
+                    : entry.InAtMs - OverlayScheduler.Scaled(OverlayScheduler.LeadMs, scale) + OverlayScheduler.Scaled(OverlayScheduler.MaxDelayMs, scale);
                 match.Deadlines.TryAdd(entry.Id, entry.State == OverlayState.Scheduled && entry.InAtMs > deadline ? int.MaxValue : deadline);
             }
 

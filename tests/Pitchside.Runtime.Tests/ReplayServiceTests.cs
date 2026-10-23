@@ -205,14 +205,13 @@ public sealed class ReplayServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_replay_runs_at_its_speed_in_time_scale_and_an_instant_or_unknown_match_at_one()
+    public async Task A_replay_stores_its_speed_as_the_match_time_scale_and_an_instant_one_stores_one()
     {
         var fast = await Replays.StartAsync(112, 3, CancellationToken.None);
         var instant = await Replays.StartAsync(113, 0, CancellationToken.None);
 
-        Replays.TimeScale(fast.MatchId).ShouldBe(3);
-        Replays.TimeScale(instant.MatchId).ShouldBe(1);
-        Replays.TimeScale("MER-404").ShouldBe(1);
+        (await Store.GetMatchAsync(fast.MatchId, CancellationToken.None))!.TimeScale.ShouldBe(3);
+        (await Store.GetMatchAsync(instant.MatchId, CancellationToken.None))!.TimeScale.ShouldBe(1);
         Replays.Stop(fast.MatchId);
         Replays.Stop(instant.MatchId);
     }

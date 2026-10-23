@@ -39,7 +39,7 @@ public sealed class MatchSnapshots(IMatchStore store, IRequiredActor<MatchSuperv
             [.. narratives.Where(n => NarrativeAudience.Receives(viewer, n))],
             entries,
             overlay.Mode(matchId),
-            overlay.TimeScale(matchId));
+            match.TimeScale);
     }
 
     /// <summary>

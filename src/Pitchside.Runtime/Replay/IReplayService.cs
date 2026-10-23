@@ -35,11 +35,4 @@ public interface IReplayService
     /// still true after its events are all published, while its actor works through them.
     /// </summary>
     bool IsInstant(string matchId);
-
-    /// <summary>
-    /// How many milliseconds of match time pass per real millisecond while the match plays: its replay speed, or 1 for
-    /// a match that is not replayed here or is replayed as fast as possible (whose cards are laid out as a record).
-    /// The overlay scales its card timings by it, so a card reads the same on screen at any speed.
-    /// </summary>
-    double TimeScale(string matchId) => 1;
 }

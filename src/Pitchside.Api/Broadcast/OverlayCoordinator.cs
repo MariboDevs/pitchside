@@ -46,8 +46,7 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         await SerialAsync(narrative.MatchId, async () =>
         {
             var readyClock = await ReadyClockAsync(narrative.MatchId, moment, cancellationToken).ConfigureAwait(false);
-            var scale = replays.TimeScale(narrative.MatchId);
-            await WriteAsync(book.Schedule(moment, narrative, sheet, match.Document, readyClock, scale), cancellationToken).ConfigureAwait(false);
+            await WriteAsync(book.Schedule(moment, narrative, sheet, match.Document, readyClock, match.TimeScale), cancellationToken).ConfigureAwait(false);
             return 0;
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -87,7 +86,7 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
 
     public async Task<OverlayEntry?> AirAsync(string matchId, string entryId, CancellationToken cancellationToken)
     {
-        if (await store.GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false) is null)
+        if (await store.GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false) is not { } match)
         {
             return null;
         }
@@ -95,7 +94,7 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         return await SerialAsync(matchId, async () =>
         {
             var state = await LiveStateAsync(matchId, cancellationToken).ConfigureAwait(false);
-            var written = book.Air(matchId, entryId, Math.Max(1, state.Period), state.ClockMs, replays.TimeScale(matchId));
+            var written = book.Air(matchId, entryId, Math.Max(1, state.Period), state.ClockMs, match.TimeScale);
             await WriteAsync(written, cancellationToken).ConfigureAwait(false);
             return written.LastOrDefault(e => e.Id == entryId);
         }, cancellationToken).ConfigureAwait(false);
@@ -110,9 +109,6 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         }, cancellationToken).ConfigureAwait(false);
 
     public ApprovalMode Mode(string matchId) => book.Mode(matchId);
-
-    /// <summary>The match's time scale, by which its card timings are scaled (<see cref="OverlayScheduler"/>).</summary>
-    public double TimeScale(string matchId) => replays.TimeScale(matchId);
 
     /// <summary>Every entry, with scheduled ones whose out time has passed reading as aired.</summary>
     public async Task<IReadOnlyList<OverlayEntry>> EntriesAsync(string matchId, CancellationToken cancellationToken)
@@ -173,7 +169,8 @@ public sealed class OverlayCoordinator(OverlayBook book, IMatchStore store, IMat
         {
             var stored = await store.GetOverlayEntriesAsync(matchId, cancellationToken).ConfigureAwait(false);
             var moments = await store.GetMomentsAsync(matchId, cancellationToken).ConfigureAwait(false);
-            book.Load(matchId, stored, moments);
+            var match = await store.GetMatchAsync(matchId, cancellationToken).ConfigureAwait(false);
+            book.Load(matchId, stored, moments, match?.TimeScale ?? 1);
         }
     }
 
