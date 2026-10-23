@@ -92,6 +92,7 @@
 .race-chart {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   height: 100%;
 }
 
@@ -202,6 +203,9 @@
 }
 
 .preview-bar {
+  // A light focus ring: the default research blue is under 3:1 on this ink.
+  --color-focus-ring: var(--brand-300);
+
   position: fixed;
   top: 1.25vh;
   right: 1.25vh;

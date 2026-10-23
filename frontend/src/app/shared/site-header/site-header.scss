@@ -10,6 +10,9 @@
 
 // Ink on paper: the instrument strip across the top of every app route, so the surfaces are one tap away.
 .site {
+  // A light focus ring: the default research blue is under 3:1 on ink.
+  --color-focus-ring: var(--brand-300);
+
   background: color-mix(in srgb, var(--color-ink) 96%, transparent);
   backdrop-filter: blur(8px);
   color: var(--color-on-ink);
@@ -121,6 +124,10 @@
 .match {
   grid-area: match;
   justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--inverse-rule);
   border-radius: var(--radius-chip);
