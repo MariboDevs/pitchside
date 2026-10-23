@@ -1,37 +1,86 @@
 <main class="page">
-  <header class="masthead">
-    <p class="eyebrow label-caps">Meridian League</p>
-    <h1 class="title page-title">Pitchside</h1>
-    <p class="lede">
-      Live match intelligence where every number comes from code and every sentence cites it.
-    </p>
-  </header>
+  <div class="top">
+    <header class="masthead">
+      <p class="eyebrow label-caps">Meridian League · live match intelligence</p>
+      <h1 class="title page-title">Pitchside</h1>
+      <p class="lede">
+        Live match intelligence where every number comes from code and every sentence cites it.
+      </p>
+    </header>
 
-  <section class="panel" aria-labelledby="start-heading">
-    <h2 id="start-heading" class="panel-title">Start a replay</h2>
-    <form class="start" [formGroup]="form" (ngSubmit)="start()">
-      <label class="field">
-        <span>Seed</span>
-        <input class="input tabular" type="number" min="1" formControlName="seed" />
-      </label>
-      <label class="field">
-        <span>Speed</span>
-        <input class="input tabular" type="number" min="0" step="0.5" formControlName="speed" />
-      </label>
-      <button class="btn btn--ink" type="submit" [disabled]="starting() || form.invalid">
-        Start replay
-      </button>
-    </form>
-    @if (error(); as message) {
-      <p class="alert" role="alert">{{ message }}</p>
-    }
-  </section>
+    <section class="starter sheet" aria-labelledby="start-heading">
+      <h2 id="start-heading" class="sheet-title">Start a replay</h2>
+      <form class="start" [formGroup]="form" (ngSubmit)="start()">
+        <label class="field">
+          <span>Seed</span>
+          <input class="input tabular" type="number" min="1" formControlName="seed" />
+        </label>
+        <label class="field">
+          <span>Speed <span class="hint">× real time</span></span>
+          <input class="input tabular" type="number" min="0" step="0.5" formControlName="speed" />
+        </label>
+        <button class="btn btn--ink" type="submit" [disabled]="starting() || form.invalid">
+          {{ starting() ? 'Starting' : 'Start replay' }}
+        </button>
+      </form>
+      @if (error(); as message) {
+        <p class="alert" role="alert">{{ message }}</p>
+      }
+    </section>
+  </div>
 
-  <section class="panel" aria-labelledby="matches-heading">
-    <h2 id="matches-heading" class="panel-title">Matches</h2>
-    @if (matches(); as list) {
-      @if (list.length === 0) {
+  @if (live().length > 0) {
+    <section class="section" aria-labelledby="live-heading">
+      <h2 id="live-heading" class="section-title">On air</h2>
+      <ul class="live">
+        @for (match of live(); track match.matchId) {
+          <li class="feature" data-testid="match-row">
+            <div class="feature-head">
+              <span class="pill pill--on-ink">{{ match.status }}</span>
+              <span class="feature-id tabular">{{ match.matchId }}</span>
+            </div>
+            <div class="fixture">
+              <span class="club">
+                <app-monogram [club]="match.document.home.club" size="md" />
+                <span class="club-name">{{ match.document.home.club.name }}</span>
+              </span>
+              <span class="versus" aria-hidden="true">v</span>
+              <span class="club club--away">
+                <span class="club-name">{{ match.document.away.club.name }}</span>
+                <app-monogram [club]="match.document.away.club" size="md" />
+              </span>
+            </div>
+            <nav class="feature-links" [attr.aria-label]="'Open ' + match.matchId">
+              <a class="btn btn--light" [routerLink]="['/viewer', match.matchId]">Viewer</a>
+              <a class="btn btn--on-ink" [routerLink]="['/control', match.matchId]">Control room</a>
+              <a
+                class="btn btn--on-ink"
+                [routerLink]="['/overlay', match.matchId]"
+                [queryParams]="{ aspect: '16x9', preview: '1' }"
+                >Overlay</a
+              >
+              <button class="btn btn--on-ink" type="button" (click)="copyOverlay(match.matchId)">
+                {{ copied() === match.matchId ? 'Copied' : 'Open in OBS' }}
+              </button>
+            </nav>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="section" aria-labelledby="matches-heading">
+    <h2 id="matches-heading" class="section-title">
+      Matches
+      @if (others(); as list) {
+        <span class="count tabular">{{ list.length }}</span>
+      }
+    </h2>
+    @if (others(); as list) {
+      @if (list.length === 0 && live().length === 0) {
         <p class="muted">No matches yet. Start a replay above.</p>
+      } @else if (list.length === 0) {
+        <p class="muted">Only the match on air so far.</p>
       } @else {
         <ul class="matches">
           @for (match of list; track match.matchId) {
@@ -43,19 +92,23 @@
                 >
                 <app-monogram [club]="match.document.away.club" size="sm" />
               </div>
-              <span [class]="statusTone(match.status)">{{ match.status }}</span>
+              <div class="meta">
+                <span class="match-id tabular">{{ match.matchId }}</span>
+                <time class="when tabular" [attr.datetime]="match.createdUtc">{{
+                  match.createdUtc | date: 'd MMM, HH:mm'
+                }}</time>
+                <span [class]="statusTone(match.status)">{{ match.status }}</span>
+              </div>
               <nav class="links" [attr.aria-label]="'Open ' + match.matchId">
-                <a class="btn btn--ghost" [routerLink]="['/viewer', match.matchId]">Viewer</a>
-                <a class="btn btn--ghost" [routerLink]="['/control', match.matchId]"
-                  >Control room</a
-                >
+                <a class="link" [routerLink]="['/viewer', match.matchId]">Viewer</a>
+                <a class="link" [routerLink]="['/control', match.matchId]">Control room</a>
                 <a
-                  class="btn btn--ghost"
+                  class="link"
                   [routerLink]="['/overlay', match.matchId]"
-                  [queryParams]="{ aspect: '16x9' }"
+                  [queryParams]="{ aspect: '16x9', preview: '1' }"
                   >Overlay</a
                 >
-                <button class="btn btn--ghost" type="button" (click)="copyOverlay(match.matchId)">
+                <button class="link" type="button" (click)="copyOverlay(match.matchId)">
                   {{ copied() === match.matchId ? 'Copied' : 'Open in OBS' }}
                 </button>
               </nav>

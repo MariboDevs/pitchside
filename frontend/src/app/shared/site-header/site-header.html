@@ -1,0 +1,38 @@
+@if (!hidden()) {
+  <header class="site" data-testid="site-header">
+    <div class="inner">
+      <a class="brand" routerLink="/" aria-label="Pitchside, all matches">
+        <span class="mark" aria-hidden="true">P</span>
+        <span class="words">
+          <span class="name">Pitchside</span>
+          <span class="league label-caps">Meridian League</span>
+        </span>
+      </a>
+
+      @if (matchId(); as id) {
+        <nav class="surfaces" aria-label="Match surfaces">
+          @for (s of surfaces; track s.path) {
+            <a
+              class="tab"
+              [routerLink]="['/', s.path, id]"
+              [queryParams]="s.query ?? null"
+              routerLinkActive="tab--on"
+              ariaCurrentWhenActive="page"
+              >{{ s.label }}</a
+            >
+          }
+        </nav>
+        <span class="match tabular" data-testid="header-match">{{ id }}</span>
+      }
+
+      <a
+        class="all"
+        routerLink="/"
+        routerLinkActive="all--on"
+        [routerLinkActiveOptions]="{ exact: true }"
+        ariaCurrentWhenActive="page"
+        >All matches</a
+      >
+    </div>
+  </header>
+}

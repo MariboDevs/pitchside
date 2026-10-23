@@ -15,6 +15,13 @@
   vector-effect: non-scaling-stroke;
 }
 
+.half {
+  stroke: var(--color-panel-highlight);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
 .area--home {
   fill: color-mix(in srgb, var(--home) 20%, transparent);
 }

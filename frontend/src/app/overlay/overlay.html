@@ -1,6 +1,7 @@
 <div
   class="stage"
   [class.stage--vertical]="vertical()"
+  [class.stage--preview]="previewing()"
   [style.--safe]="safeArea()"
   data-testid="overlay-stage"
 >
@@ -24,12 +25,27 @@
     }
 
     @if (series().length > 1) {
-      <app-xg-race
-        class="race"
-        [document]="doc"
-        [series]="series()"
-        [orientation]="vertical() ? 'vertical' : 'horizontal'"
-      />
+      <div class="race" data-testid="xg-panel">
+        <div
+          class="race-key"
+          [style.--home]="doc.home.club.primaryColour"
+          [style.--away]="doc.away.club.primaryColour"
+        >
+          <span class="race-title">xG</span>
+          <span class="race-side race-side--home tabular"
+            >{{ doc.home.club.shortName }} {{ xg().home }}</span
+          >
+          <span class="race-side race-side--away tabular"
+            >{{ doc.away.club.shortName }} {{ xg().away }}</span
+          >
+        </div>
+        <app-xg-race
+          class="race-chart"
+          [document]="doc"
+          [series]="series()"
+          [orientation]="vertical() ? 'vertical' : 'horizontal'"
+        />
+      </div>
     }
 
     <div class="lower" [class.lower--full]="card()?.fullWidth">
@@ -48,3 +64,31 @@
     </div>
   }
 </div>
+
+@if (previewing()) {
+  <nav class="preview-bar" aria-label="Overlay preview" data-testid="overlay-preview">
+    <a class="preview-btn" routerLink="/">Matches</a>
+    <a class="preview-btn" [routerLink]="['/control', matchId()]">Control room</a>
+    <span class="preview-aspect" role="group" aria-label="Aspect ratio">
+      <a
+        class="preview-btn"
+        [class.preview-btn--on]="!vertical()"
+        [routerLink]="[]"
+        [queryParams]="{ aspect: '16x9' }"
+        queryParamsHandling="merge"
+        >16:9</a
+      >
+      <a
+        class="preview-btn"
+        [class.preview-btn--on]="vertical()"
+        [routerLink]="[]"
+        [queryParams]="{ aspect: '9x16' }"
+        queryParamsHandling="merge"
+        >9:16</a
+      >
+    </span>
+    <button class="preview-btn preview-btn--ink" type="button" (click)="copyBroadcastUrl()">
+      {{ copied() ? 'Copied' : 'Copy OBS URL' }}
+    </button>
+  </nav>
+}

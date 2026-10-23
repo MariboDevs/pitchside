@@ -1,0 +1,177 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+}
+
+// Ink on paper: the instrument strip across the top of every app route, sticky so the surfaces are one tap away.
+.site {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--color-ink) 96%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--color-on-ink);
+  box-shadow: inset 0 -1px 0 var(--inverse-rule);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'brand match all'
+    'tabs tabs tabs';
+  align-items: center;
+  gap: 0 var(--space-4);
+  max-width: 88rem;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.brand {
+  grid-area: brand;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 3.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-chip);
+  background: var(--color-on-ink);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.words {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.league {
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--color-on-panel-muted);
+}
+
+.surfaces {
+  grid-area: tabs;
+  display: flex;
+  gap: var(--space-1);
+  margin: 0 calc(-1 * var(--space-4));
+  padding: 0 var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: inset 0 1px 0 var(--inverse-rule);
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  color: var(--color-on-panel-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--duration-control);
+
+  &:hover {
+    color: var(--color-on-ink);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto var(--space-3) 0;
+    height: 2px;
+    background: transparent;
+    transition: background-color var(--duration-control);
+  }
+}
+
+.tab--on {
+  color: var(--color-on-ink);
+
+  &::after {
+    background: var(--color-on-ink);
+  }
+}
+
+.match {
+  grid-area: match;
+  justify-self: end;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--inverse-rule);
+  border-radius: var(--radius-chip);
+  color: var(--color-on-panel);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.all {
+  grid-area: all;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--color-on-panel-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover,
+  &.all--on {
+    color: var(--color-on-ink);
+  }
+}
+
+@include bp.from('sm') {
+  .inner {
+    padding-inline: var(--space-8);
+  }
+
+  .surfaces {
+    margin-inline: calc(-1 * var(--space-8));
+    padding-inline: var(--space-8);
+  }
+}
+
+// One row from tablet up: brand, the tabs beside it, the match id and the way back on the right.
+@include bp.from('md') {
+  .inner {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: 'brand tabs match all';
+  }
+
+  .surfaces {
+    align-self: stretch;
+    margin: 0 0 0 var(--space-4);
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .tab {
+    min-height: 3.5rem;
+  }
+}

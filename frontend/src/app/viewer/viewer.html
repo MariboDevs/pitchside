@@ -9,6 +9,9 @@
         [period]="session.clock().period"
         [clockMs]="session.clock().clockMs"
       />
+      <h1 class="fixture">
+        {{ doc.home.club.name }} <span class="versus">v</span> {{ doc.away.club.name }}
+      </h1>
       @if (session.connection() !== 'live') {
         <span class="pill pill--waiting" role="status">{{ session.connection() }}</span>
       }
@@ -24,10 +27,14 @@
 
     <div class="body">
       <section class="pitch-panel" aria-label="Pitch">
+        <p class="caption label-caps">
+          Pitch <span aria-hidden="true">·</span> {{ doc.home.club.shortName }} attack to the right
+        </p>
         <app-pitch [document]="doc" [events]="session.events()" />
       </section>
 
       <section class="controls" aria-label="Viewing mode">
+        <p class="caption label-caps">Your view</p>
         <app-segmented-control
           label="Persona"
           [options]="personas"
@@ -103,6 +110,7 @@
       }
 
       <section class="cards" aria-label="Latest moments" aria-live="polite">
+        <p class="caption label-caps">Latest moments</p>
         @for (card of cards(); track card.id) {
           <app-lower-third
             class="card"
