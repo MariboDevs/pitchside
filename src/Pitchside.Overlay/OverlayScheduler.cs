@@ -8,7 +8,9 @@ namespace Pitchside.Overlay;
 /// narrative is ready. One lower third at a time: a higher priority pre-empts the card on screen (its out time is cut
 /// and the new card starts after the exit animation, pushing queued cards back), a lower or equal priority takes the
 /// first gap at or after its start that fits it with the exit gap, and a card that would start more than 45 s after
-/// its moment expires, however often it is moved. Pure and deterministic.
+/// its moment expires, however often it is moved. Those times are seen on screen, so on a replay faster than real
+/// time each is multiplied by the time scale (match milliseconds per real millisecond) to give the match-clock times
+/// the timeline is kept in. Pure and deterministic.
 /// </summary>
 public static class OverlayScheduler
 {
@@ -18,6 +20,9 @@ public static class OverlayScheduler
     public const int PerWordMs = 250;
     public const int CapMs = 12_000;
     public const int MaxDelayMs = 45_000;
+
+    /// <summary>A real-time span as match-clock milliseconds at <paramref name="scale"/>.</summary>
+    public static int Scaled(int realMs, double scale) => (int)Math.Round(realMs * scale);
 
     /// <summary>
     /// The entries to write: the new one, and any existing ones it moved. The card starts <see cref="LeadMs"/> after
@@ -33,14 +38,15 @@ public static class OverlayScheduler
         MatchDocument document,
         ApprovalMode mode,
         int? readyClockMs = null,
-        IReadOnlyDictionary<string, int>? deadlines = null)
+        IReadOnlyDictionary<string, int>? deadlines = null,
+        double scale = 1)
     {
         ArgumentNullException.ThrowIfNull(existing);
         ArgumentNullException.ThrowIfNull(moment);
         ArgumentNullException.ThrowIfNull(narrative);
 
-        var duration = DurationFor(narrative.RenderedText);
-        var inAt = Math.Max(moment.ClockMs, readyClockMs ?? moment.ClockMs) + LeadMs;
+        var duration = Scaled(DurationFor(narrative.RenderedText), scale);
+        var inAt = Math.Max(moment.ClockMs, readyClockMs ?? moment.ClockMs) + Scaled(LeadMs, scale);
         var candidate = new OverlayEntry
         {
             Id = IdFor(moment.Id, OverlayLayer.LowerThird),
@@ -63,14 +69,14 @@ public static class OverlayScheduler
             return [candidate with { State = OverlayState.Held }];
         }
 
-        return Place(existing, candidate, DeadlineFor(moment), deadlines ?? new Dictionary<string, int>());
+        return Place(existing, candidate, DeadlineFor(moment, scale), deadlines ?? new Dictionary<string, int>(), scale);
     }
 
-    /// <summary>The latest start a moment's card may have: <see cref="MaxDelayMs"/> after the moment.</summary>
-    public static int DeadlineFor(Moment moment)
+    /// <summary>The latest start a moment's card may have: <see cref="MaxDelayMs"/> of real time after the moment.</summary>
+    public static int DeadlineFor(Moment moment, double scale = 1)
     {
         ArgumentNullException.ThrowIfNull(moment);
-        return moment.ClockMs + MaxDelayMs;
+        return moment.ClockMs + Scaled(MaxDelayMs, scale);
     }
 
     /// <summary>
@@ -81,12 +87,13 @@ public static class OverlayScheduler
     /// pre-empts: it moves nothing.
     /// </summary>
     public static IReadOnlyList<OverlayEntry> Place(
-        IReadOnlyList<OverlayEntry> existing, OverlayEntry candidate, int deadline, IReadOnlyDictionary<string, int> deadlines)
+        IReadOnlyList<OverlayEntry> existing, OverlayEntry candidate, int deadline, IReadOnlyDictionary<string, int> deadlines, double scale = 1)
     {
         ArgumentNullException.ThrowIfNull(existing);
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(deadlines);
 
+        var exit = Scaled(ExitMs, scale);
         var desired = candidate.InAtMs;
         var duration = candidate.OutAtMs - candidate.InAtMs;
         var line = existing
@@ -97,16 +104,16 @@ public static class OverlayScheduler
         var onScreen = line.FirstOrDefault(e => e.InAtMs <= desired && desired < e.OutAtMs);
 
         int inAt;
-        if (onScreen is not null && candidate.Priority > onScreen.Priority && desired + ExitMs <= deadline)
+        if (onScreen is not null && candidate.Priority > onScreen.Priority && desired + exit <= deadline)
         {
             changed.Add(onScreen with { OutAtMs = desired });
-            inAt = desired + ExitMs;
+            inAt = desired + exit;
             var cursor = inAt + duration;
             foreach (var queued in line.Where(e => e.InAtMs > desired))
             {
                 var length = queued.OutAtMs - queued.InAtMs;
-                var start = Math.Max(queued.InAtMs, cursor + ExitMs);
-                var limit = deadlines.TryGetValue(queued.Id, out var known) ? known : queued.InAtMs - LeadMs + MaxDelayMs;
+                var start = Math.Max(queued.InAtMs, cursor + exit);
+                var limit = deadlines.TryGetValue(queued.Id, out var known) ? known : queued.InAtMs - Scaled(LeadMs, scale) + Scaled(MaxDelayMs, scale);
                 var moved = queued with
                 {
                     InAtMs = start,
@@ -123,7 +130,7 @@ public static class OverlayScheduler
         }
         else
         {
-            inAt = FirstFit(line, desired, duration);
+            inAt = FirstFit(line, desired, duration, exit);
         }
 
         changed.Add(candidate with
@@ -140,22 +147,22 @@ public static class OverlayScheduler
     /// with the exit gap on both sides. Narratives finish out of order, so a card can arrive after a later moment's
     /// card is already placed; it takes the free gap at its own moment rather than queuing behind the whole period.
     /// </summary>
-    private static int FirstFit(List<OverlayEntry> line, int desired, int duration)
+    private static int FirstFit(List<OverlayEntry> line, int desired, int duration, int exit)
     {
         var start = desired;
         foreach (var placed in line)
         {
-            if (placed.OutAtMs + ExitMs <= start)
+            if (placed.OutAtMs + exit <= start)
             {
                 continue;
             }
 
-            if (start + duration + ExitMs <= placed.InAtMs)
+            if (start + duration + exit <= placed.InAtMs)
             {
                 break;
             }
 
-            start = Math.Max(start, placed.OutAtMs + ExitMs);
+            start = Math.Max(start, placed.OutAtMs + exit);
         }
 
         return start;

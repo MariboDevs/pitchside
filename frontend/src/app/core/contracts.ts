@@ -268,6 +268,8 @@ export interface MatchSnapshot {
   narratives: Narrative[];
   overlayEntries: OverlayEntry[];
   approvalMode: ApprovalMode;
+  /** Match milliseconds per real millisecond while the match plays: its replay speed, 1 in real time. */
+  timeScale?: number;
 }
 
 export interface ViewerPreferences {

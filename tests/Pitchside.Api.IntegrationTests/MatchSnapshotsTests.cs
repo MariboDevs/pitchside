@@ -47,6 +47,29 @@ public sealed class MatchSnapshotsTests
     }
 
     [Fact]
+    public async Task A_replayed_match_keeps_its_time_scale_after_a_restart()
+    {
+        // A match replayed at three times real time has card windows three times as long on the match clock. After a
+        // restart nothing in memory remembers the replay, so the snapshot must read the scale from the stored match,
+        // or the overlay's presentation clock stops before the full-time card's out time and the card never leaves.
+        await using var factory = new PitchsideApiFactory();
+        var store = factory.Services.GetRequiredService<IMatchStore>();
+        var match = MatchSimulator.Simulate(45);
+        await store.TryCreateMatchAsync(new StoredMatch(match.Document, MatchStatus.Completed, 30, DateTimeOffset.UnixEpoch, TimeScale: 3), CancellationToken.None);
+
+        using var system = ActorSystem.Create("time-scale-test");
+        var supervisor = new FixedRequiredActor<MatchSupervisorActor>(system.ActorOf(Props.Create(() => new SilentActor())));
+        var restarted = new OverlayCoordinator(
+            new OverlayBook(), store, factory.Services.GetRequiredService<IMatchBroadcaster>(), supervisor, factory.Services.GetRequiredService<IReplayService>());
+        var snapshot = await new MatchSnapshots(store, supervisor, restarted)
+            .BuildAsync(match.Document.MatchId, new ViewerPreferences(Personas.Base, Languages.English), CancellationToken.None);
+
+        snapshot.ShouldNotBeNull();
+        snapshot.TimeScale.ShouldBe(3);
+        await system.Terminate();
+    }
+
+    [Fact]
     public async Task A_live_fact_sheet_read_falls_back_to_the_latest_stored_sheet()
     {
         await using var factory = new PitchsideApiFactory();

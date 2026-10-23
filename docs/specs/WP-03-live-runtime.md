@@ -70,7 +70,7 @@ Documents, each its own C# record and each its own Cosmos container, partition k
 
 | Container | Document | Id |
 | --- | --- | --- |
-| `matches` | `MatchDocument` plus `status`, `lastSeq`, `createdUtc` | `matchId` |
+| `matches` | `MatchDocument` plus `status`, `lastSeq`, `createdUtc`, `timeScale` (the replay speed, 1 in real time; WP-05 scales card timings by it) | `matchId` |
 | `events` | `MatchEvent` | `{matchId}-{seq:00000}` |
 | `factsheets` | `FactSheet` snapshots at every moment's `factSheetSeq` and every 60 s of clock | `{matchId}-{asOfSeq:00000}` |
 | `moments` | `Moment` | moment id |

@@ -8,8 +8,9 @@ Everything filmed is the hosted demo the judges will open, so what the video sho
 
 1. **Clean screen.** A fresh browser profile with no bookmarks bar, no other tabs, no extensions in view and no
    mail or chat windows. Nothing on screen but Pitchside, the Azure portal, the Aspire dashboard and Fabric.
-2. **Start a fresh loop.** The demo plays `MER-26` (Thornbury FC 2, Meridian Wanderers 2) on repeat, about
-   1 hour 53 minutes per loop: 47 minutes, a 15-minute break, 48 minutes, then a 2-minute pause. Ask a local
+2. **Start a fresh loop.** The demo plays `MER-26` (Thornbury FC 2, Meridian Wanderers 2) on repeat at three
+   times real time (`demoSpeed`), about 39 minutes per loop: 16 minutes, a 5-minute break, 16 minutes, then a
+   2-minute pause. Ask a local
    session to restart the demo API just before recording; the next loop (`MER-26-<n>`) kicks off within about
    15 seconds, so every moment below falls at a known time.
 3. **Open the three screens** for the new match id: the viewer (`/viewer/<matchId>`), the control room
@@ -21,18 +22,18 @@ Everything filmed is the hosted demo the judges will open, so what the video sho
 
 ## Moments to film
 
-From `docs/DEMO.md`. "After kick-off" is real time on a fresh loop, with the 15-minute break included.
+From `docs/DEMO.md`. "After kick-off" is real time on a fresh loop at speed 3, with the 5-minute break included.
 
 | Moment | Match clock | After kick-off |
 | --- | --- | --- |
 | Kick-off | 1H 00:00 | 0:00 |
-| Goal, Meridian Wanderers 0-1 | 1H 07:18 | 7:18 |
-| Goal, Thornbury FC 1-1 | 1H 12:00 | 12:00 |
-| Goal, Thornbury FC 2-1 | 1H 31:36 | 31:36 |
-| Half time | 1H 47:02 | 47:02 |
-| Big chance missed, Milan Montero | 2H 09:38 | 71:40 |
-| Penalty and goal, Meridian Wanderers 2-2 | 2H 22:57 | 84:59 |
-| Full time and the spoken recap | 2H 48:19 | 110:21 |
+| Goal, Meridian Wanderers 0-1 | 1H 07:18 | 2:26 |
+| Goal, Thornbury FC 1-1 | 1H 12:00 | 4:00 |
+| Goal, Thornbury FC 2-1 | 1H 31:36 | 10:32 |
+| Half time | 1H 47:02 | 15:41 |
+| Big chance missed, Milan Montero | 2H 09:38 | 23:53 |
+| Penalty and goal, Meridian Wanderers 2-2 | 2H 22:57 | 28:20 |
+| Full time and the spoken recap | 2H 48:19 | 36:47 |
 
 ## Script (115 seconds)
 

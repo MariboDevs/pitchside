@@ -128,6 +128,10 @@ renderer replaying the match can place entries identically.
 **Scheduler** (`Pitchside.Overlay`, code, runs in the API after a narrative is verified):
 
 - A lower third shows for `6 s + 0.25 s per word` capped at 12 s, starting 2 s after the narrative is ready.
+- Those spans, the 45 s expiry and the exit gap are what a viewer sees on screen, so on a replay faster than real
+  time they are multiplied by the replay's speed (its time scale, match milliseconds per real millisecond) before
+  they are laid on the match clock. The join snapshot carries the time scale, and the overlay's presentation clock
+  runs at it between events. Real time and an instant replay have a scale of 1.
 - One lower third at a time. A higher-priority moment pre-empts: the current entry's `outAtMs` is cut to
   now and the new one starts after the exit animation. Lower priority queues and expires if it would start
   more than 45 s after its moment.

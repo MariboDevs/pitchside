@@ -182,6 +182,46 @@ public sealed class OverlaySchedulerTests
     }
 
     [Fact]
+    public void At_three_times_real_time_a_card_keeps_its_real_time_lead_airtime_and_deadline()
+    {
+        // At speed 3 the match clock runs three times as fast, so every match-clock span is three times as long and
+        // the card reads on screen exactly as it does in real time.
+        var ready = Goal.Moment.ClockMs + 7_000;
+        var entry = OverlayScheduler.Schedule([], Goal.Moment, Fixture.NarrativeFor(Goal.Moment, 10), Goal.Sheet, Fixture.Document, ApprovalMode.Auto, ready, scale: 3)
+            .ShouldHaveSingleItem();
+
+        entry.InAtMs.ShouldBe(ready + 6_000);
+        (entry.OutAtMs - entry.InAtMs).ShouldBe(25_500);
+        OverlayScheduler.DeadlineFor(Goal.Moment, 3).ShouldBe(Goal.Moment.ClockMs + 135_000);
+    }
+
+    [Fact]
+    public void At_the_largest_time_scale_a_late_card_still_fits_the_match_clock()
+    {
+        // A period's clock runs past 50 minutes with stoppage time; a deadline and a full-length card there must stay
+        // positive ints.
+        var late = Fixture.At(Goal.Moment, 3_000_000, Goal.Moment.Priority);
+        OverlayScheduler.DeadlineFor(late, StoredMatch.MaxTimeScale).ShouldBeGreaterThan(late.ClockMs);
+        var entry = OverlayScheduler.Schedule([], late, Fixture.NarrativeFor(late, 40), Goal.Sheet, Fixture.Document, ApprovalMode.Auto, scale: StoredMatch.MaxTimeScale)
+            .ShouldHaveSingleItem();
+        entry.OutAtMs.ShouldBeGreaterThan(entry.InAtMs);
+        entry.State.ShouldBe(OverlayState.Scheduled);
+    }
+
+    [Fact]
+    public void At_three_times_real_time_a_card_ready_a_minute_after_its_moment_still_airs()
+    {
+        // Twenty real seconds to write the card are sixty seconds of match time at speed 3: past the real-time
+        // deadline, but inside the scaled one.
+        var ready = Goal.Moment.ClockMs + 60_000;
+        var narrative = Fixture.NarrativeFor(Goal.Moment, 10);
+        OverlayScheduler.Schedule([], Goal.Moment, narrative, Goal.Sheet, Fixture.Document, ApprovalMode.Auto, ready)
+            .ShouldHaveSingleItem().State.ShouldBe(OverlayState.Expired);
+        OverlayScheduler.Schedule([], Goal.Moment, narrative, Goal.Sheet, Fixture.Document, ApprovalMode.Auto, ready, scale: 3)
+            .ShouldHaveSingleItem().State.ShouldBe(OverlayState.Scheduled);
+    }
+
+    [Fact]
     public void Approve_mode_holds_new_cards()
     {
         Place([], Goal.Moment, mode: ApprovalMode.Approve).Single().State.ShouldBe(OverlayState.Held);

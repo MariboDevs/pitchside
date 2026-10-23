@@ -66,7 +66,7 @@ The keys are documented in [docs/CONFIGURATION.md](../docs/CONFIGURATION.md).
 
 | App | Settings |
 | --- | --- |
-| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `UsageGuard__Enabled=true`, `UsageGuard__ForwardedHops=2`, `Speech__Provider=Azure`, `Speech__Region`, `Speech__ResourceId`, `Speech__BlobServiceUri`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
+| api | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, `Storage__Provider=Cosmos`, `Storage__Cosmos__AccountEndpoint`, `Storage__Cosmos__Database`, `Bus__Provider=EventHubs`, `Bus__EventHubs__Namespace`, `Bus__EventHubs__HubName`, `Bus__EventHubs__CheckpointBlobUri`, `Pitchside__RunAgentsInApi=true`, `Demo__AutoStart` and `Demo__Speed` (on and `3` in demo, off and `1` in dev), `UsageGuard__Enabled=true`, `UsageGuard__ForwardedHops=2`, `Speech__Provider=Azure`, `Speech__Region`, `Speech__ResourceId`, `Speech__BlobServiceUri`, `Agents__Provider` (`Foundry` when an endpoint is given, else `Scripted`); with an endpoint also `Foundry__Endpoint`, `Foundry__Deployments__Fast`, `Foundry__Deployments__Quality`, `Evaluation__Provider=Foundry`; `Mcp__ApiKey` from Key Vault when enabled |
 | agents | `AZURE_CLIENT_ID`, `OTEL_SERVICE_NAME`, the `Bus__*` settings, `UsageGuard__Enabled=true`, the `Speech__*` settings, `Agents__Provider`, and the `Foundry__*` settings when an endpoint is given |
 | web | `API_HOST`, the API's FQDN, which nginx proxies to over HTTPS |
 
@@ -88,6 +88,7 @@ the environment, so `azd env set NAME value` (or `export NAME=value` for a hand 
 | `FOUNDRY_RESOURCE_ID` | `foundryResourceId` | the id of `ais-pitchside-dev`, so the app identities get Cognitive Services OpenAI User on it; set it empty to grant no role |
 | `PITCHSIDE_ALERT_EMAILS` | `alertEmails`, comma-separated | empty: no action group, alerts show in the portal only |
 | `PITCHSIDE_MCP_KEY_FROM_VAULT` | `mcpApiKeyFromKeyVault` | `false` |
+| `PITCHSIDE_DEMO_SPEED` | `demoSpeed` (demo only) | `3`: the demo loop plays at three times real time, about 38 minutes a loop. `1` is real time |
 | `FABRIC_WORKSPACE_PRINCIPAL_ID` | `fabricWorkspacePrincipalId` | empty: no role. The object id of the Fabric workspace identity, so the Eventstream reads the hub without a key |
 | `PITCHSIDE_FABRIC_CAPACITY` | `fabricCapacity` | `false`. `true` creates the F2 capacity, which starts running: pause it at once |
 | `PITCHSIDE_FABRIC_ADMINS` | `fabricCapacityAdministrators`, comma-separated | empty; at least one is required when the capacity is created |

@@ -38,8 +38,9 @@ public sealed class OverlayBook
     /// Restores a match's timeline from storage after a restart. Entries already in the book win, since they are newer.
     /// A restored card's deadline comes from its moment, never from its stored start, which may have moved; a card
     /// stored as scheduled past that deadline can only have been aired by the producer, so it keeps that override.
+    /// <paramref name="scale"/> is the match's stored time scale, the one its cards were laid out with.
     /// </summary>
-    public void Load(string matchId, IReadOnlyList<OverlayEntry> stored, IReadOnlyList<Moment> moments)
+    public void Load(string matchId, IReadOnlyList<OverlayEntry> stored, IReadOnlyList<Moment> moments, double scale = 1)
     {
         ArgumentNullException.ThrowIfNull(stored);
         ArgumentNullException.ThrowIfNull(moments);
@@ -55,8 +56,8 @@ public sealed class OverlayBook
                 }
 
                 var deadline = byId.TryGetValue(entry.MomentId, out var moment)
-                    ? OverlayScheduler.DeadlineFor(moment)
-                    : entry.InAtMs - OverlayScheduler.LeadMs + OverlayScheduler.MaxDelayMs;
+                    ? OverlayScheduler.DeadlineFor(moment, scale)
+                    : entry.InAtMs - OverlayScheduler.Scaled(OverlayScheduler.LeadMs, scale) + OverlayScheduler.Scaled(OverlayScheduler.MaxDelayMs, scale);
                 match.Deadlines.TryAdd(entry.Id, entry.State == OverlayState.Scheduled && entry.InAtMs > deadline ? int.MaxValue : deadline);
             }
 
@@ -64,8 +65,11 @@ public sealed class OverlayBook
         }
     }
 
-    /// <summary>Schedules a verified narrative and returns every entry that was written.</summary>
-    public IReadOnlyList<OverlayEntry> Schedule(Moment moment, Narrative narrative, FactSheet sheet, MatchDocument document, int? readyClockMs = null)
+    /// <summary>
+    /// Schedules a verified narrative and returns every entry that was written. <paramref name="scale"/> is the match's
+    /// time scale (see <see cref="OverlayScheduler"/>).
+    /// </summary>
+    public IReadOnlyList<OverlayEntry> Schedule(Moment moment, Narrative narrative, FactSheet sheet, MatchDocument document, int? readyClockMs = null, double scale = 1)
     {
         ArgumentNullException.ThrowIfNull(moment);
         var match = Match(moment.MatchId);
@@ -76,8 +80,8 @@ public sealed class OverlayBook
                 return [];
             }
 
-            var changed = OverlayScheduler.Schedule([.. match.Entries.Values], moment, narrative, sheet, document, match.Mode, readyClockMs, match.Deadlines);
-            match.Deadlines[OverlayScheduler.IdFor(moment.Id, OverlayLayer.LowerThird)] = OverlayScheduler.DeadlineFor(moment);
+            var changed = OverlayScheduler.Schedule([.. match.Entries.Values], moment, narrative, sheet, document, match.Mode, readyClockMs, match.Deadlines, scale);
+            match.Deadlines[OverlayScheduler.IdFor(moment.Id, OverlayLayer.LowerThird)] = OverlayScheduler.DeadlineFor(moment, scale);
             foreach (var entry in changed)
             {
                 match.Entries[entry.Id] = entry;
@@ -108,7 +112,7 @@ public sealed class OverlayBook
     /// otherwise from the given clock, queuing behind or pre-empting what is on the line. The producer chose to air
     /// it, so it never expires, however often a later card moves it. Returns every entry written, the released card last, or nothing if it was not held.
     /// </summary>
-    public IReadOnlyList<OverlayEntry> Air(string matchId, string entryId, int period, int clockMs)
+    public IReadOnlyList<OverlayEntry> Air(string matchId, string entryId, int period, int clockMs, double scale = 1)
     {
         var match = Match(matchId);
         lock (match)
@@ -119,10 +123,10 @@ public sealed class OverlayBook
             }
 
             var length = entry.OutAtMs - entry.InAtMs;
-            var start = entry.Period == period && entry.InAtMs > clockMs ? entry.InAtMs : clockMs + OverlayScheduler.LeadMs;
+            var start = entry.Period == period && entry.InAtMs > clockMs ? entry.InAtMs : clockMs + OverlayScheduler.Scaled(OverlayScheduler.LeadMs, scale);
             var candidate = entry with { State = OverlayState.Scheduled, Period = period, InAtMs = start, OutAtMs = start + length };
             match.Deadlines[entryId] = int.MaxValue;
-            var changed = OverlayScheduler.Place([.. match.Entries.Values], candidate, int.MaxValue, match.Deadlines);
+            var changed = OverlayScheduler.Place([.. match.Entries.Values], candidate, int.MaxValue, match.Deadlines, scale);
             foreach (var written in changed)
             {
                 match.Entries[written.Id] = written;

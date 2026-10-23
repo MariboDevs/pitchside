@@ -204,6 +204,44 @@ public sealed class ReplayServiceTests : IAsyncLifetime
         Replays.Stop(started.MatchId);
     }
 
+    [Fact]
+    public async Task A_replay_stores_its_speed_as_the_match_time_scale_and_an_instant_one_stores_one()
+    {
+        var fast = await Replays.StartAsync(112, 3, CancellationToken.None);
+        var instant = await Replays.StartAsync(113, 0, CancellationToken.None);
+
+        (await Store.GetMatchAsync(fast.MatchId, CancellationToken.None))!.TimeScale.ShouldBe(3);
+        (await Store.GetMatchAsync(instant.MatchId, CancellationToken.None))!.TimeScale.ShouldBe(1);
+        Replays.Stop(fast.MatchId);
+        Replays.Stop(instant.MatchId);
+    }
+
+    [Fact]
+    public async Task A_replay_faster_than_the_largest_time_scale_stores_the_largest()
+    {
+        // The API accepts any finite speed; at 50,000 the scaled 45 s expiry alone would overflow the int match clock.
+        var started = await Replays.StartAsync(114, 50_000, CancellationToken.None);
+
+        (await Store.GetMatchAsync(started.MatchId, CancellationToken.None))!.TimeScale.ShouldBe(StoredMatch.MaxTimeScale);
+        Replays.Stop(started.MatchId);
+    }
+
+    [Fact]
+    public void A_jump_at_half_time_skips_the_break_when_the_next_moment_follows_the_restart()
+    {
+        // Seed 4208's first second-half moment comes nine seconds after the restart, inside the jump's lead, so the
+        // last event ten seconds before it is the half-time whistle, which is already out.
+        var match = MatchSimulator.Simulate(4208);
+        var next = MatchMoments.Detect(match.Document, match.Events).First(m => m.Period == 2);
+        next.ClockMs.ShouldBeLessThan((int)ReplayService.JumpLead.TotalMilliseconds);
+        var firstHalf = match.Events.Count(e => e.Period == 1);
+
+        var target = ReplayService.JumpTarget(match.Events, firstHalf, next.TriggerSeq);
+
+        match.Events[target].Period.ShouldBe(2);
+        match.Events[target].Seq.ShouldBeLessThanOrEqualTo(next.TriggerSeq);
+    }
+
     private static async Task WaitFor(Func<Task<bool>> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
