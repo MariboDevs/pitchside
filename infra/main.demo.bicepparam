@@ -17,6 +17,9 @@ param runAgentsInApi = true
 // The judged demo plays seed 26 on a loop at ten times real time: about 13 minutes a loop instead of 1 h 53.
 param demoAutoStart = true
 param demoSpeed = readEnvironmentVariable('PITCHSIDE_DEMO_SPEED', '10')
+// A loop is about 13 minutes at speed 10, about 110 a day: 5,000 outlasts the hosting period to 10 November (about
+// 2,100 loops from 23 October) with room for the loops already stored.
+param demoMaxLoops = 5000
 
 param foundryEndpoint = readEnvironmentVariable('FOUNDRY_ENDPOINT', 'https://ais-pitchside-dev.openai.azure.com/')
 param foundryFastDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_FAST', 'pitchside-fast')
