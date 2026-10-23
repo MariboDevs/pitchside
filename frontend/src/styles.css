@@ -51,6 +51,12 @@ html.overlay-route body {
   background: transparent;
 }
 
+/* The overlay previewed in the app, not in a mixer: a studio ground in place of the programme feed. */
+html.overlay-route.overlay-preview,
+html.overlay-route.overlay-preview body {
+  background: #0e0e0d;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-text-strong);
@@ -161,6 +167,27 @@ html.overlay-route body {
   color: var(--color-link);
 }
 
+/* On an ink card: a paper button that leads, and quiet outlined ones beside it. */
+.btn--light {
+  background: var(--color-on-ink);
+  border-color: var(--color-on-ink);
+  color: var(--color-ink);
+}
+
+.btn--light:hover:not(:disabled) {
+  background: var(--neutral-100);
+}
+
+.btn--on-ink {
+  border-color: var(--inverse-rule);
+  color: var(--color-on-ink);
+}
+
+.btn--on-ink:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.08);
+  border-color: var(--neutral-600);
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -259,4 +286,31 @@ html.overlay-route body {
   height: 0.4375rem;
   border-radius: var(--radius-dot);
   background: currentColor;
+}
+
+/* Live on an ink ground: the recording red lifted so it holds contrast on near-black. */
+.pill--on-ink {
+  color: var(--color-live-on-ink);
+  border-color: var(--color-live-on-ink);
+}
+
+.pill--on-ink::before {
+  content: '';
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: var(--radius-dot);
+  background: currentColor;
+  animation: on-air 1.6s ease-in-out infinite;
+}
+
+@keyframes on-air {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill--on-ink::before {
+    animation: none;
+  }
 }

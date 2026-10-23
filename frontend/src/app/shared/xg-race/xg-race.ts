@@ -22,6 +22,11 @@ export class XgRace {
   protected readonly width = computed(() => (this.orientation() === 'horizontal' ? 1000 : 120));
   protected readonly height = computed(() => (this.orientation() === 'horizontal' ? 120 : 1000));
 
+  /** Where half time falls along the race, so a viewer can read the minute without an axis. */
+  protected readonly halfTime = computed(
+    () => (45 / MINUTES) * (this.orientation() === 'horizontal' ? this.width() : this.height()),
+  );
+
   private readonly scale = computed(() => {
     const max = Math.max(
       1,

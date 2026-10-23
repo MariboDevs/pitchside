@@ -4,9 +4,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-10);
-  max-width: 64rem;
+  max-width: 72rem;
   margin: 0 auto;
   padding: var(--space-10) var(--space-4) var(--space-10);
+}
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: end;
 }
 
 .masthead {
@@ -20,12 +27,12 @@
 }
 
 .title {
-  font-size: clamp(2.75rem, 1.6rem + 4.8vw, 4.5rem);
+  font-size: clamp(3rem, 1.6rem + 5.4vw, 5.5rem);
 }
 
 .lede {
   margin: 0;
-  max-width: 40rem;
+  max-width: 34rem;
   font-family: var(--font-display);
   font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
   line-height: 1.45;
@@ -33,41 +40,38 @@
   text-wrap: pretty;
 }
 
-.panel {
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--color-text-strong);
-}
-
-.panel-title {
-  margin: 0 0 var(--space-4);
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-  font-weight: 300;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  color: var(--color-text-strong);
+.starter {
+  padding: var(--space-6);
+  box-shadow:
+    0 1px 0 var(--color-edge-subtle),
+    0 12px 32px -20px rgb(22 22 21 / 0.25);
 }
 
 .start {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-3);
+  align-items: end;
+
+  .btn {
+    grid-column: 1 / -1;
+    min-height: var(--field-h);
+  }
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  flex: 1 1 8rem;
   min-width: 0;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-strong);
 }
 
-.start .btn {
-  min-height: var(--field-h);
+.hint {
+  font-weight: 400;
+  color: var(--color-text-muted);
 }
 
 .alert {
@@ -79,6 +83,109 @@
   color: var(--color-text-muted);
 }
 
+.section {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-text-strong);
+}
+
+.section-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--color-text-strong);
+}
+
+.count {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+// On air: each live match as an ink card, the instrument strip at feature size.
+.live {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature {
+  // A light focus ring: the default research blue is under 3:1 on ink.
+  --color-focus-ring: var(--brand-300);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(255 255 255 / 0.06), transparent 60%), var(--color-ink);
+  color: var(--color-on-ink);
+  box-shadow: 0 20px 40px -24px rgb(22 22 21 / 0.55);
+}
+
+.feature-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.feature-id {
+  font-size: 0.8125rem;
+  color: var(--color-on-panel-muted);
+}
+
+// Stacked on a phone, home over away; face to face across the card from tablet up.
+.fixture {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.club {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.club--away {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.club-name {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1rem + 1.2vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  overflow-wrap: break-word;
+}
+
+.versus {
+  display: none;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--color-on-panel-muted);
+}
+
+.feature-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+// The archive: a quiet ruled list, newest first.
 .matches {
   display: flex;
   flex-direction: column;
@@ -90,11 +197,16 @@
 
 .match {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
   align-items: center;
-  padding: var(--space-4) 0;
+  padding: var(--space-4) var(--space-2);
   border-bottom: 1px solid var(--color-edge-subtle);
+  transition: background-color var(--duration-control);
+
+  &:hover {
+    background: var(--color-surface);
+  }
 }
 
 .teams {
@@ -109,15 +221,57 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.1875rem;
   color: var(--color-text-strong);
 }
 
-.links {
-  grid-column: 1 / -1;
+.meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.match-id,
+.when {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+}
+
+// On touch the links take a real 44 px of height, so wrapped rows of them never overlap their tap areas.
+@media (pointer: coarse) {
+  .link {
+    min-height: 2.75rem;
+  }
 }
 
 @include bp.from('sm') {
@@ -126,12 +280,34 @@
   }
 }
 
-@include bp.from('lg') {
-  .match {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+@include bp.from('md') {
+  .fixture {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4);
   }
 
-  .links {
-    grid-column: auto;
+  .club--away {
+    flex-direction: row;
+    text-align: right;
+  }
+
+  .versus {
+    display: inline;
+  }
+
+  .live {
+    grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
+  }
+}
+
+@include bp.from('lg') {
+  .top {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+
+  .match {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: var(--space-6);
   }
 }

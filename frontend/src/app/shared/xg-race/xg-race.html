@@ -16,6 +16,7 @@
   data-testid="xg-race"
 >
   @if (orientation() === 'horizontal') {
+    <line class="half" [attr.x1]="halfTime()" y1="0" [attr.x2]="halfTime()" [attr.y2]="height()" />
     <line
       class="base"
       x1="0"
@@ -24,6 +25,7 @@
       [attr.y2]="height() / 2"
     />
   } @else {
+    <line class="half" x1="0" [attr.y1]="halfTime()" [attr.x2]="width()" [attr.y2]="halfTime()" />
     <line
       class="base"
       [attr.x1]="width() / 2"

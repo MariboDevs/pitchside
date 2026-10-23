@@ -3,9 +3,11 @@ import {
   Component,
   OnDestroy,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { toApiError } from '../core/api-error';
@@ -16,7 +18,7 @@ import { Monogram } from '../shared/monogram/monogram';
 /** The match list, a replay starter and the links to each match's three surfaces. */
 @Component({
   selector: 'app-home',
-  imports: [ReactiveFormsModule, RouterLink, Monogram],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, Monogram],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +32,23 @@ export class Home implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly starting = signal(false);
   readonly copied = signal<string | null>(null);
+
+  /** Matches newest first: what a judge opening the link wants is what is playing now. */
+  private readonly sorted = computed(() =>
+    [...(this.matches() ?? [])].sort((a, b) => b.createdUtc.localeCompare(a.createdUtc)),
+  );
+
+  /** On air: live or paused, featured above the list. */
+  readonly live = computed(() =>
+    this.sorted().filter((m) => m.status === 'live' || m.status === 'paused'),
+  );
+
+  /** Everything else, or null until the first load. */
+  readonly others = computed(() =>
+    this.matches() === null
+      ? null
+      : this.sorted().filter((m) => m.status !== 'live' && m.status !== 'paused'),
+  );
 
   readonly form = this.fb.nonNullable.group({
     seed: [7, [Validators.required, Validators.min(1)]],

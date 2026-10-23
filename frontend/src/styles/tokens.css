@@ -30,6 +30,7 @@
   --brand-300: #8fb0e0;
   --brand-600: #1d4a86;
   --brand-700: #163a6b;
+  --live-300: #f2876f;
   --live-600: #a33a26;
 
   /* Primitive: status */
@@ -60,6 +61,7 @@
   --color-ink-hover: var(--neutral-800);
   --color-on-ink: var(--neutral-0);
   --color-live: var(--live-600);
+  --color-live-on-ink: var(--live-300);
   --color-success: var(--green-700);
   --color-success-line: var(--green-300);
   --color-warning: var(--amber-700);

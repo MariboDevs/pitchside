@@ -19,6 +19,7 @@ It must look like a product a broadcaster would pay for, not a hackathon dashboa
 | Route | Audience | Purpose |
 | --- | --- | --- |
 | `/overlay/:matchId?aspect=16x9|9x16&persona=&lang=` | the vision mixer or OBS browser source | transparent background, graphics only, no chrome, no pointer events |
+| `/overlay/:matchId?preview=1` | anyone opening the overlay from the app | the same graphics on a studio backdrop, with a small toolbar (matches, control room, 16:9 or 9:16, copy the OBS URL); the URL given to a mixer never has it |
 | `/control/:matchId` | producer, judge | the control room: feed, fact sheet, moments, narratives with the citation chain, agent trace, approvals, usage |
 | `/viewer/:matchId` | fan | the second screen: pitch view, live cards in the chosen persona and language, player focus |
 | `/` | everyone | match list, start a replay, links to the three surfaces |
@@ -182,6 +183,16 @@ register with the screenshot paths.
   API mid-replay.
 - Every number on screen comes from a fact or an event; the frontend computes nothing but layout.
 - Transparent background means `html, body { background: transparent }` on the overlay route only.
+
+## Design pass: navigation and the overlay preview
+
+Added on 23 October after the owner's review ("make it look premium; the overlay page looks broken"). Every app route
+carries one ink header (`SiteHeader`): the wordmark back to the match list, and on a match route its three surfaces
+as tabs with the match id. The overlay route draws no header, because a broadcast page draws graphics only. The app
+opens the overlay with `?preview=1` instead, and without a feed behind it a transparent page looks broken in a
+browser. The xG race sits on a panel like every other graphic, with a key (the label and each side's xG from the
+fact sheet) and a half-time tick. A 16:9 overlay on a portrait screen gives the lower third the full safe width. The
+home page features matches on air above the list, newest first.
 
 ## Contract change: loop match ids
 

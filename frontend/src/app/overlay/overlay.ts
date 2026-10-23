@@ -8,9 +8,11 @@ import {
   effect,
   inject,
   input,
+  signal,
 } from '@angular/core';
 import { OverlayEntry } from '../core/contracts';
-import { numberOf } from '../core/format';
+import { RouterLink } from '@angular/router';
+import { findFact, formatFact, numberOf } from '../core/format';
 import { MatchSession } from '../core/match-session';
 import { LowerThird, LowerThirdChip } from '../shared/lower-third/lower-third';
 import { MomentumRibbon } from '../shared/momentum-ribbon/momentum-ribbon';
@@ -27,10 +29,12 @@ interface ClockPosition {
  * The broadcast overlay for a vision mixer or an OBS browser source: a transparent page with graphics only. It
  * draws the lower third the timeline has on air at the match clock, the score bug, the momentum ribbon and the xG
  * race. `?at=2:1322000` pins the clock to a period and millisecond, so a replay places entries identically.
+ * `?preview=1`, which the app's own links add, sets the graphics on a studio backdrop with a small toolbar; the
+ * URL a mixer is given leaves it off, so the broadcast page stays transparent and chrome-free.
  */
 @Component({
   selector: 'app-overlay',
-  imports: [LowerThird, MomentumRibbon, ScoreBug, XgRace],
+  imports: [LowerThird, MomentumRibbon, RouterLink, ScoreBug, XgRace],
   templateUrl: './overlay.html',
   styleUrl: './overlay.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,6 +50,27 @@ export class Overlay implements OnInit, OnDestroy {
   readonly lang = input<string | undefined>();
   readonly safe = input<string | undefined>();
   readonly at = input<string | undefined>();
+  readonly preview = input<string | undefined>();
+
+  protected readonly previewing = computed(() => this.preview() === '1');
+  protected readonly copied = signal(false);
+
+  /** The URL a vision mixer or OBS is given: this preview's rendering options, without its backdrop and toolbar. */
+  protected readonly broadcastUrl = computed(() => {
+    const query = new URLSearchParams({ aspect: this.vertical() ? '9x16' : '16x9' });
+    for (const [key, value] of [
+      ['persona', this.persona()],
+      ['lang', this.lang()],
+      ['safe', this.safe()],
+      ['at', this.at()],
+    ] as const) {
+      if (value) {
+        query.set(key, value);
+      }
+    }
+
+    return `${location.origin}/overlay/${this.matchId()}?${query}`;
+  });
 
   protected readonly vertical = computed(() => this.aspect() === '9x16');
   protected readonly safeArea = computed(() => {
@@ -79,6 +104,23 @@ export class Overlay implements OnInit, OnDestroy {
   private readonly pointAtClock = computed(() =>
     this.pinned() ? this.series().at(-1) : undefined,
   );
+
+  /** Each side's xG as the race's key shows it: the fact sheet's value live, the series' when pinned. */
+  protected readonly xg = computed(() => {
+    const point = this.pointAtClock();
+    if (point) {
+      return {
+        home: (point.values['home.xg'] ?? 0).toFixed(2),
+        away: (point.values['away.xg'] ?? 0).toFixed(2),
+      };
+    }
+
+    const sheet = this.session.factSheet();
+    return {
+      home: formatFact(findFact(sheet, 'home.xg')),
+      away: formatFact(findFact(sheet, 'away.xg')),
+    };
+  });
 
   protected readonly score = computed(() => {
     const point = this.pointAtClock();
@@ -161,8 +203,22 @@ export class Overlay implements OnInit, OnDestroy {
     });
   }
 
+  async copyBroadcastUrl(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.broadcastUrl());
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2000);
+    } catch {
+      window.prompt('Copy this URL into OBS', this.broadcastUrl());
+    }
+  }
+
   ngOnInit(): void {
     this.document.documentElement.classList.add('overlay-route');
+    if (this.previewing()) {
+      this.document.documentElement.classList.add('overlay-preview');
+    }
+
     void this.session.connect(this.matchId(), {
       persona: this.persona() ?? 'base',
       language: this.lang() ?? 'en',
@@ -170,6 +226,6 @@ export class Overlay implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.document.documentElement.classList.remove('overlay-route');
+    this.document.documentElement.classList.remove('overlay-route', 'overlay-preview');
   }
 }

@@ -32,12 +32,68 @@
   width: 100%;
 }
 
+// The xG race on its own panel, like every other graphic, so it reads over any frame: a key (the label and each
+// side's figure) and the chart beside it.
 .race {
   position: absolute;
   left: var(--safe);
   right: var(--safe);
-  bottom: calc(var(--safe) + 13vh);
+  bottom: calc(var(--safe) + 15vh);
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
   height: 6vh;
+  padding: 0.3em 0.8em;
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  box-shadow: inset 0 0 0 1px var(--color-panel-highlight);
+}
+
+.race-key {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  flex: none;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.race-title {
+  padding-right: 0.7em;
+  border-right: 1px solid var(--color-panel-highlight);
+  color: var(--color-on-panel-muted);
+  letter-spacing: 0.08em;
+}
+
+.race-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-on-panel-strong);
+
+  &::before {
+    content: '';
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: var(--radius-dot);
+    box-shadow: 0 0 0 1px var(--color-panel-highlight);
+  }
+}
+
+.race-side--home::before {
+  background: var(--home);
+}
+
+.race-side--away::before {
+  background: var(--away);
+}
+
+.race-chart {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
 }
 
 .lower {
@@ -72,12 +128,174 @@
     right: var(--safe);
     top: 18vh;
     bottom: 30vh;
+    flex-direction: column;
     width: 10vw;
     height: auto;
+    padding: 0.6em 0.3em;
+  }
+
+  // A narrow column has room for the label only; the chart carries the race.
+  .race-key {
+    flex-direction: column;
+  }
+
+  .race-title {
+    padding: 0 0 0.3em;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-panel-highlight);
+  }
+
+  .race-side {
+    display: none;
+  }
+
+  .race-chart {
+    width: 100%;
+    height: auto;
+    flex: 1;
   }
 
   .lower {
     width: calc(100vw - 2 * var(--safe));
+  }
+}
+
+// A 16:9 overlay on a portrait screen, such as a phone opening the link: the card takes the full safe width so its
+// text is not squeezed into a sliver, and the race's key gives the chart the room.
+@media (orientation: portrait) {
+  .stage:not(.stage--vertical) {
+    .lower {
+      width: calc(100vw - 2 * var(--safe));
+    }
+
+    // The card wraps its chips under the text here, so the race sits higher to clear it.
+    .race {
+      bottom: calc(var(--safe) + 25vh);
+    }
+
+    .race-side {
+      display: none;
+    }
+  }
+}
+
+// Preview only: a studio backdrop with faint pitch markings stands in for the programme feed.
+.stage--preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 17vh,
+      rgb(255 255 255 / 0.06) 17vh,
+      rgb(255 255 255 / 0.06) calc(17vh + 2px),
+      transparent calc(17vh + 2px)
+    ),
+    linear-gradient(
+      to right,
+      transparent calc(50% - 1px),
+      rgb(255 255 255 / 0.06) calc(50% - 1px),
+      rgb(255 255 255 / 0.06) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    radial-gradient(120% 90% at 50% 0%, #2b2b28 0%, #151514 55%, #0b0b0a 100%);
+}
+
+.preview-bar {
+  // A light focus ring: the default research blue is under 3:1 on this ink.
+  --color-focus-ring: var(--brand-300);
+
+  position: fixed;
+  top: 1.25vh;
+  right: 1.25vh;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100vw - 2.5vh);
+  padding: var(--space-1);
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--neutral-950) 82%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-panel-highlight);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-text);
+  opacity: 0.72;
+  transition: opacity var(--duration-control);
+
+  &:hover,
+  &:focus-within {
+    opacity: 1;
+  }
+}
+
+// A narrow screen has no corner to spare: the toolbar becomes a strip above the stage, which moves down under it.
+@media (max-width: 48rem) {
+  .stage--preview {
+    top: 3.25rem;
+  }
+
+  .preview-bar {
+    top: 0;
+    right: 0;
+    left: 0;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    max-width: none;
+    min-height: 3.25rem;
+    padding: 0 var(--space-2);
+    overflow-x: auto;
+    border-radius: 0;
+    opacity: 1;
+    scrollbar-width: none;
+  }
+
+  .preview-bar .preview-btn {
+    padding: 0 0.5rem;
+  }
+}
+
+.preview-aspect {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.preview-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--neutral-200);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(255 255 255 / 0.08);
+    color: var(--neutral-0);
+  }
+}
+
+.preview-btn--on {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--neutral-0);
+}
+
+.preview-btn--ink {
+  background: var(--neutral-0);
+  color: var(--neutral-900);
+
+  &:hover {
+    background: var(--neutral-100);
+    color: var(--neutral-900);
   }
 }
 
