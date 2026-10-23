@@ -35,9 +35,7 @@ public sealed class DemoAutoStartTests
         var replays = new ScriptedReplays(new HashSet<int>(), runningChecks: int.MaxValue);
         using var service = Service(replays, new DemoOptions { AutoStart = true, Seed = 26, Loop = true, LoopPauseSeconds = 0, MaxLoops = 3 });
 
-        await service.StartAsync(CancellationToken.None);
-        await Task.Delay(TimeSpan.FromMilliseconds(300));
-        await service.StopAsync(CancellationToken.None);
+        await ObserveAfterFirstStart(service, replays);
 
         replays.Started.ShouldBe(["MER-26"]);
     }
@@ -49,9 +47,7 @@ public sealed class DemoAutoStartTests
         var replays = new ScriptedReplays(new HashSet<int>(), runningChecks: 0, storedAs: MatchStatus.Live);
         using var service = Service(replays, new DemoOptions { AutoStart = true, Seed = 26, Loop = true, LoopPauseSeconds = 0, MaxLoops = 3 });
 
-        await service.StartAsync(CancellationToken.None);
-        await Task.Delay(TimeSpan.FromMilliseconds(300));
-        await service.StopAsync(CancellationToken.None);
+        await ObserveAfterFirstStart(service, replays);
 
         replays.Started.ShouldBe(["MER-26"]);
     }
@@ -84,6 +80,23 @@ public sealed class DemoAutoStartTests
         using var service = Service(replays, options);
         await service.StartAsync(CancellationToken.None);
         await service.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
+    /// Starts the service, waits for its first loop however slow the machine (a fixed delay raced it on CI), then gives a
+    /// second loop the same window it would need to start before stopping.
+    /// </summary>
+    private static async Task ObserveAfterFirstStart(DemoAutoStart service, ScriptedReplays replays)
+    {
+        await service.StartAsync(CancellationToken.None);
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (replays.Started.IsEmpty && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(20));
+        }
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300));
+        await service.StopAsync(CancellationToken.None);
     }
 
     private static DemoAutoStart Service(ScriptedReplays replays, DemoOptions options) =>
