@@ -49,6 +49,9 @@ param demoAutoStart bool = false
 @description('The demo replay\'s speed over real time (Demo:Speed), as a string because Bicep has no decimals: 1 is real time.')
 param demoSpeed string = '1'
 
+@description('The highest demo loop number started (Demo:MaxLoops): the loop stops there, so it must outlast the hosting period at the demo speed.')
+param demoMaxLoops int = 1000
+
 @description('Foundry resource endpoint, such as https://<name>.openai.azure.com/. Empty keeps the scripted crew.')
 param foundryEndpoint string = ''
 
@@ -283,6 +286,7 @@ module api 'modules/app-api.bicep' = {
     runAgentsInApi: runAgentsInApi
     demoAutoStart: demoAutoStart
     demoSpeed: demoSpeed
+    demoMaxLoops: demoMaxLoops
     keyVaultUri: keyVault.outputs.uri
     mcpApiKeyFromKeyVault: mcpApiKeyFromKeyVault
   }
