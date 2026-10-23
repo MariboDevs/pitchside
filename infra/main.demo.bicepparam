@@ -14,9 +14,9 @@ param speechSku = 'S0'
 param eventHubsSku = 'Basic'
 param webMinReplicas = 1
 param runAgentsInApi = true
-// The judged demo plays seed 26 on a loop at three times real time: about 38 minutes a loop instead of 1 h 53.
+// The judged demo plays seed 26 on a loop at ten times real time: about 13 minutes a loop instead of 1 h 53.
 param demoAutoStart = true
-param demoSpeed = readEnvironmentVariable('PITCHSIDE_DEMO_SPEED', '3')
+param demoSpeed = readEnvironmentVariable('PITCHSIDE_DEMO_SPEED', '10')
 
 param foundryEndpoint = readEnvironmentVariable('FOUNDRY_ENDPOINT', 'https://ais-pitchside-dev.openai.azure.com/')
 param foundryFastDeployment = readEnvironmentVariable('FOUNDRY_DEPLOYMENT_FAST', 'pitchside-fast')

@@ -13,7 +13,7 @@
 Seed 7 is the committed sample, but the demo seed is chosen for drama: run `simulate` across seeds 1 to 500,
 score each by goals (3 to 5), a comeback (score lead changes at least once), a red card or a penalty, a big
 chance missed, and a momentum swing in each half; pick the highest-scoring seed and record it in
-`docs/DEMO.md` with its moment list. The `demo` environment auto-starts that seed on a loop (at speed 3, below) so a
+`docs/DEMO.md` with its moment list. The `demo` environment auto-starts that seed on a loop (at speed 10, below) so a
 judge who opens the link sees a live match within a minute, with a "jump to next moment" control that
 advances the replay to 10 seconds before the next moment at speed 0 and resumes at the replay's speed.
 
@@ -25,8 +25,9 @@ over resetting stored records: loop 1 is `MER-26`, then `MER-26-2`, `MER-26-3`, 
 WP-02, WP-04, WP-05, WP-07, WP-08 and WP-10). Each loop is a full match for the crew, so with Foundry it costs what a
 match costs; the usage guard's narratives-per-hour cap still applies.
 
-Demo speed (after the 22 October judge-as-user pass): the demo loop plays at `Demo:Speed` 3, about 38 minutes a loop
-instead of 1 hour 53, so a judge sees goals within minutes. The overlay scales its card timings by the speed (WP-05),
+Demo speed (after the 22 October judge-as-user pass): the demo loop played at `Demo:Speed` 3, about 38 minutes a loop
+instead of 1 hour 53, so a judge sees goals within minutes. On 23 October the owner raised it to 10, about 13 minutes
+a loop (11 minutes of match and the 2-minute pause), so a judge sees the whole match in one sitting. The overlay scales its card timings by the speed (WP-05),
 so cards keep their real-time airtime. A jump never waits out a break: when the next moment follows the restart by
 less than the ten-second lead, it lands on the restart. `Demo:AutoStart` and `Demo:Speed` are template settings
 (`demoAutoStart`, `demoSpeed`), so a provision keeps the loop.
