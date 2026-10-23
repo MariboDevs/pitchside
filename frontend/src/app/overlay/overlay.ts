@@ -55,11 +55,22 @@ export class Overlay implements OnInit, OnDestroy {
   protected readonly previewing = computed(() => this.preview() === '1');
   protected readonly copied = signal(false);
 
-  /** The URL a vision mixer or OBS is given: this match and aspect, transparent, no preview chrome. */
-  protected readonly broadcastUrl = computed(
-    () =>
-      `${location.origin}/overlay/${this.matchId()}?aspect=${this.vertical() ? '9x16' : '16x9'}`,
-  );
+  /** The URL a vision mixer or OBS is given: this preview's rendering options, without its backdrop and toolbar. */
+  protected readonly broadcastUrl = computed(() => {
+    const query = new URLSearchParams({ aspect: this.vertical() ? '9x16' : '16x9' });
+    for (const [key, value] of [
+      ['persona', this.persona()],
+      ['lang', this.lang()],
+      ['safe', this.safe()],
+      ['at', this.at()],
+    ] as const) {
+      if (value) {
+        query.set(key, value);
+      }
+    }
+
+    return `${location.origin}/overlay/${this.matchId()}?${query}`;
+  });
 
   protected readonly vertical = computed(() => this.aspect() === '9x16');
   protected readonly safeArea = computed(() => {

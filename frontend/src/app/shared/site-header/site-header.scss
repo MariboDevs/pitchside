@@ -1,14 +1,15 @@
 @use 'breakpoints' as bp;
 
+// Sticky on the host, whose parent holds the routed page too, so the strip stays in view as the page scrolls.
 :host {
   display: block;
-}
-
-// Ink on paper: the instrument strip across the top of every app route, sticky so the surfaces are one tap away.
-.site {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+// Ink on paper: the instrument strip across the top of every app route, so the surfaces are one tap away.
+.site {
   background: color-mix(in srgb, var(--color-ink) 96%, transparent);
   backdrop-filter: blur(8px);
   color: var(--color-on-ink);
