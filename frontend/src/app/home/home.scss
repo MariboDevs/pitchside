@@ -239,6 +239,10 @@
   white-space: nowrap;
 }
 
+.more {
+  margin-top: var(--space-4);
+}
+
 .links {
   display: flex;
   flex-wrap: wrap;

@@ -11,6 +11,12 @@ test.beforeAll(async ({ request }) => {
 test('home lists the match and links to its surfaces', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/');
+  await expect(page.getByTestId('match-row').first()).toBeVisible();
+  // The list shows the newest finished matches first; other specs replay more, so open the full list when offered.
+  const showAll = page.getByTestId('show-all');
+  if ((await showAll.count()) > 0 && (await showAll.getAttribute('aria-expanded')) === 'false') {
+    await showAll.click();
+  }
   // Other specs replay more matches, some with the same clubs, so the sample's row is found by its own link.
   const row = page
     .getByTestId('match-row')
@@ -69,6 +75,53 @@ test('the 9:16 overlay centres the score bug and runs the xG race down the right
   expect(race.x).toBeGreaterThan(540);
   await expect(page.getByTestId('lower-third')).toBeVisible();
   await page.screenshot({ path: `${SCREENS}/overlay-9x16.png` });
+});
+
+test('the overlay preview switches aspect, copies a clean OBS URL and keeps clear of the graphics', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const at = `${goal.period}:${goal.inAtMs + 1000}`;
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(`/overlay/${MATCH}?aspect=16x9&preview=1&lang=af&at=${at}`);
+  const toolbar = page.getByTestId('overlay-preview');
+  await expect(toolbar).toBeVisible();
+  await expect(page.getByTestId('site-header')).toHaveCount(0);
+  await expect(page.getByTestId('score-bug')).toBeVisible();
+
+  // Preview only: a studio ground in place of the transparent broadcast page.
+  const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(background).not.toBe('rgba(0, 0, 0, 0)');
+
+  await toolbar.getByRole('link', { name: '9:16' }).click();
+  await expect(page).toHaveURL(/aspect=9x16/);
+  await expect(page).toHaveURL(/preview=1/);
+  const race = (await page.getByTestId('xg-race').boundingBox())!;
+  expect(race.height).toBeGreaterThan(race.width);
+
+  // The copied URL keeps the rendering options and drops the preview chrome.
+  await toolbar.getByRole('button', { name: 'Copy OBS URL' }).click();
+  await expect(toolbar.getByRole('button', { name: 'Copied' })).toBeVisible();
+  const copied = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+  expect(copied.pathname).toBe(`/overlay/${MATCH}`);
+  expect(copied.searchParams.get('aspect')).toBe('9x16');
+  expect(copied.searchParams.get('lang')).toBe('af');
+  expect(copied.searchParams.get('at')).toBe(at);
+  expect(copied.searchParams.has('preview')).toBe(false);
+
+  // On a phone the toolbar is a strip above the stage: no overlap with the score bug, no sideways scroll.
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto(`/overlay/${MATCH}?aspect=16x9&preview=1&at=${at}`);
+  const strip = (await toolbar.boundingBox())!;
+  const bug = (await page.getByTestId('score-bug').boundingBox())!;
+  expect(strip.y).toBe(0);
+  expect(bug.y).toBeGreaterThanOrEqual(strip.y + strip.height);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+  await page.screenshot({ path: `${SCREENS}/overlay-preview-phone.png` });
 });
 
 test('the viewer switches persona and follows a player', async ({ page }) => {

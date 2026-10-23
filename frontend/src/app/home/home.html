@@ -83,7 +83,7 @@
         <p class="muted">Only the match on air so far.</p>
       } @else {
         <ul class="matches">
-          @for (match of list; track match.matchId) {
+          @for (match of shown(); track match.matchId) {
             <li class="match" data-testid="match-row">
               <div class="teams">
                 <app-monogram [club]="match.document.home.club" size="sm" />
@@ -115,6 +115,19 @@
             </li>
           }
         </ul>
+        @if (hidden() > 0 || showAll()) {
+          <button
+            class="btn more"
+            type="button"
+            (click)="showAll.set(!showAll())"
+            [attr.aria-expanded]="showAll()"
+            data-testid="show-all"
+          >
+            {{
+              showAll() ? 'Show the latest ' + latestCount : 'Show all ' + list.length + ' matches'
+            }}
+          </button>
+        }
       }
     } @else {
       <p class="muted">Loading matches</p>

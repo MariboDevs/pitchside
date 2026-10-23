@@ -50,6 +50,21 @@ export class Home implements OnInit, OnDestroy {
       : this.sorted().filter((m) => m.status !== 'live' && m.status !== 'paused'),
   );
 
+  /** How many finished matches the list shows before "Show all": the demo loop adds one every few minutes. */
+  static readonly LIST_LIMIT = 10;
+
+  readonly showAll = signal(false);
+
+  protected readonly latestCount = Home.LIST_LIMIT;
+
+  /** The finished matches on screen: the newest few, or all of them once asked. */
+  readonly shown = computed(() => {
+    const list = this.others() ?? [];
+    return this.showAll() ? list : list.slice(0, Home.LIST_LIMIT);
+  });
+
+  readonly hidden = computed(() => (this.others()?.length ?? 0) - this.shown().length);
+
   readonly form = this.fb.nonNullable.group({
     seed: [7, [Validators.required, Validators.min(1)]],
     speed: [1, [Validators.required, Validators.min(0)]],
