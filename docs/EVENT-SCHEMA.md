@@ -181,7 +181,7 @@ sheets (at every moment and every minute of clock) and moments, and pushes to cl
 
 | Direction | Method | Payload |
 | --- | --- | --- |
-| client to server | `JoinMatch(matchId)` | replies with a `MatchSnapshot`: the stored match, the live fact sheet, every moment and the narratives for the connection's viewer preferences |
+| client to server | `JoinMatch(matchId)` | replies with a `MatchSnapshot`: the stored match, the live fact sheet, every moment and the narratives for the connection's viewer preferences, and `timeScale`, the match time per real time while it plays (its replay speed, 1 in real time) |
 | client to server | `LeaveMatch(matchId)` | |
 | client to server | `SetViewer(matchId, ViewerPreferences)` | `{ persona, language, clubId?, playerId? }`, kept per connection; persona `all` is the control room |
 | server to client | `Event` | `MatchEvent`, every ingested event |

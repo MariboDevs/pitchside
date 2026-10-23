@@ -1,7 +1,7 @@
 namespace Pitchside.Runtime.Replay;
 
 /// <summary>
-/// <c>Demo:*</c> (WP-11): the hosted demo starts its chosen seed by itself, at real-time speed, so a judge who opens
+/// <c>Demo:*</c> (WP-11): the hosted demo starts its chosen seed by itself, at <see cref="Speed"/>, so a judge who opens
 /// the link finds a match already being played, and starts it again under a new match id when it ends.
 /// </summary>
 public sealed class DemoOptions

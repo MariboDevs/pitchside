@@ -38,9 +38,14 @@ public sealed partial class ReplayService(
     // still being played from the bus after its run is gone. One entry per replay, and a match id replays once.
     private readonly ConcurrentDictionary<string, bool> _instant = new(StringComparer.Ordinal);
 
+    // Kept after a run ends for the same reason: a card can be written after the last event is out.
+    private readonly ConcurrentDictionary<string, double> _speeds = new(StringComparer.Ordinal);
+
     public IReadOnlyCollection<string> Running => [.. _runs.Keys];
 
     public bool IsInstant(string matchId) => _instant.TryGetValue(matchId, out var instant) && instant;
+
+    public double TimeScale(string matchId) => _speeds.TryGetValue(matchId, out var speed) && speed > 0 ? speed : 1;
 
     public Task<ReplayStarted> StartAsync(long seed, double speed, CancellationToken cancellationToken) =>
         StartAsync(seed, speed, MatchLoops.First, cancellationToken);
@@ -87,6 +92,7 @@ public sealed partial class ReplayService(
             // The run learns its events and moments before it publishes, so a jump can find the next moment.
             run.Load(match.Events, MatchMoments.Detect(match.Document, match.Events));
             _instant[matchId] = speed == 0;
+            _speeds[matchId] = speed;
             run.Completion = Task.Run(() => PublishAsync(run, match.Events, speed), CancellationToken.None);
             LogStarted(matchId, seed, speed);
             return new ReplayStarted(matchId, seed, speed, match.Events.Count);
@@ -151,17 +157,7 @@ public sealed partial class ReplayService(
             return true;
         }
 
-        // The last event at least ten seconds of match time before the moment's trigger, and never behind what is out.
-        var trigger = events.First(e => e.Seq == next.TriggerSeq);
-        var target = Math.Max(published - 1, 0);
-        for (var i = target; i < events.Count && events[i].Seq < next.TriggerSeq; i++)
-        {
-            if (events[i].WallTimeUtc <= trigger.WallTimeUtc - JumpLead)
-            {
-                target = i;
-            }
-        }
-
+        var target = JumpTarget(events, published, next.TriggerSeq);
         run.FastForward(target);
 
         // A jump plays on from where it lands, so a paused replay is resumed rather than left waiting at its gate.
@@ -174,6 +170,32 @@ public sealed partial class ReplayService(
         jump = new ReplayJump(matchId, next.Id, next.Type, next.Headline, events[target].Seq);
         LogJumped(matchId, next.Id, events[target].Seq);
         return true;
+    }
+
+    /// <summary>
+    /// Where a jump lands: the last event at least <see cref="JumpLead"/> before the moment's trigger, and never behind
+    /// what is out (<paramref name="published"/> events). A break never stands between the landing and the moment: when
+    /// the moment follows a restart by less than the lead, the jump lands on the restart rather than waiting the
+    /// interval out in real time.
+    /// </summary>
+    internal static int JumpTarget(IReadOnlyList<MatchEvent> events, int published, int triggerSeq)
+    {
+        var trigger = events.First(e => e.Seq == triggerSeq);
+        var target = Math.Max(published - 1, 0);
+        for (var i = target; i < events.Count && events[i].Seq < triggerSeq; i++)
+        {
+            if (events[i].WallTimeUtc <= trigger.WallTimeUtc - JumpLead)
+            {
+                target = i;
+            }
+        }
+
+        while (target + 1 < events.Count && events[target + 1].Seq <= triggerSeq && events[target + 1].Period != events[target].Period)
+        {
+            target++;
+        }
+
+        return target;
     }
 
     Task IHostedService.StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;

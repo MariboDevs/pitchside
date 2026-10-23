@@ -204,6 +204,35 @@ public sealed class ReplayServiceTests : IAsyncLifetime
         Replays.Stop(started.MatchId);
     }
 
+    [Fact]
+    public async Task A_replay_runs_at_its_speed_in_time_scale_and_an_instant_or_unknown_match_at_one()
+    {
+        var fast = await Replays.StartAsync(112, 3, CancellationToken.None);
+        var instant = await Replays.StartAsync(113, 0, CancellationToken.None);
+
+        Replays.TimeScale(fast.MatchId).ShouldBe(3);
+        Replays.TimeScale(instant.MatchId).ShouldBe(1);
+        Replays.TimeScale("MER-404").ShouldBe(1);
+        Replays.Stop(fast.MatchId);
+        Replays.Stop(instant.MatchId);
+    }
+
+    [Fact]
+    public void A_jump_at_half_time_skips_the_break_when_the_next_moment_follows_the_restart()
+    {
+        // Seed 4208's first second-half moment comes nine seconds after the restart, inside the jump's lead, so the
+        // last event ten seconds before it is the half-time whistle, which is already out.
+        var match = MatchSimulator.Simulate(4208);
+        var next = MatchMoments.Detect(match.Document, match.Events).First(m => m.Period == 2);
+        next.ClockMs.ShouldBeLessThan((int)ReplayService.JumpLead.TotalMilliseconds);
+        var firstHalf = match.Events.Count(e => e.Period == 1);
+
+        var target = ReplayService.JumpTarget(match.Events, firstHalf, next.TriggerSeq);
+
+        match.Events[target].Period.ShouldBe(2);
+        match.Events[target].Seq.ShouldBeLessThanOrEqualTo(next.TriggerSeq);
+    }
+
     private static async Task WaitFor(Func<Task<bool>> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

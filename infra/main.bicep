@@ -43,6 +43,12 @@ param webMinReplicas int = 0
 @description('Whether the API hosts the agent crew in process (Pitchside:RunAgentsInApi).')
 param runAgentsInApi bool = true
 
+@description('Whether the API starts the demo seed on its own and loops it (Demo:AutoStart, WP-11).')
+param demoAutoStart bool = false
+
+@description('The demo replay\'s speed over real time (Demo:Speed), as a string because Bicep has no decimals: 1 is real time.')
+param demoSpeed string = '1'
+
 @description('Foundry resource endpoint, such as https://<name>.openai.azure.com/. Empty keeps the scripted crew.')
 param foundryEndpoint string = ''
 
@@ -275,6 +281,8 @@ module api 'modules/app-api.bicep' = {
     foundryFastDeployment: foundryFastDeployment
     foundryQualityDeployment: foundryQualityDeployment
     runAgentsInApi: runAgentsInApi
+    demoAutoStart: demoAutoStart
+    demoSpeed: demoSpeed
     keyVaultUri: keyVault.outputs.uri
     mcpApiKeyFromKeyVault: mcpApiKeyFromKeyVault
   }

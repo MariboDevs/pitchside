@@ -22,6 +22,7 @@ import {
   ViewerPreferences,
 } from './contracts';
 import { numberOf } from './format';
+import { presentationAhead } from './presentation';
 
 /** One point of the fact series: the xG race, the score and momentum as of an event. */
 export interface SeriesPoint {
@@ -48,9 +49,6 @@ const MAX_EVENTS = 300;
  * then applies every pushed message; on a reconnect it joins again and applies the new snapshot, so a client that
  * drops out is complete again after one message. Provided per route, never shared between matches.
  */
-/** How far the overlay's presentation clock may run ahead of the last event. */
-const PRESENTATION_CAP_MS = 20_000;
-
 /** Back-off between join attempts while the hub stays connected. */
 const JOIN_RETRY_MS = [1_000, 2_000, 5_000, 10_000];
 
@@ -65,6 +63,8 @@ export class MatchSession implements OnDestroy {
   private joinAttempt = 0;
   private presentationTimer: ReturnType<typeof setInterval> | null = null;
   private anchor = { period: 0, clockMs: 0, at: 0 };
+  /** Match milliseconds per real millisecond while the match plays, from the join snapshot. */
+  private timeScale = 1;
   /** Overlay and approval pushes that arrive while a join is in flight, applied after its snapshot. */
   private pending: (() => void)[] = [];
 
@@ -97,9 +97,9 @@ export class MatchSession implements OnDestroy {
   });
 
   /**
-   * The overlay's presentation clock: the match clock, carried forward in real time between events (at most
-   * PRESENTATION_CAP_MS past the last one), so a card due in a gap between events, or the full-time card after the
-   * last event, still has its window. The score bug keeps the hub's clock.
+   * The overlay's presentation clock: the match clock, carried forward between events at the match's time scale
+   * (presentationAhead), so a card due in a gap between events, or the full-time card after the last event, still
+   * has its window. The score bug keeps the hub's clock.
    */
   readonly presentationClock = signal<{ period: number; clockMs: number }>({
     period: 0,
@@ -298,8 +298,8 @@ export class MatchSession implements OnDestroy {
       this.anchor = { ...clock, at: now };
     }
 
-    const ahead = Math.min(now - this.anchor.at, PRESENTATION_CAP_MS);
-    const next = { period: clock.period, clockMs: clock.clockMs + Math.max(0, Math.round(ahead)) };
+    const ahead = presentationAhead(now - this.anchor.at, this.timeScale);
+    const next = { period: clock.period, clockMs: clock.clockMs + ahead };
     const current = this.presentationClock();
     if (current.period !== next.period || current.clockMs !== next.clockMs) {
       this.presentationClock.set(next);
@@ -308,6 +308,7 @@ export class MatchSession implements OnDestroy {
 
   private applySnapshot(snapshot: MatchSnapshot): void {
     this.match.set(snapshot.match);
+    this.timeScale = snapshot.timeScale ?? 1;
     // A newer sheet can arrive while the join is in flight; the snapshot's older one must not roll it back.
     const current = this.factSheet();
     if (snapshot.factSheet && (!current || snapshot.factSheet.asOfSeq >= current.asOfSeq)) {
