@@ -22,7 +22,7 @@ import {
   ViewerPreferences,
 } from './contracts';
 import { numberOf } from './format';
-import { presentationAhead } from './presentation';
+import { isResting, presentationAhead } from './presentation';
 
 /** One point of the fact series: the xG race, the score and momentum as of an event. */
 export interface SeriesPoint {
@@ -299,8 +299,8 @@ export class MatchSession implements OnDestroy {
     }
 
     const state = this.status()?.status ?? this.match()?.status;
-    const finished = state === 'completed' || state === 'stopped';
-    const ahead = presentationAhead(now - this.anchor.at, this.timeScale, finished);
+    const resting = isResting(state, this.events().at(-1)?.type);
+    const ahead = presentationAhead(now - this.anchor.at, this.timeScale, resting);
     const next = { period: clock.period, clockMs: clock.clockMs + ahead };
     const current = this.presentationClock();
     if (current.period !== next.period || current.clockMs !== next.clockMs) {
