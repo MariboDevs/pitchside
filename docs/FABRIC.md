@@ -183,16 +183,19 @@ placeholders put back.
 
 ## Evidence
 
-To be filled in by the local session. Each slot says what proves it.
+Recorded by the local session on 22 and 23 October against `pitchside-dev`. Three replays fed it: `MER-4129` (seed
+4129, a full match at speed 0), `MER-13` and `MER-65` (both at speed 1). The last two were cut short when a merge to
+`main` redeployed dev and stopped the replay (`MER-13` at 19:37 UTC, `MER-65` at about 20:53 UTC). Each count below
+compares Fabric with the API at the point the replay stopped.
 
 | Check | Expected | Result |
 | --- | --- | --- |
-| `azd provision` with the Fabric settings | Event Hubs Standard, `fabric` group, Data Receiver for the workspace identity on the hub | _pending local run_ |
-| `fabric-apply.sh` output | every step printed, no error; second run updates without creating | _pending local run_ |
-| Eventstream `pitchside-events` running | screenshot, source and destination green | _pending: screenshot `docs/fabric/eventstream.png`_ |
-| First rows after a replay starts | within 30 s | _pending: seconds measured_ |
-| `MatchEventCount("MER-13")` against the API's event count at full time | `events` equals the API's count (1,642); `rows` is at least that | _pending: both numbers_ |
-| Dashboard updating during the replay | screenshot with the match selected | _pending: screenshot `docs/fabric/dashboard.png`_ |
-| Momentum tile against the overlay at the same minute | the same two shares | _pending: minute and values_ |
-| Activator alert for `MER-13` | an alert for BRW near minute 27 and for LFU near minute 83 | _pending: screenshot `docs/fabric/alert.png`_ |
-| `fabric/activator/ReflexEntities.json` | exported and committed | _pending_ |
+| `azd provision` with the Fabric settings | Event Hubs Standard, `fabric` group, Data Receiver for the workspace identity on the hub | Passed 22 October: namespace on Standard with consumer groups `$Default`, `api`, `agents` and `fabric`; the workspace identity holds Azure Event Hubs Data Receiver on `match-events`; local auth stays off |
+| `fabric-apply.sh` output | every step printed, no error; second run updates without creating | Passed. First run 22 October, after the fixes in [#32](https://github.com/MariboDevs/pitchside/pull/32); second run 23 October: `updated the definition of` the KQL database, the queryset `match-analysis` and the dashboard `Pitchside Live`, no item created, exit 0 |
+| Eventstream `pitchside-events` running | screenshot, source and destination green | Passed: [eventstream.png](fabric/eventstream.png). The source is the "Extended features" Event Hubs source with workspace identity (the basic source refused it, see the portal notes) |
+| First rows after a replay starts | within 30 s | Passed: 15 s for `MER-4129`, 5 s for `MER-13` |
+| `MatchEventCount("MER-13")` against the API's event count at full time | `events` equals the API's count (1,642); `rows` is at least that | Passed on every replay. `MER-4129` ran to full time: rows 1,621, events 1,621, API 1,621. `MER-13` was cut at seq 826: rows 826, events 826, API 826. `MER-65` was cut at seq 786: rows 789, events 786, API 786; the three extra rows are at-least-once redeliveries, which `MatchEvents()` removes |
+| Dashboard updating during the replay | screenshot with the match selected | Passed: [dashboard.png](fabric/dashboard.png) |
+| Momentum tile against the overlay at the same minute | the same two shares | Passed on `MER-13`: minute 27, LFU 0.11 and BRW 0.89 on both; minute 40, LFU 0.44 and BRW 0.56 on both |
+| Activator alert for `MER-13` | an alert for BRW near minute 27 and for LFU near minute 83 | Fired as predicted until the replay stopped. `PressureAlerts(3d)` holds BRW, 4 shots, minute 27, seq 443 (`MER-13`, published 18:59:38 UTC) and HAR, 4 shots, minute 26, seq 450 (`MER-65`, 20:26:39 UTC, the minute simulated beforehand). The rule "Pressure alert" ran on both. LFU's minute-83 alert was not reached, because `MER-13` stopped 35 seconds into the second half. Screenshot `docs/fabric/alert.png` still to come from the owner (the rule's history, or the email) |
+| `fabric/activator/ReflexEntities.json` | exported and committed | Passed: four entities, the rule's recipient is the owner's address, exported after the recipient change |
