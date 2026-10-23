@@ -298,7 +298,9 @@ export class MatchSession implements OnDestroy {
       this.anchor = { ...clock, at: now };
     }
 
-    const ahead = presentationAhead(now - this.anchor.at, this.timeScale);
+    const state = this.status()?.status ?? this.match()?.status;
+    const finished = state === 'completed' || state === 'stopped';
+    const ahead = presentationAhead(now - this.anchor.at, this.timeScale, finished);
     const next = { period: clock.period, clockMs: clock.clockMs + ahead };
     const current = this.presentationClock();
     if (current.period !== next.period || current.clockMs !== next.clockMs) {
