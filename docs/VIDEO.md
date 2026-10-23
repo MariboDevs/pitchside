@@ -15,6 +15,8 @@ Everything filmed is the hosted demo the judges will open, so what the video sho
    15 seconds, so every moment below falls at a known time.
 3. **Open the three screens** for the new match id: the viewer (`/viewer/<matchId>`), the control room
    (`/control/<matchId>`) and the broadcast overlay (`/overlay/<matchId>`) on the demo web app.
+   In the viewer, choose **Club fan** and Thornbury FC in English before recording: it opens on Casual, the
+   persona whose cards are rejected most often, and it remembers the choice.
 4. **Use the jump button.** It runs the match ahead to ten seconds before the next moment, so the video needs no
    waiting. Each shot below names the moment to jump to.
 5. **Audio.** Record the voice-over separately in a quiet room; no music, or only music you made or that is
@@ -44,7 +46,7 @@ The voice-over says no number of its own: every figure it mentions is on screen,
 | --- | --- | --- |
 | 0:00 to 0:10 | Viewer, live match, the kick-off card appears beside the pitch | "This is Pitchside: live match intelligence for a broadcast, explained as it happens." |
 | 0:10 to 0:30 | Jump to the first goal. The goal card appears in the viewer; cut to the control room and click a cited value in its narrative so the fact it came from lights up | "When a goal goes in, the numbers come from code and the words come from AI. Every sentence cites the facts it was written from, and a fact-checker rejects any number that is not on the fact sheet." |
-| 0:30 to 0:45 | Switch the persona from analyst to casual fan, then the language to isiZulu and Afrikaans | "The same moment is written for an analyst, a casual fan, a club fan or a player-focused viewer, in English, Afrikaans, isiZulu and Spanish." |
+| 0:30 to 0:45 | Switch the persona to club fan (choose Thornbury FC), then to player focus (follow a goal scorer), then the language to Afrikaans and Spanish. Keep casual and isiZulu off camera: on the demo loops their variants are verified only 11 to 38 % of the time, so most of their cards read "Shown in English" (gap register, open items) | "The same moment is written for an analyst, a casual fan, a club fan or a player-focused viewer, in English, Afrikaans, isiZulu and Spanish." |
 | 0:45 to 1:00 | Control room: switch to "Approve before air", hold a card, then air it; show its verdict panel (verdict, provider, model, prompt, groundedness) and the timeline of its model calls; switch back to "Auto-air" before leaving, or every later card, the equaliser included, stays held | "In the control room the producer holds or airs each card, and every card shows its verdict, the model that wrote it, its groundedness score and every call behind it." |
 | 1:00 to 1:15 | Azure portal: the Container Apps, Event Hubs and Foundry deployments; then the Aspire trace of one moment through the agent crew | "Under the hood: Container Apps, Event Hubs and Cosmos DB carry the feed, and a Microsoft Agent Framework crew on Foundry writes, checks and schedules every card." |
 | 1:15 to 1:30 | Fabric (the dev environment, which has the feed; demo has none): the Pitchside Live dashboard for `MER-13`, then the pressure alert in Activator | "The same feed lands in Fabric, where an analyst can query any match in KQL and an alert fires when a side builds sustained pressure." |
