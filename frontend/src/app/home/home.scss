@@ -267,14 +267,10 @@
   }
 }
 
+// On touch the links take a real 44 px of height, so wrapped rows of them never overlap their tap areas.
 @media (pointer: coarse) {
-  .link::after {
-    content: '';
-    position: absolute;
-    inset: 50% auto auto 50%;
-    width: max(100%, 44px);
-    height: max(100%, 44px);
-    transform: translate(-50%, -50%);
+  .link {
+    min-height: 2.75rem;
   }
 }
 
