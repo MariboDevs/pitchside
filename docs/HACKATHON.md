@@ -66,7 +66,7 @@ overlays on a live match feed".
 ## Submission checklist
 
 - [ ] Project pitch: what we built, which Microsoft and Azure technologies, what it does, what problem it solves.
-- [ ] Demo video under two minutes, public URL.
+- [x] Demo video under two minutes, public URL: <https://www.youtube.com/watch?v=KY_6y-mHiWQ> (1:53).
 - [ ] Public GitHub repository URL.
 - [ ] Hosted demo URL, with credentials if gated, working until 10 November.
 - [ ] README integration matrix and calibration report current.
