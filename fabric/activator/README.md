@@ -22,12 +22,14 @@ The committed definition fixes this at the source and was sent with Update Item 
 part, no `format` field: `"format": "json"` is refused with `InvalidDefinitionFormat`). The committed file is what
 Fabric returned afterwards, so the same call with it rebuilds the item.
 
-Two versions in between did not work, and the tests now reject both:
+Two versions came in between, and the tests now reject both:
 
 - An object keyed on `alertId`, with a rule on `shotsInWindow` "becomes" 4 or more. It never fired: each object
   had one value, already at 4, so nothing crossed the threshold.
-- The source in time-axis mode on `publishedUtc`, with `startTime` and `endTime` parameters. The watermark did not
-  move: the `MER-6` row came back on every poll for as long as it stayed within the lookback.
+- The source in time-axis mode on `publishedUtc`, with `startTime` and `endTime` parameters. The watermark passed
+  to the query did not move, so the `MER-6` row came back on every run for as long as it stayed within the
+  lookback (24 runs). The rule still fired once for it (its history, 11:52:13 UTC), so Activator drops events at or
+  before its own watermark. That behaviour is not documented, so the committed source does not rely on it.
 
 The source now selects by the clock instead: each run keeps the rows whose shot reached the database
 (`ingestedUtc`, the shot's first `ingestion_time()`) in the whole minute that ended 2 minutes before it. Runs come
