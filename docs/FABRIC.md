@@ -28,7 +28,7 @@ flowchart LR
 | KQL queryset `match-analysis` | `fabric/queryset/match-analysis.json` | the script, `RealTimeQueryset.json` |
 | Real-Time Dashboard `Pitchside Live` | `fabric/dashboard/pitchside-live.json` | the script, `RealTimeDashboard.json` |
 | Eventstream `pitchside-events` | portal, below | its connection is created in the portal |
-| Activator `pitchside-alerts` | portal, [fabric/activator/README.md](../fabric/activator/README.md) | exported back with `--export-activator` |
+| Activator `pitchside-alerts` | `fabric/activator/ReflexEntities.json` by Update Item Definition, [fabric/activator/README.md](../fabric/activator/README.md) | exported back with `--export-activator` |
 | Optional F2 capacity | `infra/modules/fabric.bicep` | `azd provision` with `PITCHSIDE_FABRIC_CAPACITY=true` |
 
 ### The feed and how dev reads it
@@ -104,8 +104,8 @@ referenced exactly once, every variable a parameter, every called function prese
 ### Activator
 
 The rule "a side's shots in any 3-minute window reach 4" watches `PressureAlerts()`, which uses the
-`sustained_pressure` moment's window. The rule itself is built in the portal and exported; the reasons and the exact
-definition are in [fabric/activator/README.md](../fabric/activator/README.md).
+`sustained_pressure` moment's window. The rule is set with the Fabric REST API from the committed definition (the
+first version was built in the portal); how, and the portal equivalent, are in [fabric/activator/README.md](../fabric/activator/README.md).
 
 ### Capacity
 

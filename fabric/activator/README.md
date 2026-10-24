@@ -10,15 +10,19 @@ alert fires at 4 shots, so it marks only the stronger spells, and it does not lo
 | File | What it is |
 | --- | --- |
 | `pressure-alerts.kql` | The function `PressureAlerts(lookback)` that Activator watches. `fabric-apply.sh` creates it in the KQL database with the rest of the schema. `PressureAlertParityTests` checks its window against `SustainedPressureRule.WindowMs` |
-| `ReflexEntities.json` | Not committed yet. After the rule exists, `infra/scripts/fabric-apply.sh --export-activator` saves the item's definition here |
+| `ReflexEntities.json` | The item's definition, read back with `infra/scripts/fabric-apply.sh --export-activator`: the KQL source, its event, the object **Pressure spell** keyed by `alertId` with four properties, and the rule **Pressure alert (once per shot)** |
 
-## Why the rule is defined by hand
+## How the rule was defined
 
 The Activator (Reflex) item definition is public (`ReflexEntities.json`, see the Fabric REST API "Reflex
-definition" article), but the documentation gives the rule's `instance` template only for a sample data source.
-It does not document a rule over a KQL source with a per-object key. Microsoft recommends building the item in the
-portal and reading it back with Get Item Definition, so that is what the local session does. The exported file
-then makes the rule rebuildable by Create Item with that definition.
+definition" article). The first rule was built in the portal, as Microsoft recommends, and exported. It fired on
+every event, so one shot sent an email on each of the up to ten polls that returned it. The object and the
+once-per-shot rule in the committed file were then written against the documented templates (`SplitEvent`,
+`IdentityPartAttribute`, `IdentityTupleAttribute`, `BasicEventAttribute`, `AttributeTrigger` with `NumberBecomes`)
+and sent with Update Item Definition (`POST /v1/workspaces/{id}/reflexes/{id}/updateDefinition`, the file base64
+encoded as the `ReflexEntities.json` part, no `format` field: `"format": "json"` is refused with
+`InvalidDefinitionFormat`). The committed file is what Fabric returned afterwards, so the same call with it rebuilds
+the item. The portal steps below build the same thing by hand.
 
 ## Manual definition (portal)
 
