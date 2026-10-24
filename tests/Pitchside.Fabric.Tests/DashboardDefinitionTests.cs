@@ -62,6 +62,29 @@ public sealed partial class DashboardDefinitionTests
     }
 
     [Fact]
+    public void Tile_columns_and_axis_limits_are_plain_values()
+    {
+        // The dashboard loader refuses the {"type": "specified", "value": ...} wrapper: these must be an array, a
+        // string, a number or null ("Error loading dashboard ... must be array,null").
+        string[] plain = ["xColumn", "yColumns", "seriesColumns", "yAxisMinimumValue", "yAxisMaximumValue"];
+        foreach (var tile in Dashboard.GetProperty("tiles").EnumerateArray())
+        {
+            if (!tile.TryGetProperty("visualOptions", out var options))
+            {
+                continue;
+            }
+
+            foreach (var name in plain)
+            {
+                if (options.TryGetProperty(name, out var value))
+                {
+                    value.ValueKind.ShouldNotBe(JsonValueKind.Object, $"tile {tile.GetProperty("id").GetString()}: {name}");
+                }
+            }
+        }
+    }
+
+    [Fact]
     public void Every_variable_a_query_uses_is_a_parameter_and_is_declared()
     {
         var variables = Dashboard.GetProperty("parameters").EnumerateArray().Select(p => p.GetProperty("variableName").GetString()!).ToHashSet();
@@ -93,7 +116,8 @@ public sealed partial class DashboardDefinitionTests
         var text = Dashboard.GetProperty("queries").EnumerateArray().Single(q => q.GetProperty("id").GetString() == queryId).GetProperty("text").GetString()!;
 
         parameter.GetProperty("variableName").GetString().ShouldBe("_matchId");
-        parameter.GetProperty("selectionType").GetString().ShouldBe("single");
+        parameter.GetProperty("selectionType").GetString().ShouldBe("scalar");
+        parameter.GetProperty("defaultValue").GetProperty("kind").GetString().ShouldBe("value");
         Called(text).ShouldBe(["Matches"]);
     }
 

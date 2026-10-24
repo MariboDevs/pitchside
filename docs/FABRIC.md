@@ -28,7 +28,7 @@ flowchart LR
 | KQL queryset `match-analysis` | `fabric/queryset/match-analysis.json` | the script, `RealTimeQueryset.json` |
 | Real-Time Dashboard `Pitchside Live` | `fabric/dashboard/pitchside-live.json` | the script, `RealTimeDashboard.json` |
 | Eventstream `pitchside-events` | portal, below | its connection is created in the portal |
-| Activator `pitchside-alerts` | portal, [fabric/activator/README.md](../fabric/activator/README.md) | exported back with `--export-activator` |
+| Activator `pitchside-alerts` | `fabric/activator/ReflexEntities.json` by Update Item Definition, [fabric/activator/README.md](../fabric/activator/README.md) | exported back with `--export-activator` |
 | Optional F2 capacity | `infra/modules/fabric.bicep` | `azd provision` with `PITCHSIDE_FABRIC_CAPACITY=true` |
 
 ### The feed and how dev reads it
@@ -94,8 +94,8 @@ check), `MatchEvents(matchId)`.
 
 ### Dashboard
 
-`Pitchside Live`, one page, auto-refresh every 30 s, a **Match** selector (`_matchId`, defaulting to the most recent
-match) and six tiles: momentum and xG race (lines over match time), shots per 5 minutes (columns), pressing intensity
+`Pitchside Live`, one page, auto-refresh every 30 s, a **Match** selector (`_matchId`, listing every match latest
+first and defaulting to `MER-13`, the alert demonstration: the dashboard loader takes only a fixed default) and six tiles: momentum and xG race (lines over match time), shots per 5 minutes (columns), pressing intensity
 (line), pass completion by player (table), top speeds (bars). The committed file holds three placeholders the apply
 script fills: `{{WORKSPACE_ID}}`, `{{DATABASE_ID}}` (the KQL database item) and `{{QUERY_SERVICE_URI}}` (the
 Eventhouse's query URI). `DashboardDefinitionTests` checks the load rules Fabric enforces: RFC 4122 ids, each query
@@ -104,8 +104,8 @@ referenced exactly once, every variable a parameter, every called function prese
 ### Activator
 
 The rule "a side's shots in any 3-minute window reach 4" watches `PressureAlerts()`, which uses the
-`sustained_pressure` moment's window. The rule itself is built in the portal and exported; the reasons and the exact
-definition are in [fabric/activator/README.md](../fabric/activator/README.md).
+`sustained_pressure` moment's window. The rule is set with the Fabric REST API from the committed definition (the
+first version was built in the portal); how, and the portal equivalent, are in [fabric/activator/README.md](../fabric/activator/README.md).
 
 ### Capacity
 
@@ -183,16 +183,20 @@ placeholders put back.
 
 ## Evidence
 
-To be filled in by the local session. Each slot says what proves it.
+Recorded by the local session on 22 and 23 October against `pitchside-dev`. Three replays fed it: `MER-4129` (seed
+4129, a full match at speed 0), `MER-13` and `MER-65` (both at speed 1). The last two were cut short when a merge to
+`main` redeployed dev and stopped the replay (`MER-13` at 19:37 UTC, `MER-65` at about 20:53 UTC). Each count below
+compares Fabric with the API at the point the replay stopped.
 
 | Check | Expected | Result |
 | --- | --- | --- |
-| `azd provision` with the Fabric settings | Event Hubs Standard, `fabric` group, Data Receiver for the workspace identity on the hub | _pending local run_ |
-| `fabric-apply.sh` output | every step printed, no error; second run updates without creating | _pending local run_ |
-| Eventstream `pitchside-events` running | screenshot, source and destination green | _pending: screenshot `docs/fabric/eventstream.png`_ |
-| First rows after a replay starts | within 30 s | _pending: seconds measured_ |
-| `MatchEventCount("MER-13")` against the API's event count at full time | `events` equals the API's count (1,642); `rows` is at least that | _pending: both numbers_ |
-| Dashboard updating during the replay | screenshot with the match selected | _pending: screenshot `docs/fabric/dashboard.png`_ |
-| Momentum tile against the overlay at the same minute | the same two shares | _pending: minute and values_ |
-| Activator alert for `MER-13` | an alert for BRW near minute 27 and for LFU near minute 83 | _pending: screenshot `docs/fabric/alert.png`_ |
-| `fabric/activator/ReflexEntities.json` | exported and committed | _pending_ |
+| `azd provision` with the Fabric settings | Event Hubs Standard, `fabric` group, Data Receiver for the workspace identity on the hub | Passed 22 October: namespace on Standard with consumer groups `$Default`, `api`, `agents` and `fabric`; the workspace identity holds Azure Event Hubs Data Receiver on `match-events`; local auth stays off |
+| `fabric-apply.sh` output | every step printed, no error; second run updates without creating | Passed. First run 22 October, after the fixes in [#32](https://github.com/MariboDevs/pitchside/pull/32); second run 23 October: `updated the definition of` the KQL database, the queryset `match-analysis` and the dashboard `Pitchside Live`, no item created, exit 0 |
+| Eventstream `pitchside-events` running | screenshot, source and destination green | Passed: [eventstream.png](fabric/eventstream.png). The source is the "Extended features" Event Hubs source with workspace identity (the basic source refused it, see the portal notes) |
+| First rows after a replay starts | within 30 s | Passed: 15 s for `MER-4129`, 5 s for `MER-13` |
+| `MatchEventCount("MER-13")` against the API's event count at full time | `events` equals the API's count (1,642); `rows` is at least that | Passed on every replay. `MER-4129` ran to full time: rows 1,621, events 1,621, API 1,621. `MER-13` was cut at seq 826: rows 826, events 826, API 826. `MER-65` was cut at seq 786: rows 789, events 786, API 786; the three extra rows are at-least-once redeliveries, which `MatchEvents()` removes |
+| Dashboard updating during the replay | screenshot with the match selected | Passed: [dashboard.png](fabric/dashboard.png) |
+| Momentum tile against the overlay at the same minute | the same two shares | Passed on `MER-13`: minute 27, LFU 0.11 and BRW 0.89 on both; minute 40, LFU 0.44 and BRW 0.56 on both |
+| Activator alert for `MER-13` | an alert for BRW near minute 27 and for LFU near minute 83 | Fired as predicted until the replay stopped. `PressureAlerts(3d)` holds BRW, 4 shots, minute 27, seq 443 (`MER-13`, published 18:59:38 UTC) and HAR, 4 shots, minute 26, seq 450 (`MER-65`, 20:26:39 UTC, the minute simulated beforehand). The rule "Pressure alert" ran on both. LFU's minute-83 alert was not reached, because `MER-13` stopped 35 seconds into the second half. Screenshot `docs/fabric/alert.png` still to come from the owner (the rule's history, or the email). Replaced since, see the next row |
+| Activator alert once per shot | each qualifying shot reaches the rule on one poll | Passed on `MER-32` (24 October, seed 32, speed 10): one qualifying shot, BRW, 4 shots, minute 83, seq 1404, published 12:53:27 UTC and in the database at 12:53:28. Of Activator's 15 runs from 12:43 to 12:57 UTC (`.show queries`), only the 12:56:19 run returned it. The source selects by arrival (`ingestedUtc`), so a late shot is still sent once. Before it: on `MER-9`, by publication time, the one shot came back on one run of 14; the first rule returned a shot on up to ten runs, and a time-axis version returned the `MER-6` shot on every run. Email: the tenant has no mailbox (no account in `siphomaribodevs.onmicrosoft.com` holds an Exchange licence, and the owner's account is external with no mail attribute), so no email has arrived from any version. The evidence is the rule's history in the portal, `docs/fabric/alert.png`, still to come from the owner |
+| `fabric/activator/ReflexEntities.json` | exported and committed | Passed: four entities (container, KQL source, its event, the rule), applied with Update Item Definition and exported back on 24 October; `ActivatorDefinitionTests` checks it |

@@ -70,5 +70,5 @@ curl -s localhost:5180/mcp -H 'content-type: application/json' -d '{"jsonrpc":"2
 
 Added by the WP-11 demo loop. A match id is `MER-<seed>` or, for a later replay of the same seed under a new id,
 `MER-<seed>-<loop>` with a loop number of 2 or more (`MER-26`, then `MER-26-2`, `MER-26-3`). The MCP server's
-`matchId` and `momentId` argument checks in `McpServerSetup` (used for the audit record) accepts both forms. Every id
+`matchId` and `momentId` argument checks in `McpServerSetup` (used for the audit record) accept both forms. Every id
 that was valid stays valid, and `MatchSimulator` still names a simulated match `MER-<seed>`.

@@ -1,0 +1,70 @@
+[
+  {
+    "uniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f",
+    "payload": {
+      "name": "match-analysis",
+      "description": "Container Description",
+      "type": "kqlQueries"
+    },
+    "type": "container-v1"
+  },
+  {
+    "uniqueIdentifier": "c8ba254c-5c74-493e-8959-567ed69692cf",
+    "payload": {
+      "name": "pitchside event",
+      "runSettings": {
+        "isStopped": false,
+        "executionIntervalInSeconds": 60
+      },
+      "query": {
+        "queryString": "let until = bin(now(), 1m) - 2m;\nPressureAlerts(1h)\n| where ingestedUtc >= until - 1m and ingestedUtc < until"
+      },
+      "eventhouseItem": {
+        "databaseName": "e7c4ed43-45ec-4a78-979c-db5dd2804a57",
+        "clusterHostName": "https://trd-8uvqtqarkk9r193rgn.z6.kusto.fabric.microsoft.com"
+      },
+      "queryParameters": [],
+      "metadata": {
+        "workspaceId": "74e1627c-0077-4c79-a543-84c9af743169",
+        "querySetId": "c3077aee-4879-4c29-975d-b8c0c3119a5b",
+        "queryId": "235d1dd6-2988-5750-aca2-cd7adcb90464"
+      },
+      "parentContainer": {
+        "targetUniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f"
+      }
+    },
+    "type": "kqlSource-v1"
+  },
+  {
+    "uniqueIdentifier": "f6681128-52e2-4131-a79a-bed8aa497d23",
+    "payload": {
+      "name": "pitchside event",
+      "parentContainer": {
+        "targetUniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f"
+      },
+      "definition": {
+        "type": "Event",
+        "instance": "{\"steps\":[{\"id\":\"e6fbd310-ef4a-40b6-a1bb-9bfb666dc0e5\",\"name\":\"SourceEventStep\",\"rows\":[{\"arguments\":[{\"name\":\"entityId\",\"type\":\"string\",\"value\":\"c8ba254c-5c74-493e-8959-567ed69692cf\"}],\"kind\":\"SourceReference\",\"name\":\"SourceSelector\"}]}],\"templateId\":\"SourceEvent\",\"templateVersion\":\"1.3.0\"}"
+      }
+    },
+    "type": "timeSeriesView-v1"
+  },
+  {
+    "uniqueIdentifier": "f0aea0da-40fb-48e0-9bdc-6d246ff3c783",
+    "payload": {
+      "name": "Pressure alert (once per shot)",
+      "parentContainer": {
+        "targetUniqueIdentifier": "1d70fa4e-bfd1-40df-bd0f-dc4e2d05ae1f"
+      },
+      "definition": {
+        "type": "Rule",
+        "instance": "{\"templateId\":\"EventTrigger\",\"templateVersion\":\"1.3.0\",\"steps\":[{\"name\":\"FieldsDefaultsStep\",\"id\":\"c794c32a-cde3-4334-9cf9-131d0b39327b\",\"rows\":[{\"name\":\"EventSelector\",\"kind\":\"Event\",\"arguments\":[{\"kind\":\"EventReference\",\"type\":\"complex\",\"arguments\":[{\"name\":\"entityId\",\"type\":\"string\",\"value\":\"f6681128-52e2-4131-a79a-bed8aa497d23\"}],\"name\":\"event\"}]}]},{\"name\":\"EventDetectStep\",\"id\":\"d9cf9a43-eea3-4736-9855-f93f22261661\",\"rows\":[{\"name\":\"EventFieldSelector\",\"kind\":\"EventField\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"shotsInWindow\"}]},{\"name\":\"NumberValueCondition\",\"kind\":\"NumberValueCondition\",\"arguments\":[{\"name\":\"op\",\"type\":\"string\",\"value\":\"IsGreaterThanOrEqualTo\"},{\"name\":\"threshold\",\"type\":\"number\",\"value\":4.0}]}]},{\"name\":\"ActStep\",\"id\":\"fff3abf4-1406-4d66-81da-de2bc35feceb\",\"rows\":[{\"name\":\"EmailBinding\",\"kind\":\"EmailMessage\",\"arguments\":[{\"name\":\"messageLocale\",\"type\":\"string\",\"value\":\"en-us\"},{\"name\":\"sentTo\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"sipho@maribodevs.com\"}]},{\"name\":\"copyTo\",\"type\":\"array\",\"values\":[]},{\"name\":\"bCCTo\",\"type\":\"array\",\"values\":[]},{\"name\":\"subject\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"Pressure alert\"}]},{\"name\":\"headline\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"Pressure alert\"}]},{\"name\":\"optionalMessage\",\"type\":\"array\",\"values\":[{\"type\":\"string\",\"value\":\"Side \"},{\"kind\":\"EventFieldReference\",\"type\":\"complex\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"teamId\"}]},{\"type\":\"string\",\"value\":\" has \"},{\"kind\":\"EventFieldReference\",\"type\":\"complex\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"shotsInWindow\"}]},{\"type\":\"string\",\"value\":\" shots in 3 minutes (match \"},{\"kind\":\"EventFieldReference\",\"type\":\"complex\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"matchId\"}]},{\"type\":\"string\",\"value\":\", minute \"},{\"kind\":\"EventFieldReference\",\"type\":\"complex\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"matchMinute\"}]},{\"type\":\"string\",\"value\":\").\"}]},{\"name\":\"additionalInformation\",\"type\":\"array\",\"values\":[{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"matchId\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"matchId\"}],\"name\":\"reference\"}]},{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"teamId\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"teamId\"}],\"name\":\"reference\"}]},{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"shotsInWindow\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"shotsInWindow\"}],\"name\":\"reference\"}]},{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"matchMinute\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"matchMinute\"}],\"name\":\"reference\"}]},{\"kind\":\"NameReferencePair\",\"type\":\"complex\",\"arguments\":[{\"name\":\"name\",\"type\":\"string\",\"value\":\"alertId\"},{\"kind\":\"EventFieldReference\",\"type\":\"complexReference\",\"arguments\":[{\"name\":\"fieldName\",\"type\":\"string\",\"value\":\"alertId\"}],\"name\":\"reference\"}]}]}]}]}]}",
+        "settings": {
+          "shouldRun": true,
+          "shouldApplyRuleOnUpdate": false
+        }
+      }
+    },
+    "type": "timeSeriesView-v1"
+  }
+]
