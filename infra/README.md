@@ -28,7 +28,7 @@ The apps authenticate with `DefaultAzureCredential` and their user-assigned iden
 | `modules/app-api.bicep` | `pitchside-api`: internal ingress (only the web app's nginx reaches it), sticky sessions, exactly one replica, probes on `/alive` and `/health` |
 | `modules/app-agents.bicep` | `pitchside-agents`: no ingress (a worker), 0 to 2 replicas on the KEDA `azure-eventhub` scaler with its identity |
 | `modules/app-web.bicep` | `pitchside-web`: nginx with the Angular build, proxies `/api`, `/hubs`, `/mcp` and `/health` to the API with the viewer's address in `X-Forwarded-For`, external, 0 to 2 replicas |
-| `modules/alerts.bicep` | API availability test on `/health` (through the web app, since the API's ingress is internal) with its alert, and the narratives fallback-rate log alert |
+| `modules/alerts.bicep` | API availability test on `/health` (through the web app, since the API's ingress is internal) with its alert, and the narratives fallback-rate log alert (above 20% of at least 10 narratives in 15 minutes) |
 | `modules/fabric.bicep` | Optional F2 Fabric capacity (`PITCHSIDE_FABRIC_CAPACITY=true`), off by default (WP-12) |
 | `scripts/fabric-apply.sh` | Creates or updates the Fabric Eventhouse, KQL database, queryset and dashboard from `fabric/` (WP-12) |
 | `scripts/fabric-capacity.sh` | Resumes, pauses or reports the F2 capacity |
@@ -48,7 +48,7 @@ only checks they exist.
 | Identity | Role | Scope |
 | --- | --- | --- |
 | api, agents, web | AcrPull | registry |
-| deploy workflow (`PITCHSIDE_DEPLOYER_PRINCIPAL_ID`, default `id-pitchside-github`) | AcrPush | registry |
+| deploy workflow (`PITCHSIDE_DEPLOYER_PRINCIPAL_ID`, default `id-pitchside-github` in dev and `id-pitchside-github-demo` in demo) | AcrPush | registry |
 | api, agents | Cosmos DB Built-in Data Contributor (`00000000-0000-0000-0000-000000000002`, data plane) | Cosmos DB account |
 | api, agents | Azure Event Hubs Data Sender, Azure Event Hubs Data Receiver | Event Hubs namespace |
 | Fabric workspace identity (`FABRIC_WORKSPACE_PRINCIPAL_ID`, only when set) | Azure Event Hubs Data Receiver | the `match-events` hub |
