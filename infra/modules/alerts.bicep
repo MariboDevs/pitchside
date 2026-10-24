@@ -3,7 +3,8 @@
 //    or more fail within five minutes.
 // 2. Narratives fallback rate above 20% in 15 minutes: a log query over the moment workflow's completion log line
 //    ("Moment {MomentId}: base narrative {Status} after {Attempts} explainer attempts", MomentWorkflow.LogCompleted),
-//    which reaches Application Insights through the environment's OpenTelemetry agent.
+//    which reaches Application Insights through the environment's OpenTelemetry agent. It needs at least 10 narratives
+//    in the window, so one fallback among the first few after a restart does not page anyone.
 
 @description('Azure region.')
 param location string
@@ -90,7 +91,7 @@ resource fallbackRate 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   tags: tags
   properties: {
     displayName: 'Narratives fallback rate above 20% (${environmentName})'
-    description: 'More than 20% of base narratives in the last 15 minutes fell back to the code template.'
+    description: 'More than 20% of base narratives in the last 15 minutes (at least 10 of them) fell back to the code template.'
     severity: 2
     enabled: true
     scopes: [
@@ -106,7 +107,7 @@ traces
 | where message has "base narrative" and message has "explainer attempts"
 | parse message with * "base narrative " status:string " after " *
 | summarize total = count(), fallback = countif(status =~ "Fallback")
-| where total > 0 and todouble(fallback) / total > 0.2
+| where total >= 10 and todouble(fallback) / total > 0.2
 '''
           timeAggregation: 'Count'
           operator: 'GreaterThan'
