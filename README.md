@@ -12,6 +12,8 @@ several languages.
 on air: the demo plays seed 26 on a loop at ten times real time, about 13 minutes a match, with the overlay, the
 viewer and the control room one click from the match list.
 
+**Video:** [Pitchside in under two minutes](https://www.youtube.com/watch?v=KY_6y-mHiWQ) (1:53).
+
 One rule shapes the whole system: **numbers come from code, words come from AI, and every word cites the
 numbers it came from.** A narrative sentence that contains a number not on the fact sheet is rejected before
 it reaches a screen.
@@ -31,7 +33,7 @@ it reaches a screen.
 | MCP server: match state as tools for agents and Copilot | WP-08 | built |
 | Bicep, azd, Container Apps, deploy workflow | WP-09 | deployed: dev and demo environments, one deploy identity each |
 | Spoken full-time recap with Azure AI Speech | WP-10 | deployed: real neural voices in all four languages |
-| Demo seed, jump to the next moment, submission | WP-11 | demo live; video and submission in progress |
+| Demo seed, jump to the next moment, submission | WP-11 | demo live; video published; submission in progress |
 | Fabric Real-Time Intelligence: Eventstream, KQL database, dashboard, pressure alert in Activator | WP-12 | deployed on dev |
 
 The state of record, with the evidence for each row, is the
