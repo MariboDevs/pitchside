@@ -8,6 +8,10 @@ turns them into statistics and patterns, explains why a moment matters, renders 
 the match, and personalises it for an analyst, a casual fan, a club fan and a player-focused viewer, in
 several languages.
 
+**Live demo:** <https://pitchside-web.proudground-3a2deeab.southafricanorth.azurecontainerapps.io>. A match is always
+on air: the demo plays seed 26 on a loop at ten times real time, about 13 minutes a match, with the overlay, the
+viewer and the control room one click from the match list.
+
 One rule shapes the whole system: **numbers come from code, words come from AI, and every word cites the
 numbers it came from.** A narrative sentence that contains a number not on the fact sheet is rejected before
 it reaches a screen.
@@ -25,9 +29,10 @@ it reaches a screen.
 | Personas (analyst, casual, club fan, player focus) in English, Afrikaans, isiZulu and Spanish | WP-06 | built |
 | Evaluation, traceability, usage guard, audit of every model call | WP-07 | built |
 | MCP server: match state as tools for agents and Copilot | WP-08 | built |
-| Bicep, azd, Container Apps, deploy workflow | WP-09 | written, not yet provisioned |
-| Spoken full-time recap with Azure AI Speech | WP-10 | written, real voices not yet run |
-| Demo seed, jump to the next moment, submission | WP-11 | in progress |
+| Bicep, azd, Container Apps, deploy workflow | WP-09 | deployed: dev and demo environments, one deploy identity each |
+| Spoken full-time recap with Azure AI Speech | WP-10 | deployed: real neural voices in all four languages |
+| Demo seed, jump to the next moment, submission | WP-11 | demo live; video and submission in progress |
+| Fabric Real-Time Intelligence: Eventstream, KQL database, dashboard, pressure alert in Activator | WP-12 | deployed on dev |
 
 The state of record, with the evidence for each row, is the
 [gap register](docs/specs/IMPLEMENTATION-GAP.md). The plan by day and owner is in [docs/PLAN.md](docs/PLAN.md).
@@ -36,10 +41,18 @@ The state of record, with the evidence for each row, is the
 
 - **Realism.** [The calibration report](docs/calibration/report.md) compares 5,000 simulated matches with the
   real league's averages: all 26 statistics are within tolerance. CI regenerates it and fails on drift.
-- **Every number cited.** [The evaluation report for MER-7](docs/evaluation/report-MER-7.md), run offline with the
-  scripted crew, has 752 narratives from 34 moments, all verified, with a mean citation coverage of 1.000: every
-  number in every narrative resolves to a fact. The Foundry groundedness figures replace the offline proxy once the
-  crew runs on Foundry.
+- **Every number cited.** [The evaluation report for MER-7](docs/evaluation/report-MER-7.md) is a run on the
+  Foundry deployments: 752 narratives from 34 moments and 1,412 model calls. The fact-checker verified 315 and rejected
+  184. The other 253 are fallbacks: a template written by code in place of a rejected text, or, for a translation
+  that could not be verified, the verified English. So no rejected sentence reaches a screen. Mean citation
+  coverage is 0.994 and mean Foundry groundedness 0.702.
+- **The live demo.** Three consecutive demo loops on 23 October each had 1,537 events, the 29 moments in
+  [docs/DEMO.md](docs/DEMO.md), 656 narratives written on Foundry (1 to 4 template fallbacks for the base card),
+  all 29 cards aired, and a spoken recap in each language. Every route passed a no-sideways-scroll check at 360,
+  768 and 1,280 px.
+- **Fabric.** [docs/FABRIC.md](docs/FABRIC.md#evidence): the KQL database matched the API's event count on every
+  replay, the momentum tile matched the overlay, and the pressure alert's source handed Activator each qualifying
+  shot once, at the minute the simulation predicted.
 - **Determinism.** Pinned seeds are golden masters: the sample match's events, its 34 moments and its 752
   narratives are compared exactly on every build.
 - **The demo match.** [docs/DEMO.md](docs/DEMO.md) records how seed 26 was chosen from 500 for drama, with its
