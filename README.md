@@ -51,8 +51,8 @@ The state of record, with the evidence for each row, is the
   all 29 cards aired, and a spoken recap in each language. Every route passed a no-sideways-scroll check at 360,
   768 and 1,280 px.
 - **Fabric.** [docs/FABRIC.md](docs/FABRIC.md#evidence): the KQL database matched the API's event count on every
-  replay, the momentum tile matched the overlay, and the pressure alert fired at the minute the simulation
-  predicted.
+  replay, the momentum tile matched the overlay, and the pressure alert's source handed Activator each qualifying
+  shot once, at the minute the simulation predicted.
 - **Determinism.** Pinned seeds are golden masters: the sample match's events, its 34 moments and its 752
   narratives are compared exactly on every build.
 - **The demo match.** [docs/DEMO.md](docs/DEMO.md) records how seed 26 was chosen from 500 for drama, with its
