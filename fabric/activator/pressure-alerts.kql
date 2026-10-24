@@ -4,27 +4,32 @@
 // marks the stronger spells. Unlike the moment, it does not stand down when the side scores in the window.
 //
 // Each row is one shot, published within the lookback, that brought its side to 4 or more shots in the window.
-// Activator keys the rows on matchId and teamId and alerts on each new row. PressureAlertParityTests in
+// Activator runs it every minute, and its source keeps only the rows whose shot reached the database in one whole
+// clock minute, the one that ended 2 minutes before the run. Consecutive runs take consecutive minutes, so each row
+// reaches the rule once and each shot sends one alert, not one per poll. A shot that arrives late is counted by its
+// arrival, not its publication, so it is still sent once. PressureAlertParityTests in
 // tests/Pitchside.Fabric.Tests fails if windowMs differs from SustainedPressureRule.WindowMs.
 .create-or-alter function with (folder = "pitchside/alerts", docstring = "Shots that bring a side to 4 shots in 3 minutes") PressureAlerts(lookback: timespan = 30m) {
     let windowMs = 180000;
     let shotThreshold = 4;
-    // The lookback picks the shots that may raise an alert now. The shots they are counted against are all of those
-    // matches' shots, so a pause or a slow replay between two shots of one spell never hides it.
+    // The lookback picks the shots that may raise an alert now, by when they reached the database. The shots they are
+    // counted against are all of those matches' shots, so a pause or a slow replay between two shots of one spell
+    // never hides it. ingestedUtc is a shot's first arrival: a redelivered copy does not move it.
     let live = events
-        | where publishedUtc > ago(lookback)
+        | where ingestion_time() > ago(lookback)
         | distinct matchId;
     let shots = events
         | where matchId in (live)
-        | summarize arg_max(publishedUtc, *) by matchId, seq
+        | extend ingested = ingestion_time()
+        | summarize arg_max(publishedUtc, type, teamId, period, clockMs, wallTimeUtc), ingestedUtc = min(ingested) by matchId, seq
         | where type == "shot"
-        | project matchId, teamId, period, seq, clockMs, wallTimeUtc, publishedUtc;
+        | project matchId, teamId, period, seq, clockMs, wallTimeUtc, publishedUtc, ingestedUtc;
     shots
-    | where publishedUtc > ago(lookback)
+    | where ingestedUtc > ago(lookback)
     | join kind=inner (shots | project matchId, teamId, period, earlierSeq = seq, earlierClockMs = clockMs) on matchId, teamId, period
     | where earlierSeq <= seq and earlierClockMs >= clockMs - windowMs
-    | summarize shotsInWindow = count() by matchId, teamId, period, seq, clockMs, wallTimeUtc, publishedUtc
+    | summarize shotsInWindow = count() by matchId, teamId, period, seq, clockMs, wallTimeUtc, publishedUtc, ingestedUtc
     | where shotsInWindow >= shotThreshold
-    | extend matchMinute = (period - 1) * 45 + clockMs / 60000 + 1
+    | extend matchMinute = (period - 1) * 45 + clockMs / 60000 + 1, alertId = strcat(matchId, ":", seq)
     | order by publishedUtc asc
 }
