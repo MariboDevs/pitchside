@@ -10,7 +10,7 @@ alert fires at 4 shots, so it marks only the stronger spells, and it does not lo
 | File | What it is |
 | --- | --- |
 | `pressure-alerts.kql` | The function `PressureAlerts(lookback)` that Activator watches. `fabric-apply.sh` creates it in the KQL database with the rest of the schema. `PressureAlertParityTests` checks its window against `SustainedPressureRule.WindowMs` |
-| `ReflexEntities.json` | The item's definition, read back with `infra/scripts/fabric-apply.sh --export-activator`: the KQL source, its event, the object **Pressure spell** keyed by `alertId` with four properties, and the rule **Pressure alert (once per shot)** |
+| `ReflexEntities.json` | The item's definition, read back with `infra/scripts/fabric-apply.sh --export-activator`: the KQL source, its event, the object **Pressure spell** keyed by `alertId` with four properties, and the rule **Pressure alert (once per shot)**. `ActivatorDefinitionTests` checks the references, the `alertId` key and the rule's transition at the KQL threshold |
 
 ## How the rule was defined
 
