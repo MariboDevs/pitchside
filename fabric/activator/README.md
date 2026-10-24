@@ -35,6 +35,12 @@ once a minute, about 20 seconds past it, so consecutive runs take consecutive mi
 than publication means a shot that reaches the database late is still sent, once, and a redelivered copy keeps the
 first arrival, so it is not sent again. Rows reach the database 1 to 2 seconds after publication (`MER-9`).
 
+The window keeps no state between runs, so it relies on one run per clock minute. From 22 October 18:32 to
+24 October 13:03 UTC Activator ran 2,551 times over 2,552 minutes (`.show queries`), none failed: two minutes had no
+run, whose alerts would be lost, and one had two, whose alerts would be sent twice. That is about 1 alert in 1,000
+lost and 1 in 2,500 repeated, accepted for a broadcast demo alert. Removing it needs consumption state outside the
+query, for example a table of sent `alertId`s written by the action, which this version does not have.
+
 ## Manual definition (portal)
 
 1. In workspace `pitchside-dev`, open the KQL queryset **match-analysis**, tab **Pressure alerts (Activator source)**.
