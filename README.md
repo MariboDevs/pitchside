@@ -144,16 +144,14 @@ says built when a commit made it true.
 
 ## Team
 
-| | Role |
-| --- | --- |
-| Sipho Maribo | Senior software architect: engine, agents, infrastructure |
-| Pretty Kunene | Tester: evaluation harness, fact-check gate, golden masters, browser gates |
-| Hlumela Tshazibana | Project manager and business analyst: personas, pitch, video, submission |
+Pitchside is a solo entry by Sipho Maribo, senior software architect: the engine, agents, infrastructure,
+evaluation, video and submission. [docs/PLAN.md](docs/PLAN.md) and the work package documents were written for a
+team of three and still name the owners planned at the start.
 
 ## How it is built
 
-Pitchside is developed with GitHub Copilot agent mode and Claude Code alongside the team. Every design
-decision, calibration target, tolerance and test is the team's. AI-assisted commits carry co-author trailers.
+Pitchside is developed with GitHub Copilot agent mode and Claude Code. Every design decision, calibration target,
+tolerance and test is the author's. AI-assisted commits carry co-author trailers.
 
 ## License
 
