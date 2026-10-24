@@ -17,7 +17,7 @@
         "executionIntervalInSeconds": 60
       },
       "query": {
-        "queryString": "let until = bin(now(), 1m) - 2m;\nPressureAlerts(1h)\n| where publishedUtc >= until - 1m and publishedUtc < until"
+        "queryString": "let until = bin(now(), 1m) - 2m;\nPressureAlerts(1h)\n| where ingestedUtc >= until - 1m and ingestedUtc < until"
       },
       "eventhouseItem": {
         "databaseName": "e7c4ed43-45ec-4a78-979c-db5dd2804a57",

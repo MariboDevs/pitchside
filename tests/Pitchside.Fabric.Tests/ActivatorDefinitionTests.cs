@@ -41,12 +41,24 @@ public sealed class ActivatorDefinitionTests
         source.GetProperty("runSettings").GetProperty("executionIntervalInSeconds").GetInt32().ShouldBe(60);
         query.ShouldContain("PressureAlerts(");
 
-        // One whole clock minute per run, ending 2 minutes back: consecutive runs take consecutive minutes. The time
-        // axis is off; its watermark did not move, so it returned the same row on every poll.
+        // One whole clock minute of arrivals per run, ending 2 minutes back: consecutive runs take consecutive minutes,
+        // and a shot that arrives late falls in the minute it arrived, not the one it was published in. The time axis
+        // is off; its watermark did not move, so it returned the same row on every poll.
         query.ShouldContain("let until = bin(now(), 1m) - 2m;");
-        query.ShouldContain("publishedUtc >= until - 1m and publishedUtc < until");
+        query.ShouldContain("ingestedUtc >= until - 1m and ingestedUtc < until");
         (source.TryGetProperty("eventTimeSettings", out var time) && time.ValueKind != JsonValueKind.Null).ShouldBeFalse();
         source.GetProperty("queryParameters").GetArrayLength().ShouldBe(0);
+    }
+
+    [Fact]
+    public void The_function_dates_each_shot_by_its_first_arrival()
+    {
+        var text = File.ReadAllText(RepositoryRoot.Combine("fabric", "activator", "pressure-alerts.kql"));
+
+        // A redelivered copy arrives later; the minimum keeps the first arrival, so the copy does not alert again.
+        text.ShouldContain("extend ingested = ingestion_time()");
+        text.ShouldContain("ingestedUtc = min(ingested) by matchId, seq");
+        text.ShouldContain("| where ingestedUtc > ago(lookback)");
     }
 
     [Fact]

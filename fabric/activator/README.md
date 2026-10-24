@@ -29,8 +29,11 @@ Two versions in between did not work, and the tests now reject both:
 - The source in time-axis mode on `publishedUtc`, with `startTime` and `endTime` parameters. The watermark did not
   move: the `MER-6` row came back on every poll for as long as it stayed within the lookback.
 
-The source now selects by the clock instead: each run keeps the rows published in the whole minute that ended 2
-minutes before it. Runs come once a minute, about 20 seconds past it, so consecutive runs take consecutive minutes.
+The source now selects by the clock instead: each run keeps the rows whose shot reached the database
+(`ingestedUtc`, the shot's first `ingestion_time()`) in the whole minute that ended 2 minutes before it. Runs come
+once a minute, about 20 seconds past it, so consecutive runs take consecutive minutes. Selecting by arrival rather
+than publication means a shot that reaches the database late is still sent, once, and a redelivered copy keeps the
+first arrival, so it is not sent again. Rows reach the database 1 to 2 seconds after publication (`MER-9`).
 
 ## Manual definition (portal)
 
@@ -41,11 +44,11 @@ minutes before it. Runs come once a minute, about 20 seconds past it, so consecu
    ```kusto
    let until = bin(now(), 1m) - 2m;
    PressureAlerts(1h)
-   | where publishedUtc >= until - 1m and publishedUtc < until
+   | where ingestedUtc >= until - 1m and ingestedUtc < until
    ```
 
-3. Run the query **every 1 minute**, with no event time setting. Each run keeps one whole clock minute, ending 2
-   minutes before the run, so each row arrives once. The one-hour lookback only bounds the scan.
+3. Run the query **every 1 minute**, with no event time setting. Each run keeps the shots that arrived in one whole clock
+   minute, ending 2 minutes before the run, so each row arrives once. The one-hour lookback only bounds the scan.
 4. No object is needed: the rule works on the source's events.
 5. Rule **Pressure alert (once per shot)** on the event: field `shotsInWindow` **is greater than or equal to `4`**.
    Each qualifying shot is one row and arrives once, so each shot sends one email.
