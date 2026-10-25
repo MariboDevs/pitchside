@@ -65,9 +65,10 @@ overlays on a live match feed".
 
 ## Submission checklist
 
-- [ ] Project pitch: what we built, which Microsoft and Azure technologies, what it does, what problem it solves.
+- [x] Project pitch: what we built, which Microsoft and Azure technologies, what it does, what problem it solves.
+  Entered as [Pitchside: Verified Match Intelligence](https://innovationstudio.microsoft.com/hackathons/insidethegamedeveloperhackathon/project/126350) on 25 October 2026.
 - [x] Demo video under two minutes, public URL: <https://www.youtube.com/watch?v=KY_6y-mHiWQ> (1:53).
-- [ ] Public GitHub repository URL.
-- [ ] Hosted demo URL, with credentials if gated, working until 10 November.
-- [ ] README integration matrix and calibration report current.
-- [ ] Category selected: Best Enterprise Solution.
+- [x] Public GitHub repository URL.
+- [x] Hosted demo URL, with credentials if gated, working until 10 November (open, no login; keep it up until then).
+- [x] README integration matrix and calibration report current.
+- [x] Category selected: Best Enterprise Solution (the project page has no category field, so the description names it).
