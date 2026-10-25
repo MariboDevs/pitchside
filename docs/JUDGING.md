@@ -110,7 +110,7 @@ The category asks for "the reliability, transparency, and controls required for 
 Stated here so a judge does not have to find them:
 
 - **Casual and isiZulu variants often fall back.** On the demo loops of 23 October, 24 to 38 % of casual-persona
-  variants were verified. When a persona variant is rejected, the viewer shows the moment's verified base card
+  variants were verified. When a persona variant is rejected, the viewer shows the moment's base card
   instead, in the chosen language when its translation verified; only when the translation itself fell back does it
   show the verified English, labelled "Shown in English". The checker rejects them rather than let an unsupported
   sentence air ([gap register](specs/IMPLEMENTATION-GAP.md#open-items)).
