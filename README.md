@@ -14,6 +14,9 @@ viewer and the control room one click from the match list.
 
 **Video:** [Pitchside in under two minutes](https://www.youtube.com/watch?v=KY_6y-mHiWQ) (1:53).
 
+**Judges, start here:** [docs/JUDGING.md](docs/JUDGING.md), a three-minute tour of the demo and the evidence for
+each judging criterion.
+
 One rule shapes the whole system: **numbers come from code, words come from AI, and every word cites the
 numbers it came from.** A narrative sentence that contains a number not on the fact sheet is rejected before
 it reaches a screen.
@@ -131,6 +134,7 @@ says built when a commit made it true.
 
 ## Documents
 
+- [docs/JUDGING.md](docs/JUDGING.md): for the judges, a three-minute tour and the evidence for each criterion
 - [docs/HACKATHON.md](docs/HACKATHON.md): the rules distilled, criteria, dates, submission checklist
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the five stages, the agent crew, enterprise controls, Azure topology
 - [docs/EVENT-SCHEMA.md](docs/EVENT-SCHEMA.md): the event contract
