@@ -77,9 +77,9 @@ The tools and how to register the server in a client are in [MCP.md](MCP.md).
 
 | Claim | Evidence |
 | --- | --- |
-| No rejected sentence reaches a screen | [Evaluation report for MER-7](evaluation/report-MER-7.md), a run on the Foundry deployments: 752 narratives from 34 moments and 1,412 model calls. The fact-checker verified 315 and rejected 184; the other 253 are fallbacks written by code. Mean citation coverage 0.994 |
+| No rejected sentence reaches a screen | [Evaluation report for MER-7](evaluation/report-MER-7.md), a run on the Foundry deployments: 752 narratives from 34 moments and 1,412 model calls. The fact-checker verified 315 and rejected 184. The other 253 are fallbacks: a template written by code in place of a rejected text, or, for a translation that could not be verified, the verified English. Mean citation coverage 0.994 |
 | It runs in production conditions | The demo is deployed on Azure Container Apps with Event Hubs, Cosmos DB, Foundry and Speech. Three consecutive demo loops on 23 October each had 1,537 events, 29 moments, 656 narratives written on Foundry and every card aired ([README, Evidence](../README.md#evidence)) |
-| Analysts get the feed too | Microsoft Fabric Real-Time Intelligence: Eventstream from Event Hubs into a KQL database, a live dashboard and an Activator alert on sustained pressure. The KQL row count matched the API's event count on every replay, and the alert fired once per qualifying shot ([FABRIC.md, Evidence](FABRIC.md#evidence)) |
+| Analysts get the feed too | Microsoft Fabric Real-Time Intelligence: Eventstream from Event Hubs into a KQL database, a live dashboard and an Activator alert on sustained pressure. The KQL database's distinct event count (`MatchEventCount(...).events`; raw rows can include at-least-once redeliveries) matched the API's event count on every replay, and in the recorded runs the alert fired once per qualifying shot ([FABRIC.md, Evidence](FABRIC.md#evidence)) |
 | Every audience is served | Four personas in four languages ([PERSONAS.md](PERSONAS.md)) |
 
 ### 4. User Experience and Presentation
@@ -99,7 +99,7 @@ The category asks for "the reliability, transparency, and controls required for 
 | Traceability | Every sentence links to the facts it cites and every fact to its events, in the control room and through `get_narrative` and `get_fact` over MCP |
 | Audit | Every model call and every MCP call writes an audit record with its provider, model, prompt version, prompt hash, tokens and latency: `GET /api/v1/audit?matchId=<id>` on the demo |
 | Human in the loop | Approve before air in the control room |
-| Evaluation in the open | Foundry groundedness on every verified narrative, shown on the card ([report](evaluation/report-MER-7.md)) |
+| Evaluation in the open | Foundry groundedness is scored for each verified narrative and shown on its card, or "pending" when the evaluation has not returned: 314 of the 315 verified narratives in the [report](evaluation/report-MER-7.md) have a score |
 | Cost and abuse limits | A usage guard on every paid call: 6 replays per address per hour, 20 connections per address, 400 narrated moments and 60 spoken lines per hour ([CONFIGURATION.md](CONFIGURATION.md)) |
 | No secrets | Keyless managed identity for every Azure service, Key Vault references only, local auth off on Event Hubs; gitleaks finds nothing in the whole history and the secret scan runs in CI |
 | Infrastructure as code | Bicep and azd, separate dev and demo environments with one deploy identity each, deployed by a workflow over OIDC ([infra/](../infra/README.md)) |
@@ -110,7 +110,9 @@ The category asks for "the reliability, transparency, and controls required for 
 Stated here so a judge does not have to find them:
 
 - **Casual and isiZulu variants often fall back.** On the demo loops of 23 October, 24 to 38 % of casual-persona
-  variants were verified; the rest show the verified English card with "Shown in English". The checker rejects them
-  rather than let an unsupported sentence air ([gap register](specs/IMPLEMENTATION-GAP.md#open-items)).
+  variants were verified. When a persona variant is rejected, the viewer shows the moment's verified base card
+  instead, in the chosen language when its translation verified; only when the translation itself fell back does it
+  show the verified English, labelled "Shown in English". The checker rejects them rather than let an unsupported
+  sentence air ([gap register](specs/IMPLEMENTATION-GAP.md#open-items)).
 - **Fabric runs on the dev environment**, which has the Event Hubs Standard tier it needs; the demo runs on Basic.
 - **The Afrikaans and isiZulu text has not had a native-speaker review** ([LANGUAGE-REVIEW.md](LANGUAGE-REVIEW.md)).
