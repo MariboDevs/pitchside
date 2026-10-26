@@ -229,6 +229,19 @@ public sealed class EarlierLoopNarrativesTests
         (await _recaps.GetAudioAsync(Loop2, Languages.English, CancellationToken.None)).ShouldBe(await _recaps.GetAudioAsync(Loop1, Languages.English, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task A_moment_before_full_time_never_reads_the_recap_store()
+    {
+        await WriteLoop1Async(Goal);
+        var recaps = new CountingRecapStore();
+        var replays = new EarlierLoopNarratives(
+            _audit, recaps, Options.Create(new AgentsOptions()), TimeProvider.System, NullLogger<EarlierLoopNarratives>.Instance, _store);
+
+        (await replays.TryPublishAsync(InLoop2(Goal), new InMemoryNarrativeLog().PublishAsync, CancellationToken.None)).ShouldBeTrue();
+
+        recaps.Reads.ShouldBe(0);
+    }
+
     private const string AuditId = "01JBQ3Z8X0A1B2C3D4E5F6G7H8";
 
     private EarlierLoopNarratives Replays(AgentsOptions? options = null, TimeProvider? time = null) => Replays(_store, options, time);

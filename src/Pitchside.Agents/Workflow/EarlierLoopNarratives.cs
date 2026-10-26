@@ -4,6 +4,7 @@ using Pitchside.Agents.Personalisation;
 using Pitchside.Agents.Rendering;
 using Pitchside.Contracts;
 using Pitchside.Engine;
+using Pitchside.Moments;
 using Pitchside.Runtime.Audit;
 using Pitchside.Runtime.MomentSink;
 using Pitchside.Runtime.Recaps;
@@ -175,6 +176,12 @@ public sealed partial class EarlierLoopNarratives(
     /// <summary>The full-time recap in each language the loop before spoke one in for this moment, under this loop's ids.</summary>
     private async Task CopyRecapsAsync(IReadOnlyList<Narrative> earlier, string source, Moment moment, CancellationToken cancellationToken)
     {
+        // Only full time is spoken (RecapWriter), so no other moment reads the recap store.
+        if (moment.Type != MomentTypes.FullTime)
+        {
+            return;
+        }
+
         var sourceMomentId = earlier[0].MomentId;
         foreach (var language in earlier.Select(n => n.Language).Prepend(Languages.English).Distinct(StringComparer.Ordinal))
         {
