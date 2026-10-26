@@ -161,6 +161,59 @@ public sealed class EarlierLoopNarrativesTests
     }
 
     [Fact]
+    public async Task A_moment_the_loop_before_lacks_a_variant_for_is_written_by_the_crew()
+    {
+        await WriteLoop1Async(Goal, keep: n => !IsCasualSpanish(n));
+        var log = new InMemoryNarrativeLog();
+
+        (await Replays().TryPublishAsync(InLoop2(Goal), log.PublishAsync, CancellationToken.None)).ShouldBeFalse();
+
+        log.Narratives.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Variants_the_options_no_longer_write_are_not_replayed()
+    {
+        await WriteLoop1Async(Goal);
+        var log = new InMemoryNarrativeLog();
+        var fewer = new AgentsOptions { Languages = [Languages.English, Languages.Afrikaans] };
+
+        (await Replays(fewer).TryPublishAsync(InLoop2(Goal), log.PublishAsync, CancellationToken.None)).ShouldBeFalse();
+
+        log.Narratives.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_loop_read_before_its_moment_was_complete_is_read_again_a_minute_later()
+    {
+        var earlier = await WriteLoop1Async(Goal, keep: n => !IsCasualSpanish(n));
+        var clock = new FixedTimeProvider(DateTimeOffset.UnixEpoch);
+        var replays = Replays(time: clock);
+        var log = new InMemoryNarrativeLog();
+        (await replays.TryPublishAsync(InLoop2(Goal), log.PublishAsync, CancellationToken.None)).ShouldBeFalse();
+
+        // The variant still in flight is stored; the loop held is read again only once it is a minute old.
+        await _store.SaveNarrativeAsync(earlier.Single(IsCasualSpanish), CancellationToken.None);
+        (await replays.TryPublishAsync(InLoop2(Goal), log.PublishAsync, CancellationToken.None)).ShouldBeFalse();
+        clock.Advance(EarlierLoopNarratives.RefreshAfter);
+
+        (await replays.TryPublishAsync(InLoop2(Goal), log.PublishAsync, CancellationToken.None)).ShouldBeTrue();
+        log.Narratives.Count.ShouldBe(earlier.Count);
+    }
+
+    [Fact]
+    public async Task A_publish_that_fails_does_not_stop_the_rest_and_is_tried_again()
+    {
+        var earlier = await WriteLoop1Async(Goal);
+        var publisher = new FailOncePublisher();
+
+        (await Replays().TryPublishAsync(InLoop2(Goal), publisher.PublishAsync, CancellationToken.None)).ShouldBeTrue();
+
+        publisher.Narratives.Select(n => n.Id).ShouldBe(
+            earlier.Select(n => n.Id.Replace(Loop1 + ":", Loop2 + ":", StringComparison.Ordinal)), ignoreOrder: true);
+    }
+
+    [Fact]
     public async Task The_full_time_recap_is_copied_with_the_narratives()
     {
         await WriteLoop1Async(FullTime, Crew.Recaps(_recaps));
@@ -178,16 +231,19 @@ public sealed class EarlierLoopNarrativesTests
 
     private const string AuditId = "01JBQ3Z8X0A1B2C3D4E5F6G7H8";
 
-    private EarlierLoopNarratives Replays(AgentsOptions? options = null) => Replays(_store, options);
+    private EarlierLoopNarratives Replays(AgentsOptions? options = null, TimeProvider? time = null) => Replays(_store, options, time);
 
-    private EarlierLoopNarratives Replays(IMatchStore? store, AgentsOptions? options = null) => new(
-        _audit, _recaps, Options.Create(options ?? new AgentsOptions()), TimeProvider.System, NullLogger<EarlierLoopNarratives>.Instance, store);
+    private EarlierLoopNarratives Replays(IMatchStore? store, AgentsOptions? options = null, TimeProvider? time = null) => new(
+        _audit, _recaps, Options.Create(options ?? new AgentsOptions()), time ?? TimeProvider.System, NullLogger<EarlierLoopNarratives>.Instance, store);
 
-    /// <summary>Runs the whole scripted crew on the moment in loop 1 and stores what it wrote, with one model call's record.</summary>
-    private async Task<IReadOnlyList<Narrative>> WriteLoop1Async(DetectedMoment moment, RecapWriter? recaps = null)
+    /// <summary>
+    /// Runs the whole scripted crew on the moment in loop 1 and stores what it wrote (all of it, or what
+    /// <paramref name="keep"/> keeps), with one model call's record.
+    /// </summary>
+    private async Task<IReadOnlyList<Narrative>> WriteLoop1Async(DetectedMoment moment, RecapWriter? recaps = null, Func<Narrative, bool>? keep = null)
     {
         var context = await Crew.FullWorkflow(recaps: recaps).RunAsync(moment.WorkItem, CancellationToken.None);
-        foreach (var narrative in context.Narratives)
+        foreach (var narrative in context.Narratives.Where(keep ?? (_ => true)))
         {
             await _store.SaveNarrativeAsync(narrative, CancellationToken.None);
         }
@@ -211,6 +267,8 @@ public sealed class EarlierLoopNarrativesTests
         }, CancellationToken.None);
         return context.Narratives;
     }
+
+    private static bool IsCasualSpanish(Narrative n) => n.Persona == Personas.Casual && n.Language == Languages.Spanish;
 
     private static MomentWorkItem InLoop2(DetectedMoment moment) => InLoop(moment, Loop2);
 

@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Options;
+using Pitchside.Agents.Workflow;
 using Pitchside.Contracts;
 using Pitchside.Evaluation;
 using Pitchside.Runtime.Broadcast;
@@ -29,11 +30,14 @@ public sealed partial class GroundednessBatcher(
     private readonly Dictionary<string, (string Text, double? Score)> _judged = new(StringComparer.Ordinal);
     private bool _recovered;
 
-    /// <summary>Queues a narrative for the next batch; only verified narratives are scored.</summary>
+    /// <summary>
+    /// Queues a narrative for the next batch; only verified narratives are scored, and never a demo loop's replay of
+    /// one (<see cref="EarlierLoopNarratives"/>), which keeps the evaluation it was written with and calls no model.
+    /// </summary>
     public void Enqueue(Narrative narrative)
     {
         ArgumentNullException.ThrowIfNull(narrative);
-        if (narrative.Status == NarrativeStatus.Verified)
+        if (narrative.Status == NarrativeStatus.Verified && !EarlierLoopNarratives.IsReplay(narrative))
         {
             _queue.Writer.TryWrite(narrative);
         }

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Pitchside.Agents.Personalisation;
 using Pitchside.Agents.Rendering;
 using Pitchside.Contracts;
 using Pitchside.Engine;
@@ -16,9 +17,10 @@ namespace Pitchside.Agents.Workflow;
 /// <c>Agents:ReplayEarlierLoops</c> such a moment is not written again: the narratives the crew wrote for it in the
 /// loop before are published under this loop's ids, with the audit records of the model calls that wrote them and
 /// any spoken recap, and no model is called. A copy keeps its provenance (the model, prompt and time it was written)
-/// with <c>replay</c> added to its provider, so the control room shows it is a replay. It is used only when the loop
-/// before holds a verified English base narrative for the moment and every narrative it holds renders, on this loop's
-/// fact sheet, to exactly the text it has; otherwise the crew writes the moment as usual.
+/// with <c>replay</c> added to its provider, so the control room shows it is a replay, and the groundedness judge
+/// leaves it alone. It is used only when the loop before holds exactly the narratives the crew would write for the
+/// moment now, with a verified English base, and every one renders, on this loop's fact sheet, to exactly the text it
+/// has; otherwise the crew writes the moment as usual.
 /// </summary>
 public sealed partial class EarlierLoopNarratives(
     IAuditStore audit,
@@ -30,7 +32,7 @@ public sealed partial class EarlierLoopNarratives(
 {
     public const string ReplaySuffix = " replay";
 
-    /// <summary>A loaded loop is read again for a moment it lacks once it is this old: its last moments may have been in flight.</summary>
+    /// <summary>A loaded loop is read again for a moment it cannot be reused for once it is this old: its last moments may have been in flight.</summary>
     public static readonly TimeSpan RefreshAfter = TimeSpan.FromMinutes(1);
 
     private const int AuditPage = 500;
@@ -53,33 +55,54 @@ public sealed partial class EarlierLoopNarratives(
         }
 
         var sourceMomentId = Rekey(item.Moment.Id, matchId, source);
-        (Dictionary<string, List<Narrative>> Narratives, Dictionary<string, List<AuditRecord>> Audit) loaded;
+        var expected = ExpectedIds(new MomentContext { Moment = item.Moment, FactSheet = item.FactSheet, Document = item.Document }, sourceMomentId);
+        bool Reusable(Dictionary<string, List<Narrative>> narratives) =>
+            narratives.TryGetValue(sourceMomentId, out var found) && CanReuse(found, item.FactSheet, expected);
+
+        List<Narrative> earlier;
         try
         {
-            loaded = await LoadAsync(source, sourceMomentId, cancellationToken).ConfigureAwait(false);
+            var loaded = await LoadAsync(source, Reusable, cancellationToken).ConfigureAwait(false);
+            if (!Reusable(loaded.Narratives))
+            {
+                LogNotReused(item.Moment.Id, source);
+                return false;
+            }
+
+            earlier = loaded.Narratives[sourceMomentId];
+            foreach (var record in loaded.Audit.GetValueOrDefault(sourceMomentId) ?? [])
+            {
+                await audit.SaveAsync(record with { MatchId = matchId, MomentId = item.Moment.Id }, cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // The store could not be read: the crew writes the moment, as it would without a loop before.
-            LogLoadFailed(ex, item.Moment.Id, source);
+            // The loop before could not be read or its audit copied: nothing is published yet, so the crew writes the
+            // moment, as it would without a loop before.
+            LogNotPrepared(ex, item.Moment.Id, source);
             return false;
         }
 
-        if (!loaded.Narratives.TryGetValue(sourceMomentId, out var earlier) || !CanReuse(earlier, item.FactSheet))
-        {
-            LogNotReused(item.Moment.Id, source);
-            return false;
-        }
-
-        foreach (var record in loaded.Audit.GetValueOrDefault(sourceMomentId) ?? [])
-        {
-            await audit.SaveAsync(record with { MatchId = matchId, MomentId = item.Moment.Id }, cancellationToken).ConfigureAwait(false);
-        }
-
-        // The base narrative first, as the crew publishes it, then the variants and translations.
+        // The base narrative first, as the crew publishes it, then the variants and translations. As in the crew's run,
+        // a publish that fails does not stop the rest; it is tried once more at the end, and fails the moment then.
+        var failed = new List<Narrative>();
         foreach (var narrative in earlier.OrderBy(n => IsEnglishBase(n) ? 0 : 1))
         {
-            await publish(Copy(narrative, source, matchId), cancellationToken).ConfigureAwait(false);
+            var copy = Copy(narrative, source, matchId);
+            try
+            {
+                await publish(copy, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                LogPublishFailed(ex, copy.Id);
+                failed.Add(copy);
+            }
+        }
+
+        foreach (var copy in failed)
+        {
+            await publish(copy, cancellationToken).ConfigureAwait(false);
         }
 
         await CopyRecapsAsync(earlier, source, item.Moment, cancellationToken).ConfigureAwait(false);
@@ -87,9 +110,28 @@ public sealed partial class EarlierLoopNarratives(
         return true;
     }
 
-    /// <summary>Whether every earlier narrative was written at this sheet's sequence and renders on it to the same text.</summary>
-    private static bool CanReuse(IReadOnlyList<Narrative> earlier, FactSheet sheet) =>
-        earlier.Any(n => IsEnglishBase(n) && n.Status == NarrativeStatus.Verified)
+    /// <summary>
+    /// The ids the crew writes for the moment with the current options: the base and every persona variant, in English
+    /// and every configured language, each one stored whether it verified, was rejected or fell back.
+    /// </summary>
+    private IReadOnlySet<string> ExpectedIds(MomentContext context, string sourceMomentId)
+    {
+        var languages = options.Value.Languages.Where(Languages.All.Contains).Prepend(Languages.English).Distinct(StringComparer.Ordinal).ToList();
+        var subjects = PersonaSubjects.For(context, options.Value.Personas);
+        return languages
+            .SelectMany(language => subjects
+                .Select(s => Narrative.IdFor(sourceMomentId, s.Spec.Persona, language, s.SubjectId))
+                .Prepend(Narrative.IdFor(sourceMomentId, Personas.Base, language)))
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Whether the earlier narratives are exactly the set the crew would write now, with a verified English base, each
+    /// written at this sheet's sequence and rendering on it to the same text.
+    /// </summary>
+    private static bool CanReuse(List<Narrative> earlier, FactSheet sheet, IReadOnlySet<string> expected) =>
+        expected.SetEquals(earlier.Select(n => n.Id))
+        && earlier.Any(n => IsEnglishBase(n) && n.Status == NarrativeStatus.Verified)
         && earlier.All(n => n.FactSheetSeq == sheet.AsOfSeq && RendersTheSame(n, sheet));
 
     private static bool RendersTheSame(Narrative narrative, FactSheet sheet)
@@ -113,12 +155,19 @@ public sealed partial class EarlierLoopNarratives(
     private static bool IsEnglishBase(Narrative narrative) =>
         narrative.Persona == Personas.Base && narrative.Subject is null && narrative.Language == Languages.English;
 
+    /// <summary>Whether a narrative is a later loop's replay of one written before.</summary>
+    public static bool IsReplay(Narrative narrative)
+    {
+        ArgumentNullException.ThrowIfNull(narrative);
+        return narrative.Provenance.Provider.EndsWith(ReplaySuffix, StringComparison.Ordinal);
+    }
+
     private static Narrative Copy(Narrative narrative, string from, string to) => narrative with
     {
         Id = Rekey(narrative.Id, from, to),
         MatchId = to,
         MomentId = Rekey(narrative.MomentId, from, to),
-        Provenance = narrative.Provenance.Provider.EndsWith(ReplaySuffix, StringComparison.Ordinal)
+        Provenance = IsReplay(narrative)
             ? narrative.Provenance
             : narrative.Provenance with { Provider = narrative.Provenance.Provider + ReplaySuffix },
     };
@@ -155,14 +204,18 @@ public sealed partial class EarlierLoopNarratives(
         }
     }
 
-    /// <summary>The loop's narratives and audit records by moment, read once per loop, and again for a moment it lacked.</summary>
-    private async Task<(Dictionary<string, List<Narrative>> Narratives, Dictionary<string, List<AuditRecord>> Audit)> LoadAsync(string matchId, string momentId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The loop's narratives and audit records by moment, read once per loop, and read again when what is held cannot
+    /// be reused for a moment (its last moments may have been in flight) and is older than <see cref="RefreshAfter"/>.
+    /// </summary>
+    private async Task<(Dictionary<string, List<Narrative>> Narratives, Dictionary<string, List<AuditRecord>> Audit)> LoadAsync(
+        string matchId, Func<Dictionary<string, List<Narrative>>, bool> usable, CancellationToken cancellationToken)
     {
         await _loading.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             if (_loaded is { } loaded && loaded.MatchId == matchId
-                && (loaded.Narratives.ContainsKey(momentId) || time.GetUtcNow() - loaded.ReadUtc < RefreshAfter))
+                && (usable(loaded.Narratives) || time.GetUtcNow() - loaded.ReadUtc < RefreshAfter))
             {
                 return (loaded.Narratives, loaded.Audit);
             }
@@ -205,8 +258,11 @@ public sealed partial class EarlierLoopNarratives(
     [LoggerMessage(Level = LogLevel.Information, Message = "Moment {MomentId}: {Source} cannot be replayed for it, so the crew writes it")]
     private partial void LogNotReused(string momentId, string source);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Moment {MomentId}: {Source} could not be read, so the crew writes it")]
-    private partial void LogLoadFailed(Exception exception, string momentId, string source);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Narrative {NarrativeId} could not be published as a replay; it is tried again at the end")]
+    private partial void LogPublishFailed(Exception exception, string narrativeId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Moment {MomentId}: {Source} could not be read or its audit copied, so the crew writes it")]
+    private partial void LogNotPrepared(Exception exception, string momentId, string source);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Moment {MomentId}: the {Language} recap could not be copied from the loop before")]
     private partial void LogRecapNotCopied(Exception exception, string momentId, string language);
