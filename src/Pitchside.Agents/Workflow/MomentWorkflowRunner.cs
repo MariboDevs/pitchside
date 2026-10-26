@@ -11,7 +11,9 @@ namespace Pitchside.Agents.Workflow;
 /// Reads the moment sink and runs one workflow per moment, at most <c>Agents:MaxConcurrentMoments</c> at once across
 /// the host (the <see cref="WorkflowGate"/> it shares).
 /// The sink is a queue, so a moment that arrives while the crew is busy waits rather than being dropped. Past the
-/// host's <c>UsageGuard:NarrativesPerHour</c> a moment is skipped, not queued, so a public demo cannot run up cost.
+/// host's <c>UsageGuard:NarrativesPerHour</c> a moment is skipped, not queued, so a public demo cannot run up cost. A
+/// moment in a later demo loop that the loop before can be replayed for is published from it first, with no model
+/// call, so it does not count against that limit.
 /// </summary>
 public sealed partial class MomentWorkflowRunner(
     IMomentSink sink,
@@ -20,7 +22,8 @@ public sealed partial class MomentWorkflowRunner(
     IOptions<AgentsOptions> options,
     ILogger<MomentWorkflowRunner> logger,
     UsageGuard? guard = null,
-    WorkflowGate? sharedGate = null) : BackgroundService
+    WorkflowGate? sharedGate = null,
+    EarlierLoopNarratives? earlierLoops = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -101,6 +104,11 @@ public sealed partial class MomentWorkflowRunner(
         try
         {
             await Task.Yield();
+            if (earlierLoops is not null && await earlierLoops.TryPublishAsync(item, publisher.PublishAsync, cancellationToken).ConfigureAwait(false))
+            {
+                return;
+            }
+
             if (guard is not null && !guard.TryTake(UsageLimits.Narratives, UsageGuard.HostKey).Allowed)
             {
                 LogOverLimit(item.Moment.Id);

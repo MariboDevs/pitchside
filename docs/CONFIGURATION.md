@@ -22,6 +22,7 @@ locally, and Key Vault references in Azure. No key with a secret value is ever c
 | `Agents:AgentFactCheck` | `true` | whether the second, model-based fact-check pass runs after the code check | WP-04 |
 | `Agents:Personas` | `analyst`, `casual`, `club_fan`, `player_focus` | the viewer personas written for every moment; a configured list replaces the defaults, and an empty value (`Agents__Personas=`) writes the base narrative only | WP-06 |
 | `Agents:Languages` | `en`, `af`, `zu`, `es` | the languages every narrative is written in; a configured list replaces the defaults; English is always written, the others are translated | WP-06 |
+| `Agents:ReplayEarlierLoops` | `true` | a moment in a later demo loop (`MER-26-3`) republishes what the crew wrote for the same moment in the loop before, under its own ids and with its audit records and recap, when every narrative renders the same on this loop's fact sheet and the base is verified; no model is called and the provider reads `Foundry replay`. Otherwise the crew writes the moment. `false` writes every loop afresh | WP-04, WP-11 |
 | `Foundry:Endpoint` | | the Azure OpenAI or Foundry resource endpoint; calls go to its `/openai/v1/` path, keyless | WP-04 |
 | `Foundry:Deployments:Fast` | | deployment name for the explainer, persona writer and translator | WP-04 |
 | `Foundry:Deployments:Quality` | | deployment name for half-time and full-time narratives and the agent fact-check | WP-04 |

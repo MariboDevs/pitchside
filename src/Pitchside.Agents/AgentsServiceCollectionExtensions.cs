@@ -118,6 +118,7 @@ public static class AgentsServiceCollectionExtensions
     public static IServiceCollection AddMomentWorkflowRunner(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<EarlierLoopNarratives>();
         services.TryAddSingleton<MomentWorkflowRunner>();
         services.AddHostedService(sp => sp.GetRequiredService<MomentWorkflowRunner>());
         return services;
