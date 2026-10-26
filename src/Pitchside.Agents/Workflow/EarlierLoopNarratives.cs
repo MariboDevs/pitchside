@@ -53,7 +53,18 @@ public sealed partial class EarlierLoopNarratives(
         }
 
         var sourceMomentId = Rekey(item.Moment.Id, matchId, source);
-        var loaded = await LoadAsync(source, sourceMomentId, cancellationToken).ConfigureAwait(false);
+        (Dictionary<string, List<Narrative>> Narratives, Dictionary<string, List<AuditRecord>> Audit) loaded;
+        try
+        {
+            loaded = await LoadAsync(source, sourceMomentId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The store could not be read: the crew writes the moment, as it would without a loop before.
+            LogLoadFailed(ex, item.Moment.Id, source);
+            return false;
+        }
+
         if (!loaded.Narratives.TryGetValue(sourceMomentId, out var earlier) || !CanReuse(earlier, item.FactSheet))
         {
             LogNotReused(item.Moment.Id, source);
@@ -193,6 +204,9 @@ public sealed partial class EarlierLoopNarratives(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Moment {MomentId}: {Source} cannot be replayed for it, so the crew writes it")]
     private partial void LogNotReused(string momentId, string source);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Moment {MomentId}: {Source} could not be read, so the crew writes it")]
+    private partial void LogLoadFailed(Exception exception, string momentId, string source);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Moment {MomentId}: the {Language} recap could not be copied from the loop before")]
     private partial void LogRecapNotCopied(Exception exception, string momentId, string language);

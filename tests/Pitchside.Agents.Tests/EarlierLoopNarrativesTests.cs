@@ -114,6 +114,16 @@ public sealed class EarlierLoopNarrativesTests
     }
 
     [Fact]
+    public async Task A_store_that_cannot_be_read_leaves_the_moment_to_the_crew()
+    {
+        var log = new InMemoryNarrativeLog();
+
+        (await Replays(new FailingMatchStore()).TryPublishAsync(InLoop2(Goal), log.PublishAsync, CancellationToken.None)).ShouldBeFalse();
+
+        log.Narratives.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_sheet_that_renders_differently_is_written_by_the_crew()
     {
         var earlier = await WriteLoop1Async(Goal);
