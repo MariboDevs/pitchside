@@ -16,7 +16,7 @@ namespace Pitchside.Agents.Workflow;
 /// The demo loop replays one seed again and again (<c>MER-26-2</c>, <c>MER-26-3</c>), and the engine is deterministic, so
 /// a moment in a later loop is the same moment as in the loop before it, on the same fact sheet. With
 /// <c>Agents:ReplayEarlierLoops</c> such a moment is not written again: the narratives the crew wrote for it in the
-/// loop before are published under this loop's ids, with the audit records of the model calls that wrote them and
+/// loop before are published under this loop's ids, with the audit records of the model calls that wrote them (under new ids, with their own times) and
 /// any spoken recap, and no model is called. A copy keeps its provenance (the model, prompt and time it was written)
 /// with <c>replay</c> added to its provider, so the control room shows it is a replay, and the groundedness judge
 /// leaves it alone. It is used only when the loop before holds exactly the narratives the crew would write for the
@@ -71,9 +71,13 @@ public sealed partial class EarlierLoopNarratives(
             }
 
             earlier = loaded.Narratives[sourceMomentId];
-            foreach (var record in loaded.Audit.GetValueOrDefault(sourceMomentId) ?? [])
+            // A copy gets a new id, so it sorts after the records already stored for this loop, as a call made now
+            // would, and a reader paging from its last id still finds it; its time and request id stay the call's own.
+            var copiedAt = time.GetUtcNow();
+            foreach (var (record, n) in (loaded.Audit.GetValueOrDefault(sourceMomentId) ?? []).Select((r, n) => (r, n)))
             {
-                await audit.SaveAsync(record with { MatchId = matchId, MomentId = item.Moment.Id }, cancellationToken).ConfigureAwait(false);
+                var copy = record with { Id = Ulid.New(copiedAt.AddMilliseconds(n)), MatchId = matchId, MomentId = item.Moment.Id };
+                await audit.SaveAsync(copy, cancellationToken).ConfigureAwait(false);
             }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

@@ -50,7 +50,8 @@ public sealed class EarlierLoopNarrativesTests
 
         var calls = await _audit.ListAsync(Loop2, null, 10, CancellationToken.None);
         calls.ShouldHaveSingleItem().MomentId.ShouldBe("MER-7-2:M:0324:goal");
-        calls[0].Id.ShouldBe(AuditId);
+        calls[0].Utc.ShouldBe(DateTimeOffset.UnixEpoch);
+        calls[0].InputTokens.ShouldBe(1200);
     }
 
     [Fact]
@@ -227,6 +228,20 @@ public sealed class EarlierLoopNarrativesTests
         copy.NarrativeId.ShouldBe(original.NarrativeId.Replace(Loop1 + ":", Loop2 + ":", StringComparison.Ordinal));
         copy.Ssml.ShouldBe(original.Ssml);
         (await _recaps.GetAudioAsync(Loop2, Languages.English, CancellationToken.None)).ShouldBe(await _recaps.GetAudioAsync(Loop1, Languages.English, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_replayed_call_sorts_after_a_call_made_earlier_in_the_loop()
+    {
+        await WriteLoop1Async(Goal);
+        var clock = new FixedTimeProvider(DateTimeOffset.Parse("2026-10-26T18:00:00Z", System.Globalization.CultureInfo.InvariantCulture));
+        var fresh = Ulid.New(clock.GetUtcNow().AddSeconds(-30));
+        await _audit.SaveAsync((await _audit.ListAsync(Loop1, null, 1, CancellationToken.None))[0] with { Id = fresh, MatchId = Loop2, MomentId = "MER-7-2:M:0100:goal" }, CancellationToken.None);
+
+        (await Replays(time: clock).TryPublishAsync(InLoop2(Goal), new InMemoryNarrativeLog().PublishAsync, CancellationToken.None)).ShouldBeTrue();
+
+        // A control room that has read up to the fresh call pages on from its id and still gets the replayed one.
+        (await _audit.ListAsync(Loop2, fresh, 10, CancellationToken.None)).ShouldHaveSingleItem().MomentId.ShouldBe("MER-7-2:M:0324:goal");
     }
 
     [Fact]
