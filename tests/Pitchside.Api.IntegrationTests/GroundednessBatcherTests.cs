@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Pitchside.Agents.Workflow;
 using Pitchside.Api.Broadcast;
 using Pitchside.Contracts;
 using Pitchside.Evaluation;
@@ -170,6 +171,49 @@ public sealed class GroundednessBatcherTests
         judge.Calls.ShouldBe(1);
         await batcher.StopAsync(CancellationToken.None);
     }
+
+    [Fact]
+    public async Task A_demo_loops_replay_is_never_judged_at_start_up()
+    {
+        var store = await SeededAsync(new InMemoryMatchStore());
+        await store.SaveMatchAsync(new StoredMatch(Pitchside.Engine.MatchSimulator.Simulate(7).Document, MatchStatus.Completed, 0, DateTimeOffset.UnixEpoch), CancellationToken.None);
+        await store.SaveNarrativeAsync(For(Personas.Casual), CancellationToken.None);
+        await store.SaveNarrativeAsync(Replayed(For(Personas.Analyst)), CancellationToken.None);
+        var judge = new CountingJudge();
+
+        using var batcher = Batcher(judge, store);
+        await batcher.StartAsync(CancellationToken.None);
+
+        (await ScoreOfAsync(store, Personas.Casual)).ShouldBe(0.5);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        judge.Calls.ShouldBe(1);
+        (await store.GetNarrativesAsync("MER-7", CancellationToken.None)).Single(n => n.Persona == Personas.Analyst).Evaluation.Groundedness.ShouldBeNull();
+        await batcher.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task A_demo_loops_replay_published_through_the_api_is_not_judged()
+    {
+        await using var factory = new ConfiguredApiFactory(new Dictionary<string, string?> { ["Evaluation:BatchSeconds"] = "1" });
+        var services = factory.Services;
+        var store = await SeededAsync(services.GetRequiredService<IMatchStore>());
+        var judge = new CountingJudge();
+        using var batcher = Batcher(judge, store);
+        await batcher.StartAsync(CancellationToken.None);
+        var publisher = new StoreAndBroadcastNarrativePublisher(store, new NullMatchBroadcaster(), services.GetRequiredService<OverlayCoordinator>(), batcher);
+
+        await publisher.PublishAsync(Replayed(For(Personas.Casual)), CancellationToken.None);
+        await publisher.PublishAsync(For(Personas.Analyst), CancellationToken.None);
+
+        (await ScoreOfAsync(store, Personas.Analyst)).ShouldBe(0.5);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        judge.Calls.ShouldBe(1);
+        (await store.GetNarrativesAsync("MER-7", CancellationToken.None)).Single(n => n.Persona == Personas.Casual).Evaluation.Groundedness.ShouldBeNull();
+        await batcher.StopAsync(CancellationToken.None);
+    }
+
+    private static Narrative Replayed(Narrative narrative) =>
+        narrative with { Provenance = narrative.Provenance with { Provider = narrative.Provenance.Provider + EarlierLoopNarratives.ReplaySuffix } };
 
     [Fact]
     public async Task A_saved_narrative_whose_broadcast_fails_is_still_scored()

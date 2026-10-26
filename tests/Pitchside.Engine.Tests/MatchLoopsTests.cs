@@ -12,6 +12,18 @@ public sealed class MatchLoopsTests
     [InlineData(7, 13, "MER-7-13")]
     public void A_loop_names_its_match(long seed, int loop, string matchId) => MatchLoops.MatchIdFor(seed, loop).ShouldBe(matchId);
 
+    [Theory]
+    [InlineData(26, "MER-26-2", "MER-26")]
+    [InlineData(26, "MER-26-393", "MER-26-392")]
+    [InlineData(26, "MER-26", null)]
+    [InlineData(26, "MER-26-1", null)]
+    [InlineData(26, "MER-26-02", null)]
+    [InlineData(26, "MER-26-x", null)]
+    [InlineData(26, "MER-261-2", null)]
+    [InlineData(7, "MER-26-2", null)]
+    public void A_later_loop_knows_the_loop_before_it(long seed, string matchId, string? previous) =>
+        MatchLoops.PreviousOf(seed, matchId).ShouldBe(previous);
+
     [Fact]
     public void There_is_no_loop_before_the_first() => Should.Throw<ArgumentOutOfRangeException>(() => MatchLoops.MatchIdFor(26, 0));
 

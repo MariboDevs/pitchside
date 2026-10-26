@@ -21,4 +21,10 @@ public sealed class AgentsOptions
 
     /// <summary>The languages every narrative is written in; English is always written, others are translated.</summary>
     public string[] Languages { get; set; } = [.. Contracts.Languages.All];
+
+    /// <summary>
+    /// Whether a moment in a later demo loop republishes what the crew wrote for it in the loop before, when that
+    /// renders the same on this loop's fact sheet, rather than calling the models again (<see cref="Workflow.EarlierLoopNarratives"/>).
+    /// </summary>
+    public bool ReplayEarlierLoops { get; set; } = true;
 }

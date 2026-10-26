@@ -20,6 +20,22 @@ public static class MatchLoops
     }
 
     /// <summary>
+    /// The id of the loop before <paramref name="matchId"/>, when it is a later loop of <paramref name="seed"/>
+    /// (<c>MER-26-3</c> gives <c>MER-26-2</c>, <c>MER-26-2</c> gives <c>MER-26</c>); null for the first loop or any other id.
+    /// </summary>
+    public static string? PreviousOf(long seed, string matchId)
+    {
+        ArgumentNullException.ThrowIfNull(matchId);
+        var prefix = MatchSimulator.MatchIdFor(seed) + "-";
+        return matchId.StartsWith(prefix, StringComparison.Ordinal)
+            && int.TryParse(matchId.AsSpan(prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var loop)
+            && loop > First
+            && MatchIdFor(seed, loop) == matchId
+                ? MatchIdFor(seed, loop - 1)
+                : null;
+    }
+
+    /// <summary>
     /// The same match under another id: the document's <c>matchId</c>, and every event's <c>matchId</c> and <c>id</c>
     /// (<c>{matchId}-{seq}</c>). Nothing else changes, so the stats, moments and narratives are the seed's.
     /// </summary>
