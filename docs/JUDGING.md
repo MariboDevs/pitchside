@@ -117,7 +117,7 @@ Stated here so a judge does not have to find them:
 - **Later demo loops replay the narration.** The engine is deterministic, so every loop is the same match. From 26
   October a loop republishes the narratives the crew wrote for the same moment in the loop before, under its own
   ids, instead of calling the models again, after checking that each one renders to the same text on this loop's fact
-  sheet. The control room shows such a narrative's provider as `Foundry replay`, and its audit records are the real
+  sheet. The control room shows such a narrative's provider as `foundry replay`, and its audit records are the real
   calls that wrote it, with their original times. To see the crew write live, replay another seed from the home page.
 - **Fabric runs on the dev environment**, which has the Event Hubs Standard tier it needs; the demo runs on Basic.
 - **The Afrikaans and isiZulu text has not had a native-speaker review** ([LANGUAGE-REVIEW.md](LANGUAGE-REVIEW.md)).
