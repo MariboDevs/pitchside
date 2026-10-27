@@ -119,5 +119,9 @@ Stated here so a judge does not have to find them:
   ids, instead of calling the models again, after checking that each one renders to the same text on this loop's fact
   sheet. The control room shows such a narrative's provider as `foundry replay`, and its audit records are the real
   calls that wrote it, with their original times. To see the crew write live, replay another seed from the home page.
+- **The demo's groundedness judge is the local proxy from 27 October.** To save development credits, the hosted demo
+  scores groundedness with the code-only proxy (the share of sentences whose cited facts are all in the moment's
+  evidence) instead of the Foundry judge. A replayed card keeps the Foundry score of the card it was copied from;
+  loops `MER-26-263` to `MER-26-402`, never scored by Foundry, show the proxy score.
 - **Fabric runs on the dev environment**, which has the Event Hubs Standard tier it needs; the demo runs on Basic.
 - **The Afrikaans and isiZulu text has not had a native-speaker review** ([LANGUAGE-REVIEW.md](LANGUAGE-REVIEW.md)).
