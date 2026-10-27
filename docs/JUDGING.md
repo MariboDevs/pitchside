@@ -121,7 +121,8 @@ Stated here so a judge does not have to find them:
   calls that wrote it, with their original times. To see the crew write live, replay another seed from the home page.
 - **The demo's groundedness judge is the local proxy from 27 October.** To save development credits, the hosted demo
   scores groundedness with the code-only proxy (the share of sentences whose cited facts are all in the moment's
-  evidence) instead of the Foundry judge. A replayed card keeps the Foundry score of the card it was copied from;
-  loops `MER-26-263` to `MER-26-402`, never scored by Foundry, show the proxy score.
+  evidence) instead of the Foundry judge. A replayed card is never scored again and shows whatever score the card it
+  was copied from had: a Foundry score, the proxy score, or none. A verified card that is not a replay and had no
+  score, such as most of loops `MER-26-263` to `MER-26-402`, gets the proxy score.
 - **Fabric runs on the dev environment**, which has the Event Hubs Standard tier it needs; the demo runs on Basic.
 - **The Afrikaans and isiZulu text has not had a native-speaker review** ([LANGUAGE-REVIEW.md](LANGUAGE-REVIEW.md)).
